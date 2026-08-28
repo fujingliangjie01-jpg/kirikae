@@ -94,6 +94,8 @@ video{display:block;width:100%;min-height:330px;background:#000}
 .item-tools select{min-height:48px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 9px}
 .remove{margin-top:12px;width:100%;min-height:48px;border:1px solid #70313a;border-radius:13px;background:#36161b;color:#ff8d99;font-weight:900}
 .note{color:var(--muted);font-size:13px;line-height:1.55;margin-top:10px}
+.ocr-note{margin-top:10px;padding:10px 12px;border-radius:12px;background:#132236;color:#8bc8ff;font-size:13px;line-height:1.45}
+.jan-input{width:100%;min-height:46px;margin-top:10px;border:1px solid #354155;border-radius:13px;background:#0b1018;color:#b9c7da;padding:0 12px;font-size:14px}
 canvas{display:none}
 @media(max-width:390px){
   .wrap{padding-left:15px;padding-right:15px}.hero h1{font-size:34px}.big-choice{min-height:142px}.choice-title{font-size:27px}
@@ -156,12 +158,15 @@ canvas{display:none}
   <div id="itemsEditor"></div>
   <div class="action-stack"><button id="addItem" class="secondary">＋ 商品を手入力で追加</button><button id="saveReceipt" class="primary">✅ 家計簿に保存</button><button id="discardReceipt" class="danger">この入力を破棄</button></div>
   <div class="note">OCR結果が間違っていても、商品名・価格・数量・分類をすべて手入力で修正できます。</div>
+  <div class="ocr-note">💡 JANコードが読めた商品は、修正した商品名を端末内に学習します。次回から同じJANコードの商品名を自動補正します。</div>
 </div></section>
 
 <canvas id="canvas"></canvas>
 
 <script>
 const DATA_KEY="kakeibo_purchases_v1";
+const PRODUCT_DICT_KEY="kakeibo_product_dictionary_v1";
+const OCR_ALIAS_KEY="kakeibo_ocr_aliases_v1";
 const screens=[homeScreen,bookScreen,statsScreen,searchScreen,historyScreen,cameraScreen,editScreen];
 const CATEGORY_MAP={
   "飲み物":["牛乳","コーヒー","お茶","ジュース","水","飲料"],
@@ -171,6 +176,7 @@ const CATEGORY_MAP={
   "外食":["外食"]
 };
 let stream=null,ocrWorker=null,ocrReadyPromise=null,currentItems=[];
+let lastOCRMeta={store:"",date:""};
 
 function show(screen){screens.forEach(s=>s.classList.add("hidden"));screen.classList.remove("hidden");window.scrollTo(0,0)}
 document.querySelectorAll("[data-home]").forEach(b=>b.addEventListener("click",()=>{stopCamera();show(homeScreen)}));
@@ -181,12 +187,47 @@ openStats.addEventListener("click",()=>{show(statsScreen);renderStats("month")})
 openHistory.addEventListener("click",()=>{show(historyScreen);renderHistory()});
 openReceipt.addEventListener("click",openCamera);
 cancelCamera.addEventListener("click",()=>{stopCamera();show(bookScreen)});
-manualEntry.addEventListener("click",()=>{stopCamera();openEditor([])});
+manualEntry.addEventListener("click",()=>{stopCamera();openEditor([],"",todayText())});
 backFromEdit.addEventListener("click",()=>show(bookScreen));
 discardReceipt.addEventListener("click",()=>{currentItems=[];show(bookScreen)});
 
 function loadData(){try{return JSON.parse(localStorage.getItem(DATA_KEY)||"[]")}catch(e){return[]}}
 function saveData(d){localStorage.setItem(DATA_KEY,JSON.stringify(d))}
+function loadJSON(key,fallback={}){try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch(e){return fallback}}
+function saveJSON(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function normalizeJan(v){return String(v||"").replace(/\D/g,"")}
+function normalizeOCRKey(v){
+  return String(v||"").toLowerCase().replace(/\s+/g,"").replace(/[＊*#¥￥・･.,，。:：;；'"`~〜ー\-_/\\()[\]{}]/g,"").trim()
+}
+function getLearnedProduct(jan,rawName){
+  const dict=loadJSON(PRODUCT_DICT_KEY,{});
+  const aliases=loadJSON(OCR_ALIAS_KEY,{});
+  const j=normalizeJan(jan);
+  if(j && dict[j]) return dict[j];
+  const key=normalizeOCRKey(rawName);
+  if(key && aliases[key]) return aliases[key];
+  return null;
+}
+function learnProduct(it){
+  const corrected={
+    name:String(it.name||"").trim(),
+    group:String(it.group||it.name||"").trim(),
+    category:it.category||"その他"
+  };
+  if(!corrected.name)return;
+  const j=normalizeJan(it.jan);
+  if(j){
+    const dict=loadJSON(PRODUCT_DICT_KEY,{});
+    dict[j]=corrected;
+    saveJSON(PRODUCT_DICT_KEY,dict);
+  }
+  const raw=String(it.rawName||"").trim();
+  if(raw && normalizeOCRKey(raw)!==normalizeOCRKey(corrected.name)){
+    const aliases=loadJSON(OCR_ALIAS_KEY,{});
+    aliases[normalizeOCRKey(raw)]=corrected;
+    saveJSON(OCR_ALIAS_KEY,aliases);
+  }
+}
 function yen(n){return "¥"+Math.round(Number(n)||0).toLocaleString("ja-JP")}
 function todayText(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 
@@ -210,76 +251,213 @@ function prepareOCR(){
   if(ocrReadyPromise)return ocrReadyPromise;
   ocrReadyPromise=(async()=>{
     ocrWorker=await Tesseract.createWorker("jpn+eng");
+    await ocrWorker.setParameters({
+      preserve_interword_spaces:"1"
+    });
     return ocrWorker;
   })();
   return ocrReadyPromise;
 }
+
+function buildEnhancedCanvas(sourceCanvas){
+  const out=document.createElement("canvas");
+  const scale=1.8;
+  out.width=Math.round(sourceCanvas.width*scale);
+  out.height=Math.round(sourceCanvas.height*scale);
+  const ctx=out.getContext("2d",{willReadFrequently:true});
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(sourceCanvas,0,0,out.width,out.height);
+
+  const img=ctx.getImageData(0,0,out.width,out.height);
+  const d=img.data;
+  let sum=0;
+  for(let i=0;i<d.length;i+=4){
+    const y=Math.round(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);
+    sum+=y;
+  }
+  const avg=sum/(d.length/4);
+  const threshold=Math.max(145,Math.min(205,avg-18));
+  for(let i=0;i<d.length;i+=4){
+    const y=Math.round(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);
+    // Strong contrast without turning faint print completely white.
+    let v=(y-threshold)*1.55+150;
+    v=Math.max(0,Math.min(255,v));
+    d[i]=d[i+1]=d[i+2]=v;
+  }
+  ctx.putImageData(img,0,0);
+  return out;
+}
+
+async function recognizeReceipt(sourceCanvas){
+  const worker=await prepareOCR();
+  cameraStatus.textContent="🔍 1/2 日本語を読み取り中…";
+  await worker.setParameters({tessedit_pageseg_mode:"6"});
+  const first=await worker.recognize(sourceCanvas);
+
+  cameraStatus.textContent="✨ 2/2 画像補正して再解析中…";
+  const enhanced=buildEnhancedCanvas(sourceCanvas);
+  await worker.setParameters({tessedit_pageseg_mode:"6"});
+  const second=await worker.recognize(enhanced);
+
+  const a=first.data.text||"", b=second.data.text||"";
+  // Keep both passes. Parser de-duplicates products and can recover lines one pass missed.
+  return a+"\n"+b;
+}
+
 captureReceipt.addEventListener("click",async()=>{
   if(!video.videoWidth){cameraStatus.textContent="カメラ映像を取得できません";return}
-  captureReceipt.disabled=true;cameraStatus.textContent="🔍 レシートを解析中…";
+  captureReceipt.disabled=true;cameraStatus.textContent="📸 画像を取り込み中…";
   try{
     canvas.width=video.videoWidth;canvas.height=video.videoHeight;
     canvas.getContext("2d").drawImage(video,0,0);
-    const worker=await prepareOCR();
-    const result=await worker.recognize(canvas);
-    const parsed=parseReceipt(result.data.text||"");
-    stopCamera();openEditor(parsed);
+    const text=await recognizeReceipt(canvas);
+    const parsed=parseReceipt(text);
+    stopCamera();
+    openEditor(parsed.items,parsed.store,parsed.date);
   }catch(e){
+    console.error(e);
     cameraStatus.textContent="読み取りに失敗しました。手入力で登録できます。";
   }finally{captureReceipt.disabled=false}
 });
 
-function parseReceipt(text){
-  const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-  const out=[];
-  for(const line of lines){
-    const m=line.match(/(.+?)\s+[¥￥]?\s*([0-9]{2,6})\s*$/);
-    if(!m)continue;
-    const name=m[1].replace(/[¥￥*#]/g,"").trim();
-    const price=Number(m[2]);
-    if(!name||!price||/合計|小計|現金|お預|お釣|消費税|税込|税額/.test(name))continue;
-    const c=classify(name);
-    out.push({name,price,qty:1,category:c.category,group:c.group});
-    if(out.length>=40)break;
-  }
-  return out;
+function extractReceiptDate(lines){
+  const joined=lines.join(" ");
+  let m=joined.match(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})\s*日?/);
+  if(!m)m=joined.match(/(20\d{2})(\d{2})(\d{2})/);
+  if(!m)return todayText();
+  return `${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`;
 }
 
-function openEditor(items){
-  currentItems=items.length?items:[{name:"",price:"",qty:1,category:"その他",group:""}];
-  storeInput.value="";dateInput.value=todayText();renderEditor();show(editScreen)
+function extractStore(lines){
+  const top=lines.slice(0,18).filter(Boolean);
+  const strong=/スーパー|ストア|ドラッグ|薬局|マート|アオキ|イオン|ベイシア|ヤオコー|カスミ|とりせん|セブン|ローソン|ファミリーマート|ドン.?キホーテ/i;
+  const noise=/TEL|電話|登録番号|株式会社|レシート|領収|パート|アルバイト|ホームページ|募集|営業時間/i;
+  const hit=top.find(x=>strong.test(x)&&!noise.test(x));
+  if(hit)return cleanupStore(hit);
+  const japanese=top.filter(x=>/[ぁ-んァ-ヶ一-龠]/.test(x)&&!noise.test(x)&&x.length<=28);
+  return japanese.length?cleanupStore(japanese[0]):"";
+}
+function cleanupStore(v){
+  return String(v||"").replace(/^[*＊#\s]+/,"").replace(/\s{2,}/g," ").trim();
+}
+
+function parseReceipt(text){
+  const rawLines=String(text).split(/\r?\n/).map(x=>x.replace(/[|｜]/g," ").replace(/\s+/g," ").trim()).filter(Boolean);
+  const store=extractStore(rawLines);
+  const date=extractReceiptDate(rawLines);
+  const out=[],seen=new Set();
+  let pendingJan="";
+
+  for(let idx=0;idx<rawLines.length;idx++){
+    const line=rawLines[idx];
+
+    // JAN/EAN/UPC printed on its own line is common on Japanese receipts.
+    const janOnly=line.replace(/\s/g,"").match(/(?:^|\D)(\d{8}|\d{12,13})(?:\D|$)/);
+    if(janOnly && line.replace(/\D/g,"").length<=14){
+      pendingJan=janOnly[1];
+      continue;
+    }
+
+    // Allow "商品名   ¥178", "商品名 178", and OCR variants with ￥/Y.
+    const m=line.match(/^(.{1,60}?)\s+(?:[¥￥Yy]\s*)?([0-9]{2,6})(?:\s*円)?\s*$/);
+    if(!m)continue;
+
+    let rawName=m[1].replace(/[¥￥*＊#]/g,"").trim();
+    const price=Number(m[2]);
+    if(!rawName||!price)continue;
+    if(/合計|小計|現金|お預|お釣|消費税|税込|税額|対象額|ポイント|値引|割引|お買上|領収|内税|外税/.test(rawName))continue;
+    if(/^\d+$/.test(rawName))continue;
+
+    let jan=pendingJan;
+    pendingJan="";
+
+    const learned=getLearnedProduct(jan,rawName);
+    let name=learned?.name||rawName;
+    let category=learned?.category;
+    let group=learned?.group;
+    if(!category||!group){
+      const c=classify(name);
+      category=category||c.category;
+      group=group||c.group;
+    }
+
+    const key=(normalizeJan(jan)||normalizeOCRKey(name))+"|"+price;
+    if(seen.has(key))continue;
+    seen.add(key);
+    out.push({name,rawName,price,qty:1,category,group,jan});
+    if(out.length>=50)break;
+  }
+  return {store,date,items:out};
+}
+
+function openEditor(items,store="",date=""){
+  currentItems=items.length?items:[{name:"",rawName:"",price:"",qty:1,category:"その他",group:"",jan:""}];
+  lastOCRMeta={store:store||"",date:date||todayText()};
+  storeInput.value=lastOCRMeta.store;
+  dateInput.value=lastOCRMeta.date;
+  renderEditor();
+  show(editScreen);
 }
 function renderEditor(){
   itemsEditor.innerHTML="";
   currentItems.forEach((it,i)=>{
     const div=document.createElement("div");div.className="item-row";
-    div.innerHTML=`<div class="item-grid"><input data-f="name" data-i="${i}" value="${escapeHtml(it.name)}" placeholder="商品名"><input data-f="price" data-i="${i}" type="number" min="0" value="${it.price}" placeholder="価格"></div>
-    <div class="item-tools"><select data-f="category" data-i="${i}">${["飲み物","食品","生活品","お菓子","外食","その他"].map(c=>`<option ${c===it.category?"selected":""}>${c}</option>`).join("")}</select><input data-f="qty" data-i="${i}" type="number" min="1" value="${it.qty||1}" aria-label="数量"></div>
+    const learned=it.jan?getLearnedProduct(it.jan,it.rawName):null;
+    div.innerHTML=`<div class="item-grid">
+      <input data-f="name" data-i="${i}" value="${escapeHtml(it.name)}" placeholder="商品名">
+      <input data-f="price" data-i="${i}" type="number" min="0" value="${it.price}" placeholder="価格">
+    </div>
+    <div class="item-tools">
+      <select data-f="category" data-i="${i}">${["飲み物","食品","生活品","お菓子","外食","その他"].map(c=>`<option ${c===it.category?"selected":""}>${c}</option>`).join("")}</select>
+      <input data-f="qty" data-i="${i}" type="number" min="1" value="${it.qty||1}" aria-label="数量" placeholder="数量">
+    </div>
     <input style="width:100%;min-height:48px;margin-top:10px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 12px" data-f="group" data-i="${i}" value="${escapeHtml(it.group||"")}" placeholder="まとめ名 例：牛乳">
+    <input class="jan-input" data-f="jan" data-i="${i}" inputmode="numeric" value="${escapeHtml(it.jan||"")}" placeholder="JANコード（読めた場合）">
+    ${it.rawName&&it.rawName!==it.name?`<div class="ocr-note">OCR原文：${escapeHtml(it.rawName)}${learned?"<br>✨ 保存済みの商品辞書で自動補正":""}</div>`:""}
     <button class="remove" data-remove="${i}">この商品を削除</button>`;
     itemsEditor.appendChild(div);
   });
-  itemsEditor.querySelectorAll("[data-f]").forEach(el=>el.addEventListener("input",e=>{
-    const i=Number(e.target.dataset.i),f=e.target.dataset.f;currentItems[i][f]=e.target.value;
-    if(f==="name"){
-      const c=classify(e.target.value);
-      currentItems[i].category=c.category;currentItems[i].group=c.group;
-    }
-  }));
+
+  itemsEditor.querySelectorAll("[data-f]").forEach(el=>{
+    const evt=(el.tagName==="SELECT")?"change":"input";
+    el.addEventListener(evt,e=>{
+      const i=Number(e.target.dataset.i),f=e.target.dataset.f;
+      currentItems[i][f]=e.target.value;
+      if(f==="name" && !currentItems[i].group){
+        const c=classify(e.target.value);
+        currentItems[i].category=c.category;
+        currentItems[i].group=c.group;
+      }
+    });
+  });
+
   itemsEditor.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{
-    currentItems.splice(Number(b.dataset.remove),1);if(!currentItems.length)currentItems.push({name:"",price:"",qty:1,category:"その他",group:""});renderEditor()
+    currentItems.splice(Number(b.dataset.remove),1);
+    if(!currentItems.length)currentItems.push({name:"",rawName:"",price:"",qty:1,category:"その他",group:"",jan:""});
+    renderEditor();
   }));
 }
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-addItem.addEventListener("click",()=>{currentItems.push({name:"",price:"",qty:1,category:"その他",group:""});renderEditor()});
+addItem.addEventListener("click",()=>{currentItems.push({name:"",rawName:"",price:"",qty:1,category:"その他",group:"",jan:""});renderEditor()});
 saveReceipt.addEventListener("click",()=>{
   const store=storeInput.value.trim()||"店舗未入力",date=dateInput.value||todayText();
   const items=currentItems.map(it=>({
-    name:String(it.name||"").trim(),price:Number(it.price)||0,qty:Math.max(1,Number(it.qty)||1),
-    category:it.category||"その他",group:String(it.group||it.name||"未分類").trim()
+    name:String(it.name||"").trim(),
+    rawName:String(it.rawName||"").trim(),
+    price:Number(it.price)||0,
+    qty:Math.max(1,Number(it.qty)||1),
+    category:it.category||"その他",
+    group:String(it.group||it.name||"未分類").trim(),
+    jan:normalizeJan(it.jan)
   })).filter(it=>it.name&&it.price>0);
   if(!items.length){alert("商品名と価格を1件以上入力してください");return}
-  const data=loadData();data.push({id:Date.now(),store,date,items});saveData(data);show(bookScreen)
+
+  items.forEach(learnProduct);
+
+  const data=loadData();
+  data.push({id:Date.now(),store,date,items});
+  saveData(data);
+  show(bookScreen);
 });
 
 function inPeriod(date,period){
@@ -311,7 +489,7 @@ function runSearch(){
   const q=searchInput.value.trim().toLowerCase();if(!q){searchResults.innerHTML='<div class="empty">商品名を入力してください。</div>';return}
   const hits=[];
   loadData().forEach(r=>r.items.forEach(it=>{
-    if([it.name,it.group,it.category].some(v=>String(v||"").toLowerCase().includes(q)))hits.push({...it,date:r.date,store:r.store})
+    if([it.name,it.group,it.category,it.jan].some(v=>String(v||"").toLowerCase().includes(q)))hits.push({...it,date:r.date,store:r.store})
   }));
   hits.sort((a,b)=>b.date.localeCompare(a.date));searchResults.innerHTML="";
   if(!hits.length){searchResults.innerHTML='<div class="empty">購入履歴が見つかりませんでした。</div>';return}

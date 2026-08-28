@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>切替確認</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+
+*{
+
+  box-sizing:border-box;
+
+}
+
+body{
+
+  margin:0;
+
+  padding:20px;
+
+  background:#111;
+
+  color:#fff;
+
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+
+}
+
+.container{
+
+  max-width:700px;
+
+  margin:auto;
+
+}
+
+h1{
+
+  text-align:center;
+
+  margin:10px 0 25px;
+
+}
+
+.camera-box{
+
+  background:#1c1c1e;
+
+  border-radius:16px;
+
+  padding:16px;
+
+}
+
+video{
+
+  width:100%;
+
+  background:#000;
+
+  border-radius:12px;
+
+  display:none;
+
+}
+
+button{
+
+  width:100%;
+
+  min-height:58px;
+
+  margin-top:15px;
+
+  border:0;
+
+  border-radius:12px;
+
+  font-size:18px;
+
+  font-weight:bold;
+
+}
+
+#cameraBtn{
+
+  background:#0a84ff;
+
+  color:white;
+
+}
+
+#stopBtn{
+
+  background:#444;
+
+  color:white;
+
+  display:none;
+
+}
+
+.status{
+
+  margin-top:20px;
+
+  padding:18px;
+
+  border-radius:12px;
+
+  background:#1c1c1e;
+
+  text-align:center;
+
+}
+
+.status-title{
+
+  font-size:14px;
+
+  color:#aaa;
+
+}
+
+#statusText{
+
+  margin-top:8px;
+
+  font-size:22px;
+
+  font-weight:bold;
+
+}
+
+.result{
+
+  margin-top:20px;
+
+  padding:18px;
+
+  border-radius:12px;
+
+  background:#1c1c1e;
+
+}
+
+.result h2{
+
+  font-size:16px;
+
+  margin-top:0;
+
+}
+
+#readText{
+
+  min-height:45px;
+
+  padding:12px;
+
+  background:#000;
+
+  border-radius:8px;
+
+  word-break:break-all;
+
+  font-size:20px;
+
+}
+
+.confirmed{
+
+  margin-top:20px;
+
+  padding:18px;
+
+  border-radius:12px;
+
+  background:#1c1c1e;
+
+}
+
+.confirmed h2{
+
+  font-size:16px;
+
+  margin-top:0;
+
+}
+
+#confirmedText{
+
+  min-height:45px;
+
+  padding:12px;
+
+  background:#062d17;
+
+  border:1px solid #2ecc71;
+
+  border-radius:8px;
+
+  color:#7cffaa;
+
+  word-break:break-all;
+
+  font-size:22px;
+
+  font-weight:bold;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>切替確認</h1>
+
+<div class="camera-box">
+
+<video id="camera" autoplay playsinline></video>
+
+<button id="cameraBtn">
+
+📷 カメラ起動
+
+</button>
+
+<button id="stopBtn">
+
+カメラ停止
+
+</button>
+
+</div>
+
+<div class="status">
+
+<div class="status-title">
+
+状態
+
+</div>
+
+<div id="statusText">
+
+待機中
+
+</div>
+
+</div>
+
+<div class="result">
+
+<h2>現在の読取結果</h2>
+
+<div id="readText">
+
+まだ読み取っていません
+
+</div>
+
+</div>
+
+<div class="confirmed">
+
+<h2>確定データ</h2>
+
+<div id="confirmedText">
+
+未確定
+
+</div>
+
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+</div>
+
+<script>
+
+const video = document.getElementById("camera");
+
+const canvas = document.getElementById("canvas");
+
+const cameraBtn = document.getElementById("cameraBtn");
+
+const stopBtn = document.getElementById("stopBtn");
+
+const statusText = document.getElementById("statusText");
+
+const readText = document.getElementById("readText");
+
+const confirmedText = document.getElementById("confirmedText");
+
+let stream = null;
+
+let scanning = false;
+
+let previousText = "";
+
+let sameCount = 0;
+
+let confirmedData = null;
+
+/* =========================
+
+   カメラ起動
+
+========================= */
+
+cameraBtn.addEventListener("click", async () => {
+
+  try{
+
+    stream = await navigator.mediaDevices.getUserMedia({
+
+      video:{
+
+        facingMode:{
+
+          ideal:"environment"
+
+        }
+
+      },
+
+      audio:false
+
+    });
+
+    video.srcObject = stream;
+
+    video.style.display = "block";
+
+    cameraBtn.style.display = "none";
+
+    stopBtn.style.display = "block";
+
+    statusText.textContent = "カメラ起動中";
+
+    scanning = true;
+
+    setTimeout(scanLoop,1000);
+
+  }catch(error){
+
+    console.error(error);
+
+    statusText.textContent =
+
+    "カメラを起動できません";
+
+  }
+
+});
+
+/* =========================
+
+   カメラ停止
+
+========================= */
+
+stopBtn.addEventListener("click",()=>{
+
+  scanning = false;
+
+  if(stream){
+
+    stream.getTracks().forEach(track=>{
+
+      track.stop();
+
+    });
+
+  }
+
+  video.style.display = "none";
+
+  cameraBtn.style.display = "block";
+
+  stopBtn.style.display = "none";
+
+  statusText.textContent = "停止中";
+
+});
+
+/* =========================
+
+   OCRループ
+
+========================= */
+
+async function scanLoop(){
+
+  if(!scanning){
+
+    return;
+
+  }
+
+  if(video.readyState < 2){
+
+    setTimeout(scanLoop,500);
+
+    return;
+
+  }
+
+  statusText.textContent =
+
+  "🔍 読み取り中…";
+
+  canvas.width =
+
+  video.videoWidth;
+
+  canvas.height =
+
+  video.videoHeight;
+
+  const ctx =
+
+  canvas.getContext("2d");
+
+  ctx.drawImage(
+
+    video,
+
+    0,
+
+    0,
+
+    canvas.width,
+
+    canvas.height
+
+  );
+
+  try{
+
+    const result =
+
+    await Tesseract.recognize(
+
+      canvas,
+
+      "eng"
+
+    );
+
+    let text =
+
+    normalizeText(
+
+      result.data.text
+
+    );
+
+    if(text){
+
+      readText.textContent = text;
+
+      checkSameText(text);
+
+    }
+
+  }catch(error){
+
+    console.error(error);
+
+  }
+
+  if(scanning){
+
+    setTimeout(
+
+      scanLoop,
+
+      1000
+
+    );
+
+  }
+
+}
+
+/* =========================
+
+   読取文字整形
+
+========================= */
+
+function normalizeText(text){
+
+  return text
+
+  .toUpperCase()
+
+  .replace(
+
+    /[^A-Z0-9\-]/g,
+
+    ""
+
+  )
+
+  .trim();
+
+}
+
+/* =========================
+
+   2回一致判定
+
+========================= */
+
+function checkSameText(text){
+
+  if(text === previousText){
+
+    sameCount++;
+
+  }else{
+
+    previousText = text;
+
+    sameCount = 1;
+
+  }
+
+  statusText.textContent =
+
+  "認識確認 " +
+
+  sameCount +
+
+  " / 2";
+
+  if(sameCount >= 2){
+
+    confirmData(text);
+
+  }
+
+}
+
+/* =========================
+
+   データ確定
+
+========================= */
+
+function confirmData(text){
+
+  confirmedData = {
+
+    value:text,
+
+    time:
+
+    new Date()
+
+    .toLocaleString()
+
+  };
+
+  confirmedText.textContent =
+
+  confirmedData.value;
+
+  statusText.textContent =
+
+  "✅ 読み取り完了";
+
+  scanning = false;
+
+  /*
+
+  カメラは止めず、
+
+  映像だけそのまま残す。
+
+  */
+
+}
+
+/* =========================
+
+   アプリ内保持データ確認用
+
+========================= */
+
+window.getConfirmedData =
+
+function(){
+
+  return confirmedData;
+
+};
+
+</script>
+
+</body>
+
+</html>

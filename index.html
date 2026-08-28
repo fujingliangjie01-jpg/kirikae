@@ -6,7 +6,7 @@
 
 <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
 <title>切替確認</title>
 
@@ -24,9 +24,7 @@ body{
 
   margin:0;
 
-  padding:20px;
-
-  background:#111;
+  background:#0b0b0c;
 
   color:#fff;
 
@@ -40,23 +38,67 @@ body{
 
   margin:auto;
 
+  padding:18px;
+
 }
 
 h1{
 
   text-align:center;
 
-  margin:10px 0 25px;
+  margin:8px 0 22px;
+
+  font-size:30px;
+
+}
+
+.target-box{
+
+  background:#18181b;
+
+  border:1px solid #333;
+
+  border-radius:14px;
+
+  padding:16px;
+
+  margin-bottom:16px;
+
+}
+
+.target-label{
+
+  color:#aaa;
+
+  font-size:13px;
+
+}
+
+.target-value{
+
+  margin-top:5px;
+
+  font-size:28px;
+
+  font-weight:800;
+
+  letter-spacing:2px;
 
 }
 
 .camera-box{
 
-  background:#1c1c1e;
+  background:#18181b;
 
   border-radius:16px;
 
-  padding:16px;
+  padding:14px;
+
+}
+
+.video-wrap{
+
+  position:relative;
 
 }
 
@@ -64,9 +106,31 @@ video{
 
   width:100%;
 
+  border-radius:12px;
+
   background:#000;
 
+  display:none;
+
+}
+
+.scan-frame{
+
+  position:absolute;
+
+  left:8%;
+
+  right:8%;
+
+  top:35%;
+
+  height:30%;
+
+  border:3px solid #0a84ff;
+
   border-radius:12px;
+
+  pointer-events:none;
 
   display:none;
 
@@ -78,15 +142,15 @@ button{
 
   min-height:58px;
 
-  margin-top:15px;
-
-  border:0;
+  border:none;
 
   border-radius:12px;
 
+  margin-top:14px;
+
   font-size:18px;
 
-  font-weight:bold;
+  font-weight:800;
 
 }
 
@@ -94,127 +158,105 @@ button{
 
   background:#0a84ff;
 
-  color:white;
+  color:#fff;
 
 }
 
 #stopBtn{
 
-  background:#444;
+  background:#3a3a3c;
 
-  color:white;
+  color:#fff;
 
   display:none;
 
 }
 
-.status{
+.card{
 
-  margin-top:20px;
+  background:#18181b;
 
-  padding:18px;
+  border-radius:14px;
 
-  border-radius:12px;
+  padding:16px;
 
-  background:#1c1c1e;
-
-  text-align:center;
+  margin-top:16px;
 
 }
 
-.status-title{
+.card-title{
 
-  font-size:14px;
+  font-size:13px;
+
+  color:#aaa;
+
+  margin-bottom:8px;
+
+}
+
+#status{
+
+  font-size:21px;
+
+  font-weight:800;
+
+}
+
+#currentText{
+
+  font-size:24px;
+
+  font-weight:800;
+
+  word-break:break-all;
+
+}
+
+#method{
+
+  font-size:18px;
+
+  font-weight:700;
+
+}
+
+.progress{
+
+  margin-top:8px;
 
   color:#aaa;
 
 }
 
-#statusText{
-
-  margin-top:8px;
-
-  font-size:22px;
-
-  font-weight:bold;
-
-}
-
-.result{
-
-  margin-top:20px;
-
-  padding:18px;
-
-  border-radius:12px;
-
-  background:#1c1c1e;
-
-}
-
-.result h2{
-
-  font-size:16px;
-
-  margin-top:0;
-
-}
-
-#readText{
-
-  min-height:45px;
-
-  padding:12px;
-
-  background:#000;
-
-  border-radius:8px;
-
-  word-break:break-all;
-
-  font-size:20px;
-
-}
-
 .confirmed{
 
-  margin-top:20px;
-
-  padding:18px;
-
-  border-radius:12px;
-
-  background:#1c1c1e;
-
-}
-
-.confirmed h2{
-
-  font-size:16px;
-
-  margin-top:0;
+  border:2px solid #30d158;
 
 }
 
 #confirmedText{
 
-  min-height:45px;
+  font-size:30px;
 
-  padding:12px;
+  font-weight:900;
 
-  background:#062d17;
+  color:#30d158;
 
-  border:1px solid #2ecc71;
+  letter-spacing:2px;
 
-  border-radius:8px;
+}
 
-  color:#7cffaa;
+#confirmedMethod{
 
-  word-break:break-all;
+  margin-top:6px;
 
-  font-size:22px;
+  color:#aaa;
 
-  font-weight:bold;
+}
+
+canvas{
+
+  display:none;
 
 }
 
@@ -226,95 +268,231 @@ button{
 
 <div class="container">
 
-<h1>切替確認</h1>
+  <h1>切替確認</h1>
 
-<div class="camera-box">
+  <div class="target-box">
 
-<video id="camera" autoplay playsinline></video>
+    <div class="target-label">今回の確認対象</div>
 
-<button id="cameraBtn">
+    <div class="target-value">T629C</div>
 
-📷 カメラ起動
+  </div>
 
-</button>
+  <div class="camera-box">
 
-<button id="stopBtn">
+    <div class="video-wrap">
 
-カメラ停止
+      <video
 
-</button>
+        id="camera"
 
-</div>
+        autoplay
 
-<div class="status">
+        playsinline
 
-<div class="status-title">
+        muted>
 
-状態
+      </video>
 
-</div>
+      <div
 
-<div id="statusText">
+        id="scanFrame"
 
-待機中
+        class="scan-frame">
 
-</div>
+      </div>
 
-</div>
+    </div>
 
-<div class="result">
+    <button id="cameraBtn">
 
-<h2>現在の読取結果</h2>
+      📷 カメラ起動
 
-<div id="readText">
+    </button>
 
-まだ読み取っていません
+    <button id="stopBtn">
 
-</div>
+      カメラ停止
 
-</div>
+    </button>
 
-<div class="confirmed">
+  </div>
 
-<h2>確定データ</h2>
+  <div class="card">
 
-<div id="confirmedText">
+    <div class="card-title">
 
-未確定
+      状態
 
-</div>
+    </div>
 
-</div>
+    <div id="status">
 
-<canvas id="canvas" style="display:none;"></canvas>
+      待機中
+
+    </div>
+
+    <div
+
+      id="progress"
+
+      class="progress">
+
+      確認 0 / 2
+
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <div class="card-title">
+
+      現在の読取結果
+
+    </div>
+
+    <div id="currentText">
+
+      未読取
+
+    </div>
+
+  </div>
+
+  <div class="card">
+
+    <div class="card-title">
+
+      読み取り方法
+
+    </div>
+
+    <div id="method">
+
+      -
+
+    </div>
+
+  </div>
+
+  <div class="card confirmed">
+
+    <div class="card-title">
+
+      確定データ
+
+    </div>
+
+    <div id="confirmedText">
+
+      未確定
+
+    </div>
+
+    <div id="confirmedMethod">
+
+    </div>
+
+  </div>
+
+  <canvas id="canvas"></canvas>
 
 </div>
 
 <script>
 
-const video = document.getElementById("camera");
+const TARGET = "T629C";
 
-const canvas = document.getElementById("canvas");
+const video =
 
-const cameraBtn = document.getElementById("cameraBtn");
+document.getElementById("camera");
 
-const stopBtn = document.getElementById("stopBtn");
+const canvas =
 
-const statusText = document.getElementById("statusText");
+document.getElementById("canvas");
 
-const readText = document.getElementById("readText");
+const cameraBtn =
 
-const confirmedText = document.getElementById("confirmedText");
+document.getElementById("cameraBtn");
+
+const stopBtn =
+
+document.getElementById("stopBtn");
+
+const scanFrame =
+
+document.getElementById("scanFrame");
+
+const statusEl =
+
+document.getElementById("status");
+
+const progressEl =
+
+document.getElementById("progress");
+
+const currentTextEl =
+
+document.getElementById("currentText");
+
+const methodEl =
+
+document.getElementById("method");
+
+const confirmedTextEl =
+
+document.getElementById("confirmedText");
+
+const confirmedMethodEl =
+
+document.getElementById("confirmedMethod");
 
 let stream = null;
 
 let scanning = false;
 
-let previousText = "";
+let previousValue = "";
+
+let previousMethod = "";
 
 let sameCount = 0;
 
 let confirmedData = null;
+
+let barcodeDetector = null;
+
+/* =========================
+
+   BarcodeDetector準備
+
+========================= */
+
+if("BarcodeDetector" in window){
+
+  BarcodeDetector
+
+    .getSupportedFormats()
+
+    .then(formats=>{
+
+      barcodeDetector =
+
+        new BarcodeDetector({
+
+          formats:formats
+
+        });
+
+    })
+
+    .catch(()=>{
+
+      barcodeDetector = null;
+
+    });
+
+}
 
 /* =========================
 
@@ -322,47 +500,107 @@ let confirmedData = null;
 
 ========================= */
 
-cameraBtn.addEventListener("click", async () => {
+cameraBtn.addEventListener(
+
+"click",
+
+async()=>{
 
   try{
 
-    stream = await navigator.mediaDevices.getUserMedia({
+    stream =
 
-      video:{
+      await navigator.mediaDevices
 
-        facingMode:{
+      .getUserMedia({
 
-          ideal:"environment"
+        video:{
 
-        }
+          facingMode:{
 
-      },
+            ideal:"environment"
 
-      audio:false
+          },
 
-    });
+          width:{
+
+            ideal:1920
+
+          },
+
+          height:{
+
+            ideal:1080
+
+          }
+
+        },
+
+        audio:false
+
+      });
 
     video.srcObject = stream;
 
-    video.style.display = "block";
+    await video.play();
 
-    cameraBtn.style.display = "none";
+    video.style.display =
 
-    stopBtn.style.display = "block";
+      "block";
 
-    statusText.textContent = "カメラ起動中";
+    scanFrame.style.display =
+
+      "block";
+
+    cameraBtn.style.display =
+
+      "none";
+
+    stopBtn.style.display =
+
+      "block";
+
+    statusEl.textContent =
+
+      "カメラ起動中";
+
+    currentTextEl.textContent =
+
+      "読み取り待ち";
+
+    methodEl.textContent =
+
+      "-";
 
     scanning = true;
 
-    setTimeout(scanLoop,1000);
+    sameCount = 0;
 
-  }catch(error){
+    previousValue = "";
+
+    previousMethod = "";
+
+    progressEl.textContent =
+
+      "確認 0 / 2";
+
+    setTimeout(
+
+      scanLoop,
+
+      600
+
+    );
+
+  }
+
+  catch(error){
 
     console.error(error);
 
-    statusText.textContent =
+    statusEl.textContent =
 
-    "カメラを起動できません";
+      "カメラを起動できません";
 
   }
 
@@ -374,33 +612,63 @@ cameraBtn.addEventListener("click", async () => {
 
 ========================= */
 
-stopBtn.addEventListener("click",()=>{
+stopBtn.addEventListener(
+
+"click",
+
+()=>{
+
+  stopCamera();
+
+});
+
+function stopCamera(){
 
   scanning = false;
 
   if(stream){
 
-    stream.getTracks().forEach(track=>{
+    stream
 
-      track.stop();
+      .getTracks()
 
-    });
+      .forEach(track=>{
+
+        track.stop();
+
+      });
+
+    stream = null;
 
   }
 
-  video.style.display = "none";
+  video.srcObject = null;
 
-  cameraBtn.style.display = "block";
+  video.style.display =
 
-  stopBtn.style.display = "none";
+    "none";
 
-  statusText.textContent = "停止中";
+  scanFrame.style.display =
 
-});
+    "none";
+
+  cameraBtn.style.display =
+
+    "block";
+
+  stopBtn.style.display =
+
+    "none";
+
+  statusEl.textContent =
+
+    "停止中";
+
+}
 
 /* =========================
 
-   OCRループ
+   メイン読取ループ
 
 ========================= */
 
@@ -414,73 +682,103 @@ async function scanLoop(){
 
   if(video.readyState < 2){
 
-    setTimeout(scanLoop,500);
+    setTimeout(
+
+      scanLoop,
+
+      400
+
+    );
 
     return;
 
   }
 
-  statusText.textContent =
+  statusEl.textContent =
 
-  "🔍 読み取り中…";
+    "🔍 読み取り中…";
 
-  canvas.width =
+  let detected = false;
 
-  video.videoWidth;
+  /*
 
-  canvas.height =
+  まずバーコードを優先
 
-  video.videoHeight;
+  */
 
-  const ctx =
+  if(barcodeDetector){
 
-  canvas.getContext("2d");
+    try{
 
-  ctx.drawImage(
+      const barcodes =
 
-    video,
+        await barcodeDetector
 
-    0,
+        .detect(video);
 
-    0,
+      if(barcodes.length){
 
-    canvas.width,
+        for(
 
-    canvas.height
+          const barcode
 
-  );
+          of barcodes
 
-  try{
+        ){
 
-    const result =
+          const value =
 
-    await Tesseract.recognize(
+            normalizeText(
 
-      canvas,
+              barcode.rawValue
 
-      "eng"
+            );
 
-    );
+          if(value){
 
-    let text =
+            handleDetected(
 
-    normalizeText(
+              value,
 
-      result.data.text
+              "バーコード"
 
-    );
+            );
 
-    if(text){
+            detected = true;
 
-      readText.textContent = text;
+            break;
 
-      checkSameText(text);
+          }
+
+        }
+
+      }
 
     }
 
-  }catch(error){
+    catch(error){
 
-    console.error(error);
+      console.log(
+
+        "Barcode error",
+
+        error
+
+      );
+
+    }
+
+  }
+
+  /*
+
+  バーコード未検出ならOCR
+
+  */
+
+  if(!detected){
+
+    await runOCR();
 
   }
 
@@ -490,7 +788,7 @@ async function scanLoop(){
 
       scanLoop,
 
-      1000
+      900
 
     );
 
@@ -500,59 +798,281 @@ async function scanLoop(){
 
 /* =========================
 
-   読取文字整形
+   OCR
+
+========================= */
+
+async function runOCR(){
+
+  const width =
+
+    video.videoWidth;
+
+  const height =
+
+    video.videoHeight;
+
+  if(!width || !height){
+
+    return;
+
+  }
+
+  /*
+
+  画面中央だけOCRする
+
+  */
+
+  const cropX =
+
+    width * 0.08;
+
+  const cropY =
+
+    height * 0.35;
+
+  const cropW =
+
+    width * 0.84;
+
+  const cropH =
+
+    height * 0.30;
+
+  canvas.width =
+
+    cropW;
+
+  canvas.height =
+
+    cropH;
+
+  const ctx =
+
+    canvas.getContext(
+
+      "2d",
+
+      {
+
+        willReadFrequently:true
+
+      }
+
+    );
+
+  ctx.drawImage(
+
+    video,
+
+    cropX,
+
+    cropY,
+
+    cropW,
+
+    cropH,
+
+    0,
+
+    0,
+
+    cropW,
+
+    cropH
+
+  );
+
+  try{
+
+    const result =
+
+      await Tesseract.recognize(
+
+        canvas,
+
+        "eng"
+
+      );
+
+    const raw =
+
+      result.data.text || "";
+
+    const normalized =
+
+      normalizeText(raw);
+
+    /*
+
+    OCR結果にT629Cが
+
+    含まれているか確認
+
+    */
+
+    if(
+
+      normalized.includes(
+
+        TARGET
+
+      )
+
+    ){
+
+      handleDetected(
+
+        TARGET,
+
+        "文字OCR"
+
+      );
+
+      return;
+
+    }
+
+    /*
+
+    T629C以外でも
+
+    読めた文字は表示する
+
+    */
+
+    if(normalized){
+
+      currentTextEl.textContent =
+
+        normalized;
+
+      methodEl.textContent =
+
+        "文字OCR";
+
+      statusEl.textContent =
+
+        "文字を検出";
+
+    }
+
+  }
+
+  catch(error){
+
+    console.error(
+
+      "OCR error",
+
+      error
+
+    );
+
+  }
+
+}
+
+/* =========================
+
+   文字整形
 
 ========================= */
 
 function normalizeText(text){
 
-  return text
+  return String(text)
 
-  .toUpperCase()
+    .toUpperCase()
 
-  .replace(
+    .replace(
 
-    /[^A-Z0-9\-]/g,
+      /\s+/g,
 
-    ""
+      ""
 
-  )
+    )
 
-  .trim();
+    .replace(
+
+      /[^A-Z0-9\-]/g,
+
+      ""
+
+    );
 
 }
 
 /* =========================
 
-   2回一致判定
+   検出処理
 
 ========================= */
 
-function checkSameText(text){
+function handleDetected(
 
-  if(text === previousText){
+  value,
+
+  method
+
+){
+
+  currentTextEl.textContent =
+
+    value;
+
+  methodEl.textContent =
+
+    method;
+
+  if(
+
+    value === previousValue &&
+
+    method === previousMethod
+
+  ){
 
     sameCount++;
 
-  }else{
+  }
 
-    previousText = text;
+  else{
+
+    previousValue =
+
+      value;
+
+    previousMethod =
+
+      method;
 
     sameCount = 1;
 
   }
 
-  statusText.textContent =
+  progressEl.textContent =
 
-  "認識確認 " +
+    "確認 " +
 
-  sameCount +
+    sameCount +
 
-  " / 2";
+    " / 2";
+
+  statusEl.textContent =
+
+    "認識確認中";
 
   if(sameCount >= 2){
 
-    confirmData(text);
+    confirmData(
+
+      value,
+
+      method
+
+    );
 
   }
 
@@ -560,47 +1080,63 @@ function checkSameText(text){
 
 /* =========================
 
-   データ確定
+   確定
 
 ========================= */
 
-function confirmData(text){
+function confirmData(
+
+  value,
+
+  method
+
+){
 
   confirmedData = {
 
-    value:text,
+    value:value,
+
+    method:method,
 
     time:
 
-    new Date()
+      new Date()
 
-    .toLocaleString()
+      .toLocaleString(
+
+        "ja-JP"
+
+      )
 
   };
 
-  confirmedText.textContent =
+  confirmedTextEl.textContent =
 
-  confirmedData.value;
+    confirmedData.value;
 
-  statusText.textContent =
+  confirmedMethodEl.textContent =
 
-  "✅ 読み取り完了";
+    confirmedData.method +
+
+    " / " +
+
+    confirmedData.time;
+
+  statusEl.textContent =
+
+    "✅ 読み取り完了";
+
+  progressEl.textContent =
+
+    "確認 2 / 2";
 
   scanning = false;
-
-  /*
-
-  カメラは止めず、
-
-  映像だけそのまま残す。
-
-  */
 
 }
 
 /* =========================
 
-   アプリ内保持データ確認用
+   保持データ取得用
 
 ========================= */
 

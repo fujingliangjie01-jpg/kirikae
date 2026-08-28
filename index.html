@@ -3,521 +3,338 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>切替確認</title>
+<title>家計簿</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#0b0b0c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+:root{
+  --bg:#090b10;--card:#151923;--card2:#1c2230;--text:#fff;--muted:#9aa4b2;
+  --blue:#2487ff;--green:#22c55e;--orange:#ff8a1f;--purple:#9b6cff;
+  --red:#ff4d5e;--yellow:#f4c542;--line:#2a3242
+}
+body{margin:0;background:linear-gradient(180deg,#090b10,#101521);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
 .hidden{display:none!important}
 .screen{min-height:100vh}
-.wrap{max-width:720px;margin:auto;padding:18px}
-h1{text-align:center;margin:8px 0 20px;font-size:30px}
-.card{background:#18181b;border-radius:16px;padding:16px;margin-bottom:14px}
-.label{color:#aaa;font-size:14px;margin-bottom:7px}
-.model{font-size:32px;font-weight:900;letter-spacing:2px}
-.main-btn,.retry-btn,.cancel-btn{width:100%;min-height:58px;border:0;border-radius:14px;color:#fff;font-size:18px;font-weight:900}
-.main-btn,.retry-btn{background:#0a84ff}
-.cancel-btn{background:#2c2c2e;margin-top:10px}
-.start-box{min-height:100vh;display:flex;flex-direction:column;justify-content:center;max-width:620px;margin:auto;padding:22px}
-.start-title{text-align:center;font-size:36px;font-weight:900;margin-bottom:12px}
-.start-sub{text-align:center;color:#aaa;margin-bottom:28px}
-.inspect-title{margin:24px 0 10px;font-size:22px;font-weight:900}
-.item{display:flex;align-items:center;gap:12px;min-height:62px;padding:12px 14px;margin-bottom:10px;background:#18181b;border:1px solid #303034;border-radius:14px}
-.num{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#2c2c2e;font-weight:900;flex:none}
-.name{flex:1;min-width:0;font-size:18px;font-weight:800}
-.status{color:#aaa;font-size:14px;font-weight:800;white-space:nowrap}
-.small-btn{border:0;border-radius:11px;background:#0a84ff;color:#fff;min-height:44px;padding:0 12px;font-size:15px;font-weight:850}
-.done{border-color:#30d158}.done .status{color:#30d158}
-#cameraScreen{background:#000}
-.camera-wrap{max-width:760px;margin:auto;padding:14px}
-.camera-title{text-align:center;font-size:24px;font-weight:900;padding:8px 0 14px}
-.camera-box{position:relative;overflow:hidden;border-radius:16px;background:#111}
-video{display:block;width:100%;min-height:300px;background:#000}
-.scan-frame{position:absolute;left:10%;right:10%;top:56%;height:19%;border:3px solid #0a84ff;border-radius:14px;pointer-events:none}
-.scan-frame.code{top:25%;height:50%}
-.guide{position:absolute;top:15px;left:10px;right:10px;text-align:center;font-weight:900;text-shadow:0 1px 5px #000}
-.complete{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;background:rgba(0,0,0,.70);padding:24px}
-.complete.show{display:flex}
-.complete-mark{font-size:64px}
-.complete-title{font-size:40px;font-weight:900}
-.complete-value{margin-top:10px;font-size:44px;font-weight:900;color:#30d158;letter-spacing:2px;word-break:break-all}
-.camera-status{margin-top:14px;padding:14px;border-radius:13px;background:#18181b}
-#cameraStatus{font-size:20px;font-weight:850}
-#candidate{margin-top:8px;font-size:23px;font-weight:900;word-break:break-all}
-.error{color:#ff453a}
-.help{margin-top:8px;color:#aaa;font-size:13px;line-height:1.5}
+.wrap{max-width:760px;margin:auto;padding:24px 18px 42px}
+.hero{padding:34px 4px 24px;text-align:center}
+.hero h1{font-size:38px;margin:0 0 8px;font-weight:950;letter-spacing:.5px}
+.hero p{margin:0;color:var(--muted);font-size:17px}
+.home-actions{display:grid;gap:26px;margin-top:30px}
+.big-choice{
+  width:100%;min-height:154px;border:0;border-radius:28px;padding:24px;
+  color:#fff;text-align:left;display:flex;align-items:center;gap:20px;
+  box-shadow:0 14px 35px rgba(0,0,0,.24);transition:.15s transform
+}
+.big-choice:active{transform:scale(.985)}
+.big-choice.book{background:linear-gradient(135deg,#1677ff,#21b66f)}
+.big-choice.search{background:linear-gradient(135deg,#ff7a18,#ffb11b)}
+.choice-icon{font-size:52px;flex:none}
+.choice-title{font-size:31px;font-weight:950}
+.choice-sub{font-size:15px;margin-top:7px;opacity:.9;line-height:1.5}
+.topbar{display:flex;align-items:center;gap:14px;margin:8px 0 24px}
+.back{
+  min-width:52px;min-height:52px;border:1px solid var(--line);border-radius:16px;
+  background:#171c27;color:#fff;font-size:25px;font-weight:900
+}
+.page-title{font-size:29px;font-weight:950}
+.section-title{font-size:22px;font-weight:950;margin:26px 2px 14px}
+.menu-grid{display:grid;gap:18px}
+.menu-btn{
+  width:100%;min-height:92px;border:1px solid var(--line);border-radius:22px;
+  padding:18px 20px;color:#fff;background:var(--card);display:flex;align-items:center;gap:17px;text-align:left
+}
+.menu-btn .ico{font-size:36px}.menu-btn b{display:block;font-size:21px}.menu-btn span{display:block;color:#b7c0ce;margin-top:5px;font-size:14px}
+.menu-btn.receipt{border-color:#2c7fff;background:linear-gradient(135deg,#132b55,#17233a)}
+.menu-btn.stats{border-color:#31b96b;background:linear-gradient(135deg,#123524,#17251e)}
+.menu-btn.history{border-color:#8b6cff;background:linear-gradient(135deg,#2a2143,#211d30)}
+.period{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+.period button{min-height:52px;border:1px solid var(--line);border-radius:15px;background:#171c27;color:#cbd3df;font-weight:900}
+.period button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:20px}
+.summary-label{color:var(--muted);font-size:14px}.summary-total{font-size:38px;font-weight:950;margin-top:4px}
+.category-list{display:grid;gap:13px;margin-top:16px}
+.category{
+  border:1px solid var(--line);border-radius:18px;padding:16px;background:var(--card2)
+}
+.category-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.category-name{font-size:19px;font-weight:900}.category-val{text-align:right;font-weight:900}
+.bar{height:12px;background:#2b3342;border-radius:999px;margin-top:12px;overflow:hidden}
+.bar>div{height:100%;border-radius:999px}
+.searchbox{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px}
+.searchbox label{display:block;font-size:17px;font-weight:900;margin-bottom:10px}
+.search-row{display:grid;grid-template-columns:1fr;gap:14px}
+.search-input{width:100%;min-height:60px;border:2px solid #3b465b;border-radius:17px;background:#0d1119;color:#fff;padding:0 17px;font-size:20px;outline:none}
+.search-input:focus{border-color:var(--orange)}
+.primary{
+  width:100%;min-height:60px;border:0;border-radius:17px;background:var(--orange);color:#fff;font-size:19px;font-weight:950
+}
+.result{margin-top:22px;display:grid;gap:15px}
+.result-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:19px}
+.result-name{font-size:25px;font-weight:950}.badge{display:inline-block;margin-top:8px;padding:6px 10px;border-radius:999px;background:#213c2a;color:#72e79b;font-size:13px;font-weight:900}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:17px}
+.info{background:#0f141d;border-radius:15px;padding:13px}.info small{display:block;color:var(--muted);margin-bottom:5px}.info b{font-size:17px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+.camera-box{position:relative;overflow:hidden;border-radius:22px;background:#050505;border:1px solid var(--line)}
+video{display:block;width:100%;min-height:330px;background:#000}
+.scan-frame{position:absolute;left:6%;right:6%;top:8%;bottom:8%;border:3px solid #32a4ff;border-radius:18px;pointer-events:none}
+.guide{position:absolute;left:10px;right:10px;top:18px;text-align:center;font-weight:950;text-shadow:0 2px 6px #000}
+.camera-status{margin:16px 0;padding:15px;background:var(--card);border-radius:16px;font-size:18px;font-weight:850}
+.action-stack{display:grid;gap:16px;margin-top:18px}
+.secondary,.danger{width:100%;min-height:58px;border-radius:16px;font-size:18px;font-weight:900}
+.secondary{background:#252c39;color:#fff;border:1px solid #394355}.danger{background:#421a20;color:#ff8d99;border:1px solid #70313a}
+.form-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin-bottom:18px}
+.field{margin-bottom:16px}.field:last-child{margin-bottom:0}.field label{display:block;font-weight:900;margin-bottom:8px}
+.field input,.field select{width:100%;min-height:54px;border:1px solid #3b465b;border-radius:14px;background:#0e131c;color:#fff;padding:0 14px;font-size:17px}
+.item-row{background:#111722;border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:13px}
+.item-grid{display:grid;grid-template-columns:1fr 105px;gap:10px}
+.item-grid input{width:100%;min-height:50px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 12px;font-size:16px}
+.item-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.item-tools select{min-height:48px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 9px}
+.remove{margin-top:12px;width:100%;min-height:48px;border:1px solid #70313a;border-radius:13px;background:#36161b;color:#ff8d99;font-weight:900}
+.note{color:var(--muted);font-size:13px;line-height:1.55;margin-top:10px}
 canvas{display:none}
+@media(max-width:390px){
+  .wrap{padding-left:15px;padding-right:15px}.hero h1{font-size:34px}.big-choice{min-height:142px}.choice-title{font-size:27px}
+  .info-grid{grid-template-columns:1fr}.item-grid{grid-template-columns:1fr 90px}
+}
 </style>
 </head>
 <body>
-
-<section id="startScreen" class="screen">
-  <div class="start-box">
-    <div class="start-title">切替確認</div>
-    <div class="start-sub">機種情報はまだ読み込まれていません</div>
-    <button id="startModelCamera" class="main-btn">📷 機種確認カメラ</button>
-  </div>
-</section>
-
-<section id="cameraScreen" class="screen hidden">
-  <div class="camera-wrap">
-    <div id="cameraTitle" class="camera-title">機種読み込み</div>
-
-    <div class="camera-box">
-      <video id="video" autoplay playsinline muted></video>
-      <div id="scanFrame" class="scan-frame"></div>
-      <div id="guide" class="guide">青枠に機種名を入れてください</div>
-
-      <div id="completeOverlay" class="complete">
-        <div class="complete-mark">✅</div>
-        <div class="complete-title">読み込みOK</div>
-        <div id="completeValue" class="complete-value"></div>
-      </div>
-    </div>
-
-    <div class="camera-status">
-      <div id="cameraStatus">待機中</div>
-      <div id="candidate">-</div>
-      <div id="helpText" class="help"></div>
-    </div>
-
-    <button id="retryCamera" class="retry-btn hidden">カメラを再起動</button>
-    <button id="cancelCamera" class="cancel-btn">戻る</button>
-  </div>
-</section>
-
-<section id="inspectionScreen" class="screen hidden">
+<section id="homeScreen" class="screen">
   <div class="wrap">
-    <h1>切替確認</h1>
-
-    <div class="card">
-      <div class="label">読み込み機種</div>
-      <div id="modelValue" class="model">---</div>
-    </div>
-
-    <button id="rescanModel" class="main-btn">📷 機種を読み直す</button>
-
-    <div class="inspect-title">点検</div>
-    <div class="item"><div class="num">1</div><div class="name">Fドレン</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">2</div><div class="name">Rドレン</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">3</div><div class="name">Sパイプ</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">4</div><div class="name">HGパイプ（T6/T7）</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">5</div><div class="name">ガス抜きシート</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">6</div><div class="name">CPケース</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">7</div><div class="name">シキリ板確認</div><div class="status">未点検</div></div>
-    <div class="item"><div class="num">8</div><div class="name">シキリマーキング</div><div class="status">未点検</div></div>
-
-    <div id="codeItem" class="item">
-      <div class="num">9</div>
-      <div class="name">コード確認</div>
-      <button id="scanCode" class="small-btn">📷 QR確認</button>
-      <div id="codeStatus" class="status">未確認</div>
+    <div class="hero"><h1>わが家のお金</h1><p>家計と「これ買ったっけ？」をひとつに</p></div>
+    <div class="home-actions">
+      <button id="openBook" class="big-choice book"><div class="choice-icon">💰</div><div><div class="choice-title">家計簿</div><div class="choice-sub">レシート登録・支出グラフ・購入履歴</div></div></button>
+      <button id="openSearch" class="big-choice search"><div class="choice-icon">🔍</div><div><div class="choice-title">購入検索</div><div class="choice-sub">いつ・どこで・いくらで買ったかを検索</div></div></button>
     </div>
   </div>
 </section>
+
+<section id="bookScreen" class="screen hidden"><div class="wrap">
+  <div class="topbar"><button class="back" data-home>←</button><div class="page-title">家計簿</div></div>
+  <div class="menu-grid">
+    <button id="openReceipt" class="menu-btn receipt"><div class="ico">📷</div><div><b>レシートを登録</b><span>撮影して読み取り。読めない所は手入力できます</span></div></button>
+    <button id="openStats" class="menu-btn stats"><div class="ico">📊</div><div><b>家計分析</b><span>月・半年・年間で支出を確認</span></div></button>
+    <button id="openHistory" class="menu-btn history"><div class="ico">🧾</div><div><b>購入履歴</b><span>登録した買い物を新しい順に確認</span></div></button>
+  </div>
+</div></section>
+
+<section id="statsScreen" class="screen hidden"><div class="wrap">
+  <div class="topbar"><button class="back" data-book>←</button><div class="page-title">家計分析</div></div>
+  <div class="period"><button data-period="month" class="active">月</button><button data-period="half">半年</button><button data-period="year">年間</button></div>
+  <div class="summary"><div class="summary-label">対象期間の支出</div><div id="totalSpend" class="summary-total">¥0</div><div id="categoryList" class="category-list"></div></div>
+  <div class="note">カテゴリーを押すと、牛乳・コーヒー・漂白剤などの詳細分類を表示する機能へ拡張できる構造です。</div>
+</div></section>
+
+<section id="searchScreen" class="screen hidden"><div class="wrap">
+  <div class="topbar"><button class="back" data-home>←</button><div class="page-title">購入検索</div></div>
+  <div class="searchbox"><label for="searchInput">これ買ったっけ？</label><div class="search-row"><input id="searchInput" class="search-input" placeholder="例：牛乳、コーヒー、漂白剤"><button id="searchBtn" class="primary">🔍 購入履歴を検索</button></div></div>
+  <div id="searchResults" class="result"><div class="empty">商品名を入力すると、最終購入日・店舗・価格などを表示します。</div></div>
+</div></section>
+
+<section id="historyScreen" class="screen hidden"><div class="wrap">
+  <div class="topbar"><button class="back" data-book>←</button><div class="page-title">購入履歴</div></div>
+  <div id="historyList" class="result"></div>
+</div></section>
+
+<section id="cameraScreen" class="screen hidden"><div class="wrap">
+  <div class="topbar"><button id="cancelCamera" class="back">←</button><div class="page-title">レシート撮影</div></div>
+  <div class="camera-box"><video id="video" autoplay playsinline muted></video><div class="scan-frame"></div><div class="guide">レシート全体をできるだけ枠内へ</div></div>
+  <div id="cameraStatus" class="camera-status">カメラ待機中</div>
+  <div class="action-stack"><button id="captureReceipt" class="primary">📸 このレシートを読み取る</button><button id="manualEntry" class="secondary">⌨️ 読み取れないので手入力</button></div>
+</div></section>
+
+<section id="editScreen" class="screen hidden"><div class="wrap">
+  <div class="topbar"><button id="backFromEdit" class="back">←</button><div class="page-title">内容確認・修正</div></div>
+  <div class="form-card">
+    <div class="field"><label>店舗名</label><input id="storeInput" placeholder="例：○○スーパー"></div>
+    <div class="field"><label>購入日</label><input id="dateInput" type="date"></div>
+  </div>
+  <div class="section-title">購入商品</div>
+  <div id="itemsEditor"></div>
+  <div class="action-stack"><button id="addItem" class="secondary">＋ 商品を手入力で追加</button><button id="saveReceipt" class="primary">✅ 家計簿に保存</button><button id="discardReceipt" class="danger">この入力を破棄</button></div>
+  <div class="note">OCR結果が間違っていても、商品名・価格・数量・分類をすべて手入力で修正できます。</div>
+</div></section>
 
 <canvas id="canvas"></canvas>
 
 <script>
-const MODEL_KEY="kirikae_model_confirmed_v8";
-const CODE_KEY="kirikae_code_confirmed_v8";
-const MODEL_PATTERN=/[A-Z][0-9]{3}[A-Z]{1,3}/g;
+const DATA_KEY="kakeibo_purchases_v1";
+const screens=[homeScreen,bookScreen,statsScreen,searchScreen,historyScreen,cameraScreen,editScreen];
+const CATEGORY_MAP={
+  "飲み物":["牛乳","コーヒー","お茶","ジュース","水","飲料"],
+  "生活品":["漂白剤","リンス","コンディショナー","シャンプー","洗剤","ティッシュ","トイレットペーパー"],
+  "食品":["米","パン","卵","肉","魚","野菜","豆腐","納豆"],
+  "お菓子":["チョコ","菓子","アイス","クッキー"],
+  "外食":["外食"]
+};
+let stream=null,ocrWorker=null,ocrReadyPromise=null,currentItems=[];
 
-const startScreen=document.getElementById("startScreen");
-const cameraScreen=document.getElementById("cameraScreen");
-const inspectionScreen=document.getElementById("inspectionScreen");
-const startModelCamera=document.getElementById("startModelCamera");
-const rescanModel=document.getElementById("rescanModel");
-const scanCode=document.getElementById("scanCode");
-const cancelCamera=document.getElementById("cancelCamera");
-const retryCamera=document.getElementById("retryCamera");
-const modelValue=document.getElementById("modelValue");
-const codeItem=document.getElementById("codeItem");
-const codeStatus=document.getElementById("codeStatus");
-const video=document.getElementById("video");
-const canvas=document.getElementById("canvas");
-const cameraTitle=document.getElementById("cameraTitle");
-const scanFrame=document.getElementById("scanFrame");
-const guide=document.getElementById("guide");
-const completeOverlay=document.getElementById("completeOverlay");
-const completeValue=document.getElementById("completeValue");
-const cameraStatus=document.getElementById("cameraStatus");
-const candidate=document.getElementById("candidate");
-const helpText=document.getElementById("helpText");
+function show(screen){screens.forEach(s=>s.classList.add("hidden"));screen.classList.remove("hidden");window.scrollTo(0,0)}
+document.querySelectorAll("[data-home]").forEach(b=>b.addEventListener("click",()=>{stopCamera();show(homeScreen)}));
+document.querySelectorAll("[data-book]").forEach(b=>b.addEventListener("click",()=>show(bookScreen)));
+openBook.addEventListener("click",()=>show(bookScreen));
+openSearch.addEventListener("click",()=>show(searchScreen));
+openStats.addEventListener("click",()=>{show(statsScreen);renderStats("month")});
+openHistory.addEventListener("click",()=>{show(historyScreen);renderHistory()});
+openReceipt.addEventListener("click",openCamera);
+cancelCamera.addEventListener("click",()=>{stopCamera();show(bookScreen)});
+manualEntry.addEventListener("click",()=>{stopCamera();openEditor([])});
+backFromEdit.addEventListener("click",()=>show(bookScreen));
+discardReceipt.addEventListener("click",()=>{currentItems=[];show(bookScreen)});
 
-let currentMode="model";
-let stream=null;
-let scanning=false;
-let busy=false;
-let cameraStarting=false;
-let previousValue="";
-let sameCount=0;
-let barcodeDetector=null;
-let ocrWorker=null;
-let ocrReadyPromise=null;
-let scanTimer=null;
+function loadData(){try{return JSON.parse(localStorage.getItem(DATA_KEY)||"[]")}catch(e){return[]}}
+function saveData(d){localStorage.setItem(DATA_KEY,JSON.stringify(d))}
+function yen(n){return "¥"+Math.round(Number(n)||0).toLocaleString("ja-JP")}
+function todayText(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 
-function readJSON(key){
+function classify(name){
+  const s=String(name||"").toLowerCase();
+  for(const [cat,words] of Object.entries(CATEGORY_MAP)){
+    for(const w of words){if(s.includes(w.toLowerCase())) return {category:cat,group:w==="飲料"?name:w}}
+  }
+  return {category:"その他",group:name||"未分類"};
+}
+
+async function openCamera(){
+  show(cameraScreen);cameraStatus.textContent="カメラ起動中…";
   try{
-    const raw=localStorage.getItem(key);
-    return raw?JSON.parse(raw):null;
-  }catch(e){return null}
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    video.srcObject=stream;await video.play();cameraStatus.textContent="レシートを枠内に入れてください";
+  }catch(e){cameraStatus.textContent="カメラを起動できません。手入力を利用してください。"}
 }
-
-function showOnly(screen){
-  startScreen.classList.add("hidden");
-  cameraScreen.classList.add("hidden");
-  inspectionScreen.classList.add("hidden");
-  screen.classList.remove("hidden");
-}
-
-function showInspection(){
-  stopCamera();
-  const model=readJSON(MODEL_KEY);
-  if(!model||!model.value){
-    showOnly(startScreen);
-    return;
-  }
-  modelValue.textContent=model.value;
-
-  const code=readJSON(CODE_KEY);
-  if(code&&code.value){
-    codeStatus.textContent="✅ 完了";
-    codeItem.classList.add("done");
-  }else{
-    codeStatus.textContent="未確認";
-    codeItem.classList.remove("done");
-  }
-  showOnly(inspectionScreen);
-}
-
-(function init(){
-  const model=readJSON(MODEL_KEY);
-  if(model&&model.value) showInspection();
-  else showOnly(startScreen);
-})();
-
-startModelCamera.addEventListener("click",()=>openCamera("model"));
-rescanModel.addEventListener("click",()=>openCamera("model"));
-scanCode.addEventListener("click",()=>openCamera("code"));
-retryCamera.addEventListener("click",()=>openCamera(currentMode));
-
-cancelCamera.addEventListener("click",()=>{
-  stopCamera();
-  if(readJSON(MODEL_KEY)) showInspection();
-  else showOnly(startScreen);
-});
-
-async function openCamera(mode){
-  /* 二重起動を完全防止 */
-  if(cameraStarting) return;
-  cameraStarting=true;
-
-  stopCamera();
-  currentMode=mode;
-  previousValue="";
-  sameCount=0;
-  candidate.textContent="-";
-  helpText.textContent="";
-  retryCamera.classList.add("hidden");
-  completeOverlay.classList.remove("show");
-
-  if(mode==="code"){
-    cameraTitle.textContent="コード確認";
-    guide.textContent="QRコード全体を枠内に入れてください";
-    scanFrame.classList.add("code");
-  }else{
-    cameraTitle.textContent="機種読み込み";
-    guide.textContent="青枠に機種名を入れてください";
-    scanFrame.classList.remove("code");
-  }
-
-  showOnly(cameraScreen);
-  cameraStatus.classList.remove("error");
-  cameraStatus.textContent="カメラ起動中…";
-
-  try{
-    if(!window.isSecureContext){
-      throw new Error("NOT_SECURE");
-    }
-
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      throw new Error("NO_GETUSERMEDIA");
-    }
-
-    /* まず最も互換性の高い設定で1回だけ起動 */
-    stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:"environment"},
-      audio:false
-    });
-
-    video.srcObject=stream;
-    await video.play();
-
-    await prepareBarcode();
-
-    if(mode==="model"){
-      prepareOCR().catch(()=>{});
-    }
-
-    scanning=true;
-    cameraStatus.textContent="🔍 読み取り中…";
-    scanTimer=setTimeout(scanLoop,300);
-
-  }catch(e){
-    console.error(e);
-    stopCamera();
-    cameraStatus.classList.add("error");
-
-    if(e && e.name==="NotAllowedError"){
-      cameraStatus.textContent="カメラの使用が許可されていません";
-      helpText.textContent="Safariのサイト設定で「カメラ」を許可してから「カメラを再起動」を押してください。";
-    }else if(e && e.name==="NotFoundError"){
-      cameraStatus.textContent="使用できるカメラが見つかりません";
-    }else if(String(e && e.message)==="NOT_SECURE"){
-      cameraStatus.textContent="HTTPSではないためカメラを起動できません";
-    }else if(String(e && e.message)==="NO_GETUSERMEDIA"){
-      cameraStatus.textContent="このブラウザではカメラ起動に対応していません";
-      helpText.textContent="Safari本体でGitHub Pagesを開いてください。";
-    }else{
-      cameraStatus.textContent="カメラを起動できません";
-      helpText.textContent="Safari本体で開き直すか、カメラ権限を確認してください。";
-    }
-
-    retryCamera.classList.remove("hidden");
-  }finally{
-    cameraStarting=false;
-  }
-}
-
-function stopCamera(){
-  scanning=false;
-  busy=false;
-
-  if(scanTimer){
-    clearTimeout(scanTimer);
-    scanTimer=null;
-  }
-
-  if(stream){
-    stream.getTracks().forEach(t=>t.stop());
-    stream=null;
-  }
-
-  video.srcObject=null;
-}
-
+function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}video.srcObject=null}
 function prepareOCR(){
   if(ocrReadyPromise)return ocrReadyPromise;
   ocrReadyPromise=(async()=>{
-    ocrWorker=await Tesseract.createWorker("eng");
-    await ocrWorker.setParameters({
-      tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-      tessedit_pageseg_mode:"7",
-      preserve_interword_spaces:"0"
-    });
+    ocrWorker=await Tesseract.createWorker("jpn+eng");
     return ocrWorker;
   })();
   return ocrReadyPromise;
 }
-
-async function prepareBarcode(){
-  barcodeDetector=null;
-  if(!("BarcodeDetector" in window))return;
+captureReceipt.addEventListener("click",async()=>{
+  if(!video.videoWidth){cameraStatus.textContent="カメラ映像を取得できません";return}
+  captureReceipt.disabled=true;cameraStatus.textContent="🔍 レシートを解析中…";
   try{
-    const supported=await BarcodeDetector.getSupportedFormats();
-    const preferred=currentMode==="code"
-      ?["qr_code","data_matrix","code_128","code_39","code_93"]
-      :["code_128","code_39","code_93","qr_code","data_matrix"];
-    const formats=preferred.filter(f=>supported.includes(f));
-    barcodeDetector=new BarcodeDetector(formats.length?{formats}:undefined);
-  }catch(e){
-    barcodeDetector=null;
-  }
-}
-
-function normalizeText(text){
-  return String(text).toUpperCase().replace(/\s+/g,"").replace(/[^A-Z0-9]/g,"");
-}
-
-function extractModel(text){
-  const matches=normalizeText(text).match(MODEL_PATTERN);
-  if(!matches||!matches.length)return null;
-  matches.sort((a,b)=>b.length-a.length);
-  return matches[0];
-}
-
-async function scanLoop(){
-  if(!scanning||busy)return;
-
-  if(video.readyState<2){
-    scanTimer=setTimeout(scanLoop,300);
-    return;
-  }
-
-  busy=true;
-  try{
-    if(currentMode==="code"){
-      await readCode();
-    }else{
-      const hit=await readModelBarcode();
-      if(!hit&&scanning)await readModelOCR();
-    }
-  }catch(e){
-    console.error(e);
-  }finally{
-    busy=false;
-    if(scanning)scanTimer=setTimeout(scanLoop,currentMode==="code"?120:300);
-  }
-}
-
-async function readCode(){
-  /*
-    iPhone対策：
-    BarcodeDetectorに依存せず、まずjsQRで映像フレームを直接解析。
-    同じQR内容を2回読めた時だけ確定する。
-  */
-  const w=video.videoWidth;
-  const h=video.videoHeight;
-
-  if(!w||!h)return;
-
-  const maxW=900;
-  const scale=Math.min(1,maxW/w);
-  const outW=Math.max(1,Math.round(w*scale));
-  const outH=Math.max(1,Math.round(h*scale));
-
-  canvas.width=outW;
-  canvas.height=outH;
-
-  const ctx=canvas.getContext("2d",{willReadFrequently:true});
-  ctx.drawImage(video,0,0,w,h,0,0,outW,outH);
-
-  try{
-    if(typeof jsQR==="function"){
-      const image=ctx.getImageData(0,0,outW,outH);
-      const qr=jsQR(image.data,outW,outH,{
-        inversionAttempts:"attemptBoth"
-      });
-
-      if(qr && qr.data){
-        const value=String(qr.data).trim();
-
-        if(value){
-          candidate.textContent=value;
-          handleDetected(value,"QR");
-          return;
-        }
-      }
-    }
-  }catch(e){
-    console.error("jsQR",e);
-  }
-
-  /*
-    jsQRで見つからなかった場合だけ
-    BarcodeDetectorも使える端末では補助的に確認。
-  */
-  if(barcodeDetector){
-    try{
-      const results=await barcodeDetector.detect(video);
-
-      for(const r of results){
-        const value=String(r.rawValue||"").trim();
-
-        if(!value)continue;
-
-        candidate.textContent=value;
-        handleDetected(value,"QR/バーコード");
-        return;
-      }
-    }catch(e){}
-  }
-
-  cameraStatus.textContent="🔍 QRコードを読み取り中…";
-}
-async function readModelBarcode(){
-  if(!barcodeDetector)return false;
-  try{
-    const results=await barcodeDetector.detect(video);
-    for(const r of results){
-      const model=extractModel(r.rawValue||"");
-      if(model){
-        candidate.textContent=model;
-        handleDetected(model,"バーコード");
-        return true;
-      }
-    }
-  }catch(e){}
-  return false;
-}
-
-async function readModelOCR(){
-  const w=video.videoWidth,h=video.videoHeight;
-  if(!w||!h)return;
-
-  const x=w*.10,y=h*.56,cw=w*.80,ch=h*.19;
-  const scale=Math.min(1,1200/cw);
-
-  canvas.width=Math.max(1,Math.round(cw*scale));
-  canvas.height=Math.max(1,Math.round(ch*scale));
-
-  const ctx=canvas.getContext("2d",{willReadFrequently:true});
-  ctx.drawImage(video,x,y,cw,ch,0,0,canvas.width,canvas.height);
-
-  try{
+    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+    canvas.getContext("2d").drawImage(video,0,0);
     const worker=await prepareOCR();
     const result=await worker.recognize(canvas);
-    const model=extractModel(result.data.text||"");
+    const parsed=parseReceipt(result.data.text||"");
+    stopCamera();openEditor(parsed);
+  }catch(e){
+    cameraStatus.textContent="読み取りに失敗しました。手入力で登録できます。";
+  }finally{captureReceipt.disabled=false}
+});
 
-    if(model){
-      candidate.textContent=model;
-      handleDetected(model,"文字OCR");
+function parseReceipt(text){
+  const lines=String(text).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const out=[];
+  for(const line of lines){
+    const m=line.match(/(.+?)\s+[¥￥]?\s*([0-9]{2,6})\s*$/);
+    if(!m)continue;
+    const name=m[1].replace(/[¥￥*#]/g,"").trim();
+    const price=Number(m[2]);
+    if(!name||!price||/合計|小計|現金|お預|お釣|消費税|税込|税額/.test(name))continue;
+    const c=classify(name);
+    out.push({name,price,qty:1,category:c.category,group:c.group});
+    if(out.length>=40)break;
+  }
+  return out;
+}
+
+function openEditor(items){
+  currentItems=items.length?items:[{name:"",price:"",qty:1,category:"その他",group:""}];
+  storeInput.value="";dateInput.value=todayText();renderEditor();show(editScreen)
+}
+function renderEditor(){
+  itemsEditor.innerHTML="";
+  currentItems.forEach((it,i)=>{
+    const div=document.createElement("div");div.className="item-row";
+    div.innerHTML=`<div class="item-grid"><input data-f="name" data-i="${i}" value="${escapeHtml(it.name)}" placeholder="商品名"><input data-f="price" data-i="${i}" type="number" min="0" value="${it.price}" placeholder="価格"></div>
+    <div class="item-tools"><select data-f="category" data-i="${i}">${["飲み物","食品","生活品","お菓子","外食","その他"].map(c=>`<option ${c===it.category?"selected":""}>${c}</option>`).join("")}</select><input data-f="qty" data-i="${i}" type="number" min="1" value="${it.qty||1}" aria-label="数量"></div>
+    <input style="width:100%;min-height:48px;margin-top:10px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 12px" data-f="group" data-i="${i}" value="${escapeHtml(it.group||"")}" placeholder="まとめ名 例：牛乳">
+    <button class="remove" data-remove="${i}">この商品を削除</button>`;
+    itemsEditor.appendChild(div);
+  });
+  itemsEditor.querySelectorAll("[data-f]").forEach(el=>el.addEventListener("input",e=>{
+    const i=Number(e.target.dataset.i),f=e.target.dataset.f;currentItems[i][f]=e.target.value;
+    if(f==="name"){
+      const c=classify(e.target.value);
+      currentItems[i].category=c.category;currentItems[i].group=c.group;
     }
-  }catch(e){}
+  }));
+  itemsEditor.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{
+    currentItems.splice(Number(b.dataset.remove),1);if(!currentItems.length)currentItems.push({name:"",price:"",qty:1,category:"その他",group:""});renderEditor()
+  }));
+}
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+addItem.addEventListener("click",()=>{currentItems.push({name:"",price:"",qty:1,category:"その他",group:""});renderEditor()});
+saveReceipt.addEventListener("click",()=>{
+  const store=storeInput.value.trim()||"店舗未入力",date=dateInput.value||todayText();
+  const items=currentItems.map(it=>({
+    name:String(it.name||"").trim(),price:Number(it.price)||0,qty:Math.max(1,Number(it.qty)||1),
+    category:it.category||"その他",group:String(it.group||it.name||"未分類").trim()
+  })).filter(it=>it.name&&it.price>0);
+  if(!items.length){alert("商品名と価格を1件以上入力してください");return}
+  const data=loadData();data.push({id:Date.now(),store,date,items});saveData(data);show(bookScreen)
+});
+
+function inPeriod(date,period){
+  const d=new Date(date+"T00:00:00"),now=new Date(),start=new Date(now.getFullYear(),now.getMonth(),1);
+  if(period==="half")start=new Date(now.getFullYear(),now.getMonth()-5,1);
+  if(period==="year")start=new Date(now.getFullYear(),0,1);
+  return d>=start&&d<=now
+}
+document.querySelectorAll("[data-period]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("[data-period]").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderStats(b.dataset.period)
+}));
+function renderStats(period){
+  const data=loadData().filter(r=>inPeriod(r.date,period)),sums={};
+  let total=0;
+  data.forEach(r=>r.items.forEach(it=>{const v=it.price*it.qty;total+=v;sums[it.category]=(sums[it.category]||0)+v}));
+  totalSpend.textContent=yen(total);categoryList.innerHTML="";
+  const colors={"飲み物":"#2997ff","食品":"#30d158","生活品":"#a06cff","お菓子":"#ffd60a","外食":"#ff453a","その他":"#8e8e93"};
+  Object.entries(sums).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{
+    const pct=total?val/total*100:0,div=document.createElement("div");div.className="category";
+    div.innerHTML=`<div class="category-head"><div class="category-name">${cat}</div><div class="category-val">${yen(val)}<br><small>${pct.toFixed(1)}%</small></div></div><div class="bar"><div style="width:${pct}%;background:${colors[cat]||colors["その他"]}"></div></div>`;
+    categoryList.appendChild(div)
+  });
+  if(!total)categoryList.innerHTML='<div class="empty">この期間のデータはまだありません。</div>'
 }
 
-function handleDetected(value,method){
-  if(value===previousValue)sameCount++;
-  else{
-    previousValue=value;
-    sameCount=1;
-  }
-
-  cameraStatus.textContent=`確認 ${Math.min(sameCount,2)} / 2`;
-
-  if(sameCount>=2){
-    confirmRead(value,method);
-  }
+searchBtn.addEventListener("click",runSearch);
+searchInput.addEventListener("keydown",e=>{if(e.key==="Enter")runSearch()});
+function runSearch(){
+  const q=searchInput.value.trim().toLowerCase();if(!q){searchResults.innerHTML='<div class="empty">商品名を入力してください。</div>';return}
+  const hits=[];
+  loadData().forEach(r=>r.items.forEach(it=>{
+    if([it.name,it.group,it.category].some(v=>String(v||"").toLowerCase().includes(q)))hits.push({...it,date:r.date,store:r.store})
+  }));
+  hits.sort((a,b)=>b.date.localeCompare(a.date));searchResults.innerHTML="";
+  if(!hits.length){searchResults.innerHTML='<div class="empty">購入履歴が見つかりませんでした。</div>';return}
+  const min=hits.reduce((a,b)=>a.price<=b.price?a:b);
+  const latest=hits[0];
+  const card=document.createElement("div");card.className="result-card";
+  card.innerHTML=`<div class="result-name">${escapeHtml(latest.group||latest.name)}</div><div class="badge">最終購入 ${escapeHtml(latest.date)}</div>
+  <div class="info-grid"><div class="info"><small>最後に買った店舗</small><b>${escapeHtml(latest.store)}</b></div><div class="info"><small>最後の価格</small><b>${yen(latest.price)}</b></div><div class="info"><small>最安値</small><b>${yen(min.price)}</b></div><div class="info"><small>最安値の店舗</small><b>${escapeHtml(min.store)}</b></div></div>`;
+  searchResults.appendChild(card);
+  hits.slice(0,20).forEach(h=>{
+    const d=document.createElement("div");d.className="result-card";
+    d.innerHTML=`<b>${escapeHtml(h.date)}　${escapeHtml(h.store)}</b><div style="margin-top:8px;color:#cbd3df">${escapeHtml(h.name)} ／ ${yen(h.price)} ／ ${h.qty}個</div>`;
+    searchResults.appendChild(d)
+  })
 }
-
-function confirmRead(value,method){
-  scanning=false;
-  if(scanTimer){
-    clearTimeout(scanTimer);
-    scanTimer=null;
-  }
-
-  const now=new Date();
-
-  localStorage.setItem(
-    currentMode==="code"?CODE_KEY:MODEL_KEY,
-    JSON.stringify({
-      value,
-      method,
-      timeISO:now.toISOString(),
-      timeText:now.toLocaleString("ja-JP")
-    })
-  );
-
-  completeValue.textContent=value;
-  completeOverlay.classList.add("show");
-  cameraStatus.textContent="✅ 読み込み完了";
-
-  if(navigator.vibrate)navigator.vibrate(120);
-
-  setTimeout(showInspection,1300);
+function renderHistory(){
+  const data=loadData().sort((a,b)=>b.date.localeCompare(a.date));historyList.innerHTML="";
+  if(!data.length){historyList.innerHTML='<div class="empty">購入履歴はまだありません。</div>';return}
+  data.forEach(r=>{
+    const total=r.items.reduce((s,it)=>s+it.price*it.qty,0),d=document.createElement("div");d.className="result-card";
+    d.innerHTML=`<div class="result-name">${escapeHtml(r.store)}</div><div class="badge">${escapeHtml(r.date)}</div><div style="margin-top:13px;font-size:21px;font-weight:900">${yen(total)}</div><div style="margin-top:9px;color:#b7c0ce">${r.items.slice(0,5).map(it=>escapeHtml(it.group||it.name)).join("・")}${r.items.length>5?" ほか":""}</div>`;
+    historyList.appendChild(d)
+  })
 }
 </script>
 </body>

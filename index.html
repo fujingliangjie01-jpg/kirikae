@@ -132,7 +132,7 @@ canvas{display:none}
 
 <section id="searchScreen" class="screen hidden"><div class="wrap">
   <div class="topbar"><button class="back" data-home>←</button><div class="page-title">購入検索</div></div>
-  <div class="searchbox"><label for="searchInput">これ買ったっけ？</label><div class="search-row"><input id="searchInput" class="search-input" placeholder="例：牛乳、コーヒー、漂白剤"><button id="searchBtn" class="primary">🔍 購入履歴を検索</button></div></div>
+  <div class="searchbox"><label for="searchInput">これ買ったっけ？</label><div class="search-row"><input id="searchInput" class="search-input" placeholder="例：牛乳、コーヒー、漂白剤（数字は無視）"><button id="searchBtn" class="primary">🔍 購入履歴を検索</button></div></div>
   <div id="searchResults" class="result"><div class="empty">商品名を入力すると、最終購入日・店舗・価格などを表示します。</div></div>
 </div></section>
 
@@ -199,6 +199,14 @@ function normalizeJan(v){return String(v||"").replace(/\D/g,"")}
 function normalizeOCRKey(v){
   return String(v||"").toLowerCase().replace(/\s+/g,"").replace(/[＊*#¥￥・･.,，。:：;；'"`~〜ー\-_/\\()[\]{}]/g,"").trim()
 }
+function normalizeProductWords(v){
+  return String(v||"")
+    .toLowerCase()
+    .replace(/[0-9０-９]/g,"")
+    .replace(/\s+/g,"")
+    .replace(/[＊*#¥￥・･.,，。:：;；'"`~〜ー\-_/\\()[\]{}]/g,"")
+    .trim();
+}
 function getLearnedProduct(jan,rawName){
   const dict=loadJSON(PRODUCT_DICT_KEY,{});
   const aliases=loadJSON(OCR_ALIAS_KEY,{});
@@ -232,7 +240,7 @@ function yen(n){return "¥"+Math.round(Number(n)||0).toLocaleString("ja-JP")}
 function todayText(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 
 function classify(name){
-  const s=String(name||"").toLowerCase();
+  const s=normalizeProductWords(name);
   for(const [cat,words] of Object.entries(CATEGORY_MAP)){
     for(const w of words){if(s.includes(w.toLowerCase())) return {category:cat,group:w==="飲料"?name:w}}
   }
@@ -486,10 +494,15 @@ function renderStats(period){
 searchBtn.addEventListener("click",runSearch);
 searchInput.addEventListener("keydown",e=>{if(e.key==="Enter")runSearch()});
 function runSearch(){
-  const q=searchInput.value.trim().toLowerCase();if(!q){searchResults.innerHTML='<div class="empty">商品名を入力してください。</div>';return}
+  const rawQ=searchInput.value.trim();
+  const q=normalizeProductWords(rawQ);
+  const janQ=normalizeJan(rawQ);
+  if(!q&&!janQ){searchResults.innerHTML='<div class="empty">商品名を入力してください。</div>';return}
   const hits=[];
   loadData().forEach(r=>r.items.forEach(it=>{
-    if([it.name,it.group,it.category,it.jan].some(v=>String(v||"").toLowerCase().includes(q)))hits.push({...it,date:r.date,store:r.store})
+    const wordHit=[it.name,it.group,it.category].some(v=>normalizeProductWords(v).includes(q));
+    const janHit=janQ.length>=8 && normalizeJan(it.jan).includes(janQ);
+    if(wordHit||janHit)hits.push({...it,date:r.date,store:r.store})
   }));
   hits.sort((a,b)=>b.date.localeCompare(a.date));searchResults.innerHTML="";
   if(!hits.length){searchResults.innerHTML='<div class="empty">購入履歴が見つかりませんでした。</div>';return}

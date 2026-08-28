@@ -20,6 +20,7 @@ button{cursor:pointer}
 .wrap{max-width:760px;margin:auto;padding:24px 18px 42px}
 .hero{padding:34px 4px 24px;text-align:center}
 .hero h1{font-size:38px;margin:0 0 8px;font-weight:950;letter-spacing:.5px}
+.rev{display:inline-block;margin-left:7px;color:#667080;font-size:11px;font-weight:700;letter-spacing:.4px;vertical-align:middle}
 .hero p{margin:0;color:var(--muted);font-size:17px}
 .home-actions{display:grid;gap:26px;margin-top:30px}
 .big-choice{
@@ -89,6 +90,10 @@ video{display:block;width:100%;min-height:330px;background:#000}
 .field input,.field select{width:100%;min-height:54px;border:1px solid #3b465b;border-radius:14px;background:#0e131c;color:#fff;padding:0 14px;font-size:17px}
 .item-row{background:#111722;border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:13px}
 .item-grid{display:grid;grid-template-columns:1fr 105px;gap:10px}
+.voice-name-row{display:grid;grid-template-columns:1fr 58px;gap:12px;align-items:center}
+.voice-btn{min-width:58px;min-height:50px;border:1px solid #516079;border-radius:14px;background:#202a3a;color:#fff;font-size:24px;font-weight:900}
+.voice-btn.listening{background:#7a2430;border-color:#ff6474;animation:pulseMic 1s infinite}
+@keyframes pulseMic{50%{transform:scale(.96);opacity:.78}}
 .item-grid input{width:100%;min-height:50px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 12px;font-size:16px}
 .item-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .item-tools select{min-height:48px;border:1px solid #3b465b;border-radius:13px;background:#0b1018;color:#fff;padding:0 9px}
@@ -106,7 +111,7 @@ canvas{display:none}
 <body>
 <section id="homeScreen" class="screen">
   <div class="wrap">
-    <div class="hero"><h1>わが家のお金</h1><p>家計と「これ買ったっけ？」をひとつに</p></div>
+    <div class="hero"><h1>わが家のお金 <span class="rev">Rev.004</span></h1><p>家計と「これ買ったっけ？」をひとつに</p></div>
     <div class="home-actions">
       <button id="openBook" class="big-choice book"><div class="choice-icon">💰</div><div><div class="choice-title">家計簿</div><div class="choice-sub">レシート登録・支出グラフ・購入履歴</div></div></button>
       <button id="openSearch" class="big-choice search"><div class="choice-icon">🔍</div><div><div class="choice-title">購入検索</div><div class="choice-sub">いつ・どこで・いくらで買ったかを検索</div></div></button>
@@ -115,7 +120,7 @@ canvas{display:none}
 </section>
 
 <section id="bookScreen" class="screen hidden"><div class="wrap">
-  <div class="topbar"><button class="back" data-home>←</button><div class="page-title">家計簿</div></div>
+  <div class="topbar"><button class="back" data-home>←</button><div class="page-title">家計簿 <span class="rev">Rev.004</span></div></div>
   <div class="menu-grid">
     <button id="openReceipt" class="menu-btn receipt"><div class="ico">📷</div><div><b>レシートを登録</b><span>撮影して読み取り。読めない所は手入力できます</span></div></button>
     <button id="openStats" class="menu-btn stats"><div class="ico">📊</div><div><b>家計分析</b><span>月・半年・年間で支出を確認</span></div></button>
@@ -131,7 +136,7 @@ canvas{display:none}
 </div></section>
 
 <section id="searchScreen" class="screen hidden"><div class="wrap">
-  <div class="topbar"><button class="back" data-home>←</button><div class="page-title">購入検索</div></div>
+  <div class="topbar"><button class="back" data-home>←</button><div class="page-title">購入検索 <span class="rev">Rev.004</span></div></div>
   <div class="searchbox"><label for="searchInput">これ買ったっけ？</label><div class="search-row"><input id="searchInput" class="search-input" placeholder="例：牛乳、コーヒー、漂白剤（数字は無視）"><button id="searchBtn" class="primary">🔍 購入履歴を検索</button></div></div>
   <div id="searchResults" class="result"><div class="empty">商品名を入力すると、最終購入日・店舗・価格などを表示します。</div></div>
 </div></section>
@@ -149,7 +154,7 @@ canvas{display:none}
 </div></section>
 
 <section id="editScreen" class="screen hidden"><div class="wrap">
-  <div class="topbar"><button id="backFromEdit" class="back">←</button><div class="page-title">内容確認・修正</div></div>
+  <div class="topbar"><button id="backFromEdit" class="back">←</button><div class="page-title">内容確認・修正 <span class="rev">Rev.004</span></div></div>
   <div class="form-card">
     <div class="field"><label>店舗名</label><input id="storeInput" placeholder="例：○○スーパー"></div>
     <div class="field"><label>購入日</label><input id="dateInput" type="date"></div>
@@ -164,6 +169,7 @@ canvas{display:none}
 <canvas id="canvas"></canvas>
 
 <script>
+const APP_REVISION="Rev.004";
 const DATA_KEY="kakeibo_purchases_v1";
 const PRODUCT_DICT_KEY="kakeibo_product_dictionary_v1";
 const OCR_ALIAS_KEY="kakeibo_ocr_aliases_v1";
@@ -406,13 +412,54 @@ function openEditor(items,store="",date=""){
   renderEditor();
   show(editScreen);
 }
+function speechRecognitionClass(){
+  return window.SpeechRecognition||window.webkitSpeechRecognition||null;
+}
+function startVoiceInput(target,button){
+  const SR=speechRecognitionClass();
+  if(!SR){
+    alert("このブラウザではアプリ内音声認識を利用できません。iPhoneキーボードのマイク入力も利用できます。");
+    target.focus();
+    return;
+  }
+  const rec=new SR();
+  rec.lang="ja-JP";
+  rec.interimResults=false;
+  rec.continuous=false;
+  rec.maxAlternatives=1;
+  button.classList.add("listening");
+  button.textContent="●";
+  rec.onresult=e=>{
+    const spoken=e.results?.[0]?.[0]?.transcript||"";
+    if(spoken){
+      target.value=spoken;
+      target.dispatchEvent(new Event("input",{bubbles:true}));
+    }
+  };
+  rec.onerror=e=>{
+    console.warn("speech recognition:",e.error);
+    if(e.error!=="aborted") alert("音声を認識できませんでした。もう一度試してください。");
+  };
+  rec.onend=()=>{
+    button.classList.remove("listening");
+    button.textContent="🎤";
+  };
+  try{rec.start()}catch(e){
+    button.classList.remove("listening");
+    button.textContent="🎤";
+  }
+}
+
 function renderEditor(){
   itemsEditor.innerHTML="";
   currentItems.forEach((it,i)=>{
     const div=document.createElement("div");div.className="item-row";
     const learned=it.jan?getLearnedProduct(it.jan,it.rawName):null;
     div.innerHTML=`<div class="item-grid">
-      <input data-f="name" data-i="${i}" value="${escapeHtml(it.name)}" placeholder="商品名">
+      <div class="voice-name-row">
+        <input data-f="name" data-i="${i}" value="${escapeHtml(it.name)}" placeholder="商品名">
+        <button type="button" class="voice-btn" data-voice-name="${i}" aria-label="商品名を音声入力">🎤</button>
+      </div>
       <input data-f="price" data-i="${i}" type="number" min="0" value="${it.price}" placeholder="価格">
     </div>
     <div class="item-tools">
@@ -438,6 +485,12 @@ function renderEditor(){
       }
     });
   });
+
+  itemsEditor.querySelectorAll("[data-voice-name]").forEach(b=>b.addEventListener("click",()=>{
+    const i=Number(b.dataset.voiceName);
+    const target=itemsEditor.querySelector(`[data-f="name"][data-i="${i}"]`);
+    if(target)startVoiceInput(target,b);
+  }));
 
   itemsEditor.querySelectorAll("[data-remove]").forEach(b=>b.addEventListener("click",()=>{
     currentItems.splice(Number(b.dataset.remove),1);

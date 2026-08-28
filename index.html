@@ -1,1 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>切替確認</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0b0c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.wrap{max-width:720px;margin:auto;padding:18px}
+h1{text-align:center;margin:8px 0 20px;font-size:30px}
+.card{background:#18181b;border-radius:16px;padding:16px;margin-bottom:14px}
+.label{color:#aaa;font-size:14px;margin-bottom:7px}
+.model{font-size:32px;font-weight:900;letter-spacing:2px}
+.inspect-title{margin:24px 0 10px;font-size:22px;font-weight:900}
+.item{display:flex;align-items:center;gap:12px;min-height:62px;padding:12px 14px;margin-bottom:10px;background:#18181b;border:1px solid #303034;border-radius:14px}
+.num{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#2c2c2e;font-weight:900;flex:none}
+.name{flex:1;min-width:0;font-size:18px;font-weight:800}
+.status{color:#aaa;font-size:14px;font-weight:800;white-space:nowrap}
+.qr-btn,.rescan-btn{border:0;border-radius:11px;background:#0a84ff;color:#fff;font-weight:850}
+.qr-btn{min-height:44px;padding:0 12px;font-size:15px}
+.rescan-btn{width:100%;min-height:54px;font-size:17px;margin-bottom:18px}
+.done{border-color:#30d158}.done .status{color:#30d158}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>切替確認</h1>
 
+  <div class="card">
+    <div class="label">読み込み機種</div>
+    <div id="modelValue" class="model">---</div>
+  </div>
+
+  <button id="rescanBtn" class="rescan-btn">📷 機種を読み直す</button>
+
+  <div class="inspect-title">点検</div>
+
+  <div class="item"><div class="num">1</div><div class="name">Fドレン</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">2</div><div class="name">Rドレン</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">3</div><div class="name">Sパイプ</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">4</div><div class="name">HGパイプ（T6/T7）</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">5</div><div class="name">ガス抜きシート</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">6</div><div class="name">CPケース</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">7</div><div class="name">シキリ板確認</div><div class="status">未点検</div></div>
+  <div class="item"><div class="num">8</div><div class="name">シキリマーキング</div><div class="status">未点検</div></div>
+
+  <div id="codeItem" class="item">
+    <div class="num">9</div>
+    <div class="name">コード確認</div>
+    <button id="scanCodeBtn" class="qr-btn">📷 QR確認</button>
+    <div id="codeStatus" class="status">未確認</div>
+  </div>
+</div>
+
+<script>
+const MODEL_KEY="kirikae_model_confirmed_v3";
+const CODE_KEY="kirikae_code_confirmed_v2";
+
+function readJSON(key){
+  try{
+    const v=localStorage.getItem(key);
+    return v?JSON.parse(v):null;
+  }catch(e){return null}
+}
+
+const model=readJSON(MODEL_KEY);
+
+/* 最初だけ自動で機種確認カメラへ */
+if(!model || !model.value){
+  location.replace("camera.html?mode=model");
+}else{
+  document.getElementById("modelValue").textContent=model.value;
+}
+
+const code=readJSON(CODE_KEY);
+if(code && code.value){
+  document.getElementById("codeStatus").textContent="✅ 完了";
+  document.getElementById("codeItem").classList.add("done");
+}
+
+document.getElementById("rescanBtn").addEventListener("click",()=>{
+  localStorage.removeItem(MODEL_KEY);
+  localStorage.removeItem(CODE_KEY);
+  location.href="camera.html?mode=model";
+});
+
+document.getElementById("scanCodeBtn").addEventListener("click",()=>{
+  location.href="camera.html?mode=code";
+});
+</script>
+</body>
+</html>

@@ -876,9 +876,9 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhStartSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .bhStartMetric{background:#11151b;border:1px solid #2b313b;border-radius:12px;padding:10px;text-align:center}
 .bhStartMetric small{display:block;color:#969daa;font-size:10px;margin-bottom:3px}.bhStartMetric b{font-size:17px}
-.bhSlip{position:relative;background:linear-gradient(180deg,#111820,#0d1117);border:1px solid #303744;border-radius:16px;padding:14px 10px 12px;margin:12px 0 16px;overflow:hidden}
-.bhSlipTitle{font-weight:800;margin-bottom:10px}.bhSlipScale{position:absolute;top:38px;bottom:10px;right:52px;width:2px;background:#f4f4f4;opacity:.9}.bhSlipScale:after{content:'START';position:absolute;top:-18px;right:-22px;font-size:9px;color:#fff;letter-spacing:.08em}
-.bhSlipRow{display:grid;grid-template-columns:30px 1fr 50px;align-items:center;height:44px;position:relative;z-index:2}.bhSlipBoat{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid rgba(255,255,255,.5);background:#202630}.bhSlipLane{position:relative;height:30px}.bhSlipTrack{position:absolute;left:0;right:0;top:14px;height:1px;background:rgba(255,255,255,.12)}.bhSlipMarker{position:absolute;top:5px;width:28px;height:20px;border-radius:9px 12px 12px 9px;background:#f1f1f1;box-shadow:0 0 10px rgba(255,255,255,.16);transform:translateX(-50%)}.bhSlipMarker:after{content:'›';position:absolute;right:4px;top:-3px;font-size:21px;color:#111}.bhSlipST{text-align:right;font-weight:900;font-variant-numeric:tabular-nums}.bhSlipAhead .bhSlipST{color:#ffd75a}.bhSlipBehind .bhSlipST{color:#ff8d8d}
+.bhSlip{--boat-w:56px;--start-x:72%;position:relative;background:linear-gradient(180deg,#111820,#0d1117);border:1px solid #303744;border-radius:16px;padding:14px 10px 12px;margin:12px 0 16px;overflow:hidden}
+.bhSlipTitle{font-weight:800;margin-bottom:6px}.bhSlipRule{font-size:10px;color:#9aa1ad;line-height:1.45;margin-bottom:8px}.bhSlipRule b{color:#ffd75a}.bhSlipRow{display:grid;grid-template-columns:30px minmax(0,1fr) 50px;align-items:center;height:50px;position:relative;z-index:2}.bhSlipBoat{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid rgba(255,255,255,.5);background:#202630}.bhSlipLane{position:relative;height:38px;overflow:visible}.bhSlipTrack{position:absolute;left:0;right:0;top:19px;height:1px;background:rgba(255,255,255,.12)}.bhSlipLane:after{content:'';position:absolute;left:var(--start-x);top:-6px;bottom:-6px;width:2px;background:#ffd84d;box-shadow:0 0 7px rgba(255,216,77,.4);z-index:1}.bhSlipStartLabel{position:absolute;left:var(--start-x);top:-1px;transform:translate(-50%,-100%);font-size:8px;font-weight:900;color:#ffd84d;white-space:nowrap}.bhSlipMarker{position:absolute;top:4px;width:var(--boat-w);height:30px;transform:translateX(-100%);z-index:3;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}.bhSlipMarker svg{display:block;width:100%;height:100%;overflow:visible}.bhSlipMarker .wake{opacity:.48}.bhSlipNoseDot{position:absolute;right:-2px;top:13px;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 5px #fff;opacity:.9}.bhSlipST{text-align:right;font-weight:900;font-variant-numeric:tabular-nums}.bhSlipAhead .bhSlipST{color:#ffd75a}.bhSlipBehind .bhSlipST{color:#ff8d8d}.bhSlipAxis{display:grid;grid-template-columns:30px minmax(0,1fr) 50px;margin-top:2px}.bhSlipAxisLane{position:relative;height:26px;font-size:8px;color:#8f97a3}.bhSlipAxisZero{position:absolute;left:var(--start-x);transform:translateX(-50%);color:#ffd84d;font-weight:900}.bhSlipAxisLate{position:absolute;left:calc(var(--start-x) - var(--boat-w));transform:translateX(-50%)}.bhSlipAxisFly{position:absolute;left:calc(var(--start-x) + var(--boat-w));transform:translateX(-50%)}
+@media(max-width:600px){.bhSlip{--start-x:74%;padding-left:8px;padding-right:6px}.bhSlipRow{grid-template-columns:28px minmax(0,1fr) 46px;height:47px}.bhSlipST{font-size:12px}}
 .bhStartGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bhStartBoatCard{background:#11151b;border:1px solid #2b313b;border-radius:14px;padding:12px;min-width:0}.bhStartBoatHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.bhStartBoatName{font-weight:900;font-size:15px}.bhStartBoatCourse{font-size:11px;color:#9ca3af}.bhStartAvg{font-size:20px;font-weight:950}.bhStartTags{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0}.bhStartTag{font-size:10px;padding:3px 6px;border-radius:999px;background:#222936;border:1px solid #394252}.bhStartTag.good{background:#173621;border-color:#2e7543}.bhStartTag.warn{background:#3b2519;border-color:#84532f}.bhStartSeries{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}.bhStartChip{font-size:10px;padding:3px 5px;border-radius:6px;background:#1c222c;font-variant-numeric:tabular-nums}.bhStartChip.fast{outline:1px solid #8f7d2c}.bhStartChip.slow{opacity:.55}.bhStartNone{color:#8d94a0;font-size:12px;line-height:1.5}.bhStartNote{font-size:11px;color:#9299a5;margin-top:12px;line-height:1.55}
 @media(max-width:600px){.bhStartGrid{grid-template-columns:1fr}.bhStartSummary{grid-template-columns:1fr 1fr}.bhStartSummary .bhStartMetric:last-child{grid-column:1/-1}}
 </style>
@@ -1993,18 +1993,37 @@ function bhStartCardHTML(x){
  }
  return `<div class="bhStartBoatCard"><div class="bhStartBoatHead"><div><div class="bhStartBoatName">${bhBoatLabel(x.boat)}</div><div class="bhStartBoatCourse">今回 ${c}コース / 同コース ${x.count}走</div></div><div class="bhStartAvg">${x.count?bhFmtST(x.predict):'－'}</div></div>${x.count?`<div class="bhStartTags">${tags.join('')}</div><div style="font-size:11px;color:#a7aebb">平均 ${bhFmtST(x.avg)}　中央値 ${bhFmtST(x.median)}　最速 ${bhFmtST(x.min)}　最遅 ${bhFmtST(x.max)}　σ ${x.sd.toFixed(3)}</div><div class="bhStartSeries">${x.rows.map((r,i)=>`<span class="bhStartChip ${r.st<=.10?'fast':r.st>=.20?'slow':''}">${i+1}:${bhFmtST(r.st)}</span>`).join('')}</div>`:`<div class="bhStartNone">今回と同じ${c}コースのSTを取得できていません。データ元にSTが無いレースは集計から除外します。</div>`}</div>`;
 }
+function bhSlipBoatSvg(b){
+ const colors={1:["#f7f7f7","#d9d9d9","#111"],2:["#20242a","#050505","#f5f5f5"],3:["#ef3d36","#8f0f0f","#fff"],4:["#3589ff","#0c3f9d","#fff"],5:["#f2d21b","#a47f00","#111"],6:["#35b24a","#0f6d25","#fff"]};
+ const c=colors[b]||colors[1];
+ // viewBoxの右端 x=100 が「船首の最先端」。透明余白を右側に一切置かない。
+ return `<svg viewBox="0 0 100 42" preserveAspectRatio="none" aria-hidden="true"><path class="wake" d="M0 31 C18 28 28 34 42 30" fill="none" stroke="#8ad8ff" stroke-width="4"/><path d="M14 29 Q38 18 78 20 L100 26 Q79 35 27 35 L10 31Z" fill="${c[0]}" stroke="${c[1]}" stroke-width="1.8"/><path d="M45 20 L55 11 L72 12 L79 21Z" fill="${c[1]}" opacity=".95"/><circle cx="61" cy="11" r="4" fill="${c[0]}" stroke="${c[1]}" stroke-width="1"/><text x="36" y="31" text-anchor="middle" font-size="15" font-weight="900" fill="${c[2]}">${b}</text></svg>`;
+}
 function bhStartSlipHTML(stats){
  let usable=stats.filter(x=>Number.isFinite(x.predict));
  if(!usable.length)return `<div class="bhStartNone">STデータ取得後にスリット隊形を表示します。</div>`;
  let fastest=Math.min(...usable.map(x=>x.predict)),slowest=Math.max(...usable.map(x=>x.predict));
- // 0.15秒=1艇身。表示は最速艇をSTART直前に置き、遅いほど左へずらす。最大1.5艇身を画面幅に圧縮。
- let maxBody=1.5;
- return `<div class="bhSlip"><div class="bhSlipTitle">🚤 予測スリット隊形 <span style="font-size:10px;color:#9aa1ad">（0.15秒＝1艇身換算）</span></div><div class="bhSlipScale"></div>${stats.map(x=>{
-   let ok=Number.isFinite(x.predict),body=ok?(x.predict-fastest)/.15:1.5,pct=ok?Math.max(6,Math.min(94,94-(body/maxBody)*76)):10;
-   let cls=ok&&x.predict===fastest?' bhSlipAhead':ok&&x.predict===slowest&&slowest-fastest>=.04?' bhSlipBehind':'';
-   return `<div class="bhSlipRow${cls}"><div class="bhSlipBoat">${x.boat}</div><div class="bhSlipLane"><div class="bhSlipTrack"></div>${ok?`<div class="bhSlipMarker" style="left:${pct}%" title="${body.toFixed(2)}艇身差"></div>`:''}</div><div class="bhSlipST">${ok?bhFmtST(x.predict):'－'}</div></div>`;
- }).join('')}</div>`;
+ /*
+   座標ルール（絶対基準）:
+   - 船首の最先端 = marker要素の右端
+   - ST 0.00 → 船首先端がSTART線と完全一致
+   - +0.15 → 遅れ側（左）へ「表示中の船1艇分」
+   - +0.08 → 左へ 0.08/0.15 = 約0.53艇身
+   - -0.15(F.15) → フライング側（右）へ1艇身
+   left は「船首先端X」。transform:translateX(-100%) で船体をその左側に置く。
+ */
+ return `<div class="bhSlip"><div class="bhSlipTitle">🚤 予測スリット隊形</div><div class="bhSlipRule"><b>船首先端基準</b>：0.00＝船先がSTART線に接触 / ＋＝遅れ側 / F・－＝フライング側 / 0.15秒＝1艇身</div>${stats.map((x,idx)=>{
+   let ok=Number.isFinite(x.predict);
+   let st=ok?x.predict:0;
+   let cls=ok&&st===fastest?' bhSlipAhead':ok&&st===slowest&&slowest-fastest>=.04?' bhSlipBehind':'';
+   // 1艇身 = 画面上の船幅56px。Safari互換のため掛け算calcは使わずJSでpxへ確定。
+   let ratio=ok?(st/.15):0;
+   let shiftPx=ratio*56;
+   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
+   return `<div class="bhSlipRow${cls}"><div class="bhSlipBoat">${x.boat}</div><div class="bhSlipLane">${idx===0?'<div class="bhSlipStartLabel">START 0.00</div>':''}<div class="bhSlipTrack"></div>${ok?`<div class="bhSlipMarker" style="left:${nose}" title="ST ${bhFmtST(st)} / ${Math.abs(ratio).toFixed(2)}艇身"><span class="bhSlipNoseDot"></span>${bhSlipBoatSvg(x.boat)}</div>`:''}</div><div class="bhSlipST">${ok?bhFmtST(st):'－'}</div></div>`;
+ }).join('')}<div class="bhSlipAxis"><div></div><div class="bhSlipAxisLane"><span class="bhSlipAxisLate">+0.15<br>1艇身遅れ</span><span class="bhSlipAxisZero">0.00<br>START</span><span class="bhSlipAxisFly">F.15<br>1艇身F</span></div><div></div></div></div>`;
 }
+
 function renderStartPrediction(){
  let card=$("startPredictionCard"),box=$("startPrediction");if(!card||!box||racers.length!==6)return;
  let stats=[1,2,3,4,5,6].map(bhStartStats),usable=stats.filter(x=>Number.isFinite(x.predict));

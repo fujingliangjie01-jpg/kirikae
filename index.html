@@ -884,6 +884,9 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 </style>
 </head>
 <body>
+<!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
+<div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
+<div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
 <h1>BOAT HUNTER</h1>
@@ -4842,4 +4845,3 @@ function bhStartAutoResultCheck(){
 </script>
 </body>
 </html>
-そ

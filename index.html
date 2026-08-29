@@ -879,6 +879,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhSlip{--boat-w:56px;--start-x:68%;position:relative;background:linear-gradient(180deg,#111820,#0d1117);border:1px solid #303744;border-radius:16px;padding:14px 10px 12px;margin:12px 0 16px;overflow:hidden}
 .bhSlipTitle{font-weight:800;margin-bottom:6px}.bhSlipRule{font-size:10px;color:#9aa1ad;line-height:1.45;margin-bottom:8px}.bhSlipRule b{color:#ffd75a}.bhSlipRow{display:grid;grid-template-columns:30px minmax(0,1fr) 50px;align-items:center;height:50px;position:relative;z-index:2}.bhSlipBoat{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid rgba(255,255,255,.5);background:#202630}.bhSlipLane{position:relative;height:38px;overflow:visible}.bhSlipTrack{position:absolute;left:0;right:0;top:19px;height:1px;background:rgba(255,255,255,.12)}.bhSlipLane:after{content:'';position:absolute;left:var(--start-x);top:-6px;bottom:-6px;width:2px;background:#ffd84d;box-shadow:0 0 7px rgba(255,216,77,.4);z-index:1}.bhSlipStartLabel{position:absolute;left:var(--start-x);top:-1px;transform:translate(-50%,-100%);font-size:8px;font-weight:900;color:#ffd84d;white-space:nowrap}.bhSlipMarker{position:absolute;top:4px;width:var(--boat-w);height:30px;transform:translateX(-100%);z-index:3;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}.bhSlipMarker svg{display:block;width:100%;height:100%;overflow:visible}.bhSlipMarker .wake{opacity:.48}.bhSlipNoseDot{position:absolute;right:-2px;top:13px;width:4px;height:4px;border-radius:50%;background:#fff;box-shadow:0 0 5px #fff;opacity:.9}.bhSlipST{text-align:right;font-weight:900;font-variant-numeric:tabular-nums}.bhSlipAhead .bhSlipST{color:#ffd75a}.bhSlipBehind .bhSlipST{color:#ff8d8d}.bhSlipAxis{display:grid;grid-template-columns:30px minmax(0,1fr) 50px;margin-top:2px}.bhSlipAxisLane{position:relative;height:26px;font-size:8px;color:#8f97a3}.bhSlipAxisZero{position:absolute;left:var(--start-x);transform:translateX(-50%);color:#ffd84d;font-weight:900}.bhSlipAxisLate{position:absolute;left:calc(var(--start-x) - var(--boat-w));transform:translateX(-50%)}.bhSlipAxisFly{position:absolute;left:calc(var(--start-x) + var(--boat-w));transform:translateX(-50%)}
 @media(max-width:600px){.bhSlip{--start-x:68%;padding-left:8px;padding-right:6px}.bhSlipRow{grid-template-columns:28px minmax(0,1fr) 46px;height:47px}.bhSlipST{font-size:12px}}
+.bhDualSlip{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.bhDualSlip .bhSlip{margin:0;min-width:0}.bhOneM{--start-x:76%}.bhOneM .bhSlipLane:after{background:#62e6ff;box-shadow:0 0 7px rgba(98,230,255,.45)}.bhOneM .bhSlipStartLabel,.bhOneM .bhSlipAxisZero{color:#62e6ff}.bhOneMMetric{font-size:10px;color:#9aa1ad;margin-top:2px}.bhOneMLead{color:#62e6ff;font-weight:900}.bhOneMWarn{color:#ff9d9d;font-weight:800}.bhTheoryBox{margin:12px 0;padding:11px 12px;border-radius:13px;border:1px solid #2f3946;background:#10161e;font-size:11px;line-height:1.6;color:#b8c0cb}.bhTheoryBox b{color:#fff}.bhSpeedPill{display:inline-block;padding:2px 7px;border:1px solid #3b4858;border-radius:999px;margin:2px 3px 2px 0;font-size:10px;color:#d9e4ef;background:#151d27}.bhArrivalTable{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}.bhArrivalCell{padding:8px;border:1px solid #303945;border-radius:10px;background:#111821;font-size:10px;color:#aeb7c2}.bhArrivalCell b{display:block;font-size:13px;color:#fff;margin-top:2px}.bhArrivalCell.leader{border-color:#4edbf3}.bhArrivalCell.warn{border-color:#8e4040}@media(max-width:760px){.bhDualSlip{grid-template-columns:1fr}.bhArrivalTable{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bhStartGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bhStartBoatCard{background:#11151b;border:1px solid #2b313b;border-radius:14px;padding:12px;min-width:0}.bhStartBoatHead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.bhStartBoatName{font-weight:900;font-size:15px}.bhStartBoatCourse{font-size:11px;color:#9ca3af}.bhStartAvg{font-size:20px;font-weight:950}.bhStartTags{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0}.bhStartTag{font-size:10px;padding:3px 6px;border-radius:999px;background:#222936;border:1px solid #394252}.bhStartTag.good{background:#173621;border-color:#2e7543}.bhStartTag.warn{background:#3b2519;border-color:#84532f}.bhStartSeries{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}.bhStartChip{font-size:10px;padding:3px 5px;border-radius:6px;background:#1c222c;font-variant-numeric:tabular-nums}.bhStartChip.fast{outline:1px solid #8f7d2c}.bhStartChip.slow{opacity:.55}.bhStartNone{color:#8d94a0;font-size:12px;line-height:1.5}.bhStartNote{font-size:11px;color:#9299a5;margin-top:12px;line-height:1.55}
 @media(max-width:600px){.bhStartGrid{grid-template-columns:1fr}.bhStartSummary{grid-template-columns:1fr 1fr}.bhStartSummary .bhStartMetric:last-child{grid-column:1/-1}}
 </style>
@@ -2034,6 +2035,67 @@ function bhStartSlipHTML(stats){
  }).join('')}<div class="bhSlipAxis"><div></div><div class="bhSlipAxisLane"><span class="bhSlipAxisLate">+0.15<br>1艇身遅れ</span><span class="bhSlipAxisZero">0.00<br>START</span><span class="bhSlipAxisFly">F.15<br>1艇身F</span></div><div></div></div></div>`;
 }
 
+
+function bhClassOfBoat(b){
+ let r=racer(b)||{};
+ return String(r.rank_number||r.class_number||r.rank||r.class||"").toUpperCase();
+}
+function bhFCount(b){
+ let r=racer(b)||{},p=preview(b)||{};
+ const vals=[r.flying_count,r.f_count,r.flying,r.f,p.flying_count,p.f_count,p.flying,p.f];
+ for(const v of vals){let n=Number(v);if(Number.isFinite(n)&&n>=0&&n<=5)return n}
+ return 0;
+}
+function bhExTime(b){let p=preview(b)||{};let v=num(p.exhibition_time||p.exhibition);return v>0?v:null}
+function bhOneMModel(stats){
+ // 暫定「1マーク到達理論」: ST + 150m直線の相対速度差で到達差を作る。
+ // 絶対速度は実測値ではないため70〜80km/h内のモデル値として扱う。
+ let exVals=[1,2,3,4,5,6].map(bhExTime).filter(Number.isFinite).sort((a,b)=>a-b);
+ let exMedian=exVals.length?(exVals.length%2?exVals[(exVals.length-1)/2]:(exVals[exVals.length/2-1]+exVals[exVals.length/2])/2):null;
+ let rows=stats.map(x=>{
+  if(!Number.isFinite(x.predict))return {...x,speed:null,arrival:null,confidence:0};
+  let speed=74.0;
+  // スタート能力は「行き足へ乗せる再現性」として小さく反映。
+  if(x.fast10>=40)speed+=1.0; else if(x.fast15>=75)speed+=.5;
+  if(x.predict>=.18)speed-=.8; else if(x.predict<=.10)speed+=.4;
+  // F持ちは踏み込み抑制。ST側にも既に出る想定なので速度補正は小さめ。
+  let fc=bhFCount(x.boat); if(fc>=2)speed-=1.0; else if(fc===1)speed-=.5;
+  // 展示タイムは場内相対差だけ使う。0.10秒良い≈+2km/h、最大±3km/h。
+  let ex=bhExTime(x.boat); if(Number.isFinite(ex)&&Number.isFinite(exMedian))speed+=Math.max(-3,Math.min(3,(exMedian-ex)*20));
+  // 手入力の行き足・伸び足を加える。
+  let er=exhibitRatings[x.boat]||{}; speed+=(er.iki||0)*1.0+(er.nobi||0)*1.4;
+  speed=Math.max(70,Math.min(80,speed));
+  // 150m到達時刻。STはスタート線通過の時間差として加算。
+  let travel=150/(speed/3.6),arrival=x.predict+travel;
+  // 階級は速度そのものではなく予測再現性（信頼度）へ。
+  let cls=bhClassOfBoat(x.boat),confidence=cls==='A1'?90:cls==='A2'?83:cls==='B1'?74:cls==='B2'?66:70;
+  confidence+=x.sd<=.018?5:x.sd<=.025?3:x.sd>.04?-6:0;
+  confidence-=fc*4; confidence=Math.max(50,Math.min(96,confidence));
+  return {...x,speed,arrival,travel,ex,exMedian,confidence,fCount:fc,cls};
+ });
+ let usable=rows.filter(x=>Number.isFinite(x.arrival));
+ if(!usable.length)return rows;
+ let lead=Math.min(...usable.map(x=>x.arrival));
+ rows.forEach(x=>{if(Number.isFinite(x.arrival)){x.delay=x.arrival-lead;x.boatBehind=x.delay/.15}});
+ return rows;
+}
+function bhOneMSlipHTML(rows){
+ let usable=rows.filter(x=>Number.isFinite(x.arrival));
+ if(!usable.length)return `<div class="bhStartNone">1マーク到達予測を計算できません。</div>`;
+ let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
+ return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート予測＋150mの行き足/伸び差から、1M直前の相対艇身差を表示。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
+  let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
+  let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
+  let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';
+  let cls=ok&&x.boat===leader.boat?' bhSlipAhead':ok&&behind>=.7?' bhSlipBehind':'';
+  return `<div class="bhSlipRow${cls}"><div class="bhSlipBoat" style="${boatBadgeStyle}">${x.boat}</div><div class="bhSlipLane">${idx===0?'<div class="bhSlipStartLabel">1M先頭基準</div>':''}<div class="bhSlipTrack"></div>${ok?`<div class="bhSlipMarker" style="left:${nose}" title="予測 ${x.speed.toFixed(1)}km/h / 先頭差 ${behind.toFixed(2)}艇身">${bhSlipBoatSvg(x.boat)}</div>`:''}</div><div class="bhSlipST">${ok?(behind<.01?'先頭':behind.toFixed(2)+'艇'):'－'}</div></div>`;
+ }).join('')}<div class="bhSlipAxis"><div></div><div class="bhSlipAxisLane"><span class="bhSlipAxisLate">1艇身後</span><span class="bhSlipAxisZero">先頭</span></div><div></div></div></div>`;
+}
+function bhOneMDetailHTML(rows){
+ let usable=rows.filter(x=>Number.isFinite(x.arrival)); if(!usable.length)return '';
+ let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
+ return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論・暫定モデル</b><br>予測STに、スタートラインから1Mまで150mの相対速度差を加算。速度モデルは70〜80km/h内で、同場の展示タイム相対差・手入力の行き足/伸び足・スタート傾向・F状況を反映。<b>階級は艇速ではなく予測の再現性（信頼度）へ反映</b>しています。実測の直線タイムが取得できる場合は今後そちらを優先します。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span>${x.fCount?`<br>F${x.fCount}補正`:''}</div>`}).join('')}</div></div>`;
+}
 function renderStartPrediction(){
  let card=$("startPredictionCard"),box=$("startPrediction");if(!card||!box||racers.length!==6)return;
  let stats=[1,2,3,4,5,6].map(bhStartStats),usable=stats.filter(x=>Number.isFinite(x.predict));
@@ -2041,7 +2103,8 @@ function renderStartPrediction(){
  if(!usable.length){box.innerHTML=`<div class="bhStartNone">同コース過去15走のSTを検索しています。取得できたSTだけで自動集計します。</div>`;return}
  let fastest=[...usable].sort((a,b)=>a.predict-b.predict)[0],stable=[...usable].filter(x=>x.count>=3).sort((a,b)=>a.sd-b.sd)[0]||fastest;
  let spread=Math.max(...usable.map(x=>x.predict))-Math.min(...usable.map(x=>x.predict)),body=spread/.15;
- box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div>${bhStartSlipHTML(stats)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。これは予測補助であり、実際の進入・展示・F状況・風などで変化します。</div>`;
+ let oneM=bhOneMModel(stats);
+ box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は暫定モデルで、実測の直線タイム・行き足データ取得後に精密化します。</div>`;
 }
 
 

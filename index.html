@@ -896,8 +896,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 #bhNewBetRows{margin-top:12px}.bhV3Bet{display:grid;grid-template-columns:34px minmax(95px,1fr) 72px 72px 82px 92px;gap:6px;align-items:center;padding:10px 7px;border-top:1px solid #303030;font-size:12px}.bhV3Bet:first-child{border-top:0}.bhV3Rank{font-weight:1000;color:#ffd75a}.bhV3Ticket{font-size:22px;font-weight:1000;letter-spacing:1.5px;color:#fff}.bhV3Pct{font-weight:1000;color:#ffd75a}.bhV3Odds{font-weight:900;color:#8edfff}.bhV3Amount{font-weight:900}.bhV3Return{font-weight:900;color:#9ef0b5}.bhV3Method{grid-column:2/-1;font-size:10px;color:#aaa;margin-top:-3px}.bhV3HeadMandatory{box-shadow:inset 3px 0 0 #ff6666}.bhV3DefenseNote{margin:10px 0;padding:9px;border:1px solid #4a3f28;border-radius:9px;background:#17130b;color:#e9d38a;font-size:11px;line-height:1.6}@media(max-width:650px){.bhV3Bet{grid-template-columns:30px minmax(88px,1fr) 58px 60px}.bhV3Amount,.bhV3Return{grid-column:auto}.bhV3Method{grid-column:2/-1}.bhV3Ticket{font-size:19px}}
 </style>
 </head>
-<body><div class="bhVol">vol.9</div>
-<div class="bhBudgetTop"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🧪 検証画面</button></div></div>
+<body><div class="bhVol">vol.11</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -948,6 +947,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <div>
 <label>本日の開催場</label>
 <select id="venue"></select>
+<div class="bhBudgetTop" style="padding:0;margin:10px 0 0;max-width:none"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🏁 結果確認</button></div></div>
 </div>
 <div>
 <label>レース</label>
@@ -1014,7 +1014,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 </div>
 
 <div id="bhNewBetCard" class="card"><h2>🎫 新・買い目 / 資金評価</h2><div class="bhFundSummary"><div class="bhFundBox"><small>1レース資金</small><b id="bhFundBudget">1,200円</b></div><div class="bhFundBox"><small>使用予定</small><b id="bhFundUsed">未算出</b></div><div class="bhFundBox"><small>期待回収倍率</small><b id="bhFundReturn">未算出</b></div></div><div id="bhNewBetRows" class="bhVerifyNote">新買い目ロジック作成後、最大10点を1点ずつ「買い目％・オッズ・投資額・的中時払戻」で表示します。○・全のまとめ買いは使用しません。</div><div id="bhWatchAlert" class="bhWatchAlert">⚠️ このレースは「見」を推奨</div></div>
-<div id="bhVerifyPanel" class="card bhVerifyPanel"><h2>🧪 検証画面</h2><div class="bhVerifyGrid"><div class="bhVerifyStat"><small>検証レース</small><b id="bhVCount">0R</b></div><div class="bhVerifyStat"><small>累計収支</small><b id="bhVProfit">0円</b></div><div class="bhVerifyStat"><small>回収率</small><b id="bhVRoi">0%</b></div><div class="bhVerifyStat"><small>買い目的中</small><b id="bhVHit">0%</b></div><div class="bhVerifyStat"><small>見推奨</small><b id="bhVWatch">0R</b></div><div class="bhVerifyStat"><small>見推奨除外時収支</small><b id="bhVWatchProfit">0円</b></div></div><div class="bhVerifyNote">結果取得時に、実着順・3連単払戻・投資額・払戻額・収支・回収率・見推奨判定・イン逃げ率・1M展開・壁/絞り状態を保存する検証領域です。既存の結果取得データと接続できる構造にしてあります。</div><button id="bhVerifyClose" class="subBtn" type="button">閉じる</button></div>
+<div id="bhVerifyPanel" class="card bhVerifyPanel"><h2>🏁 結果確認</h2><div class="bhVerifyGrid"><div class="bhVerifyStat"><small>検証レース</small><b id="bhVCount">0R</b></div><div class="bhVerifyStat"><small>累計収支</small><b id="bhVProfit">0円</b></div><div class="bhVerifyStat"><small>回収率</small><b id="bhVRoi">0%</b></div><div class="bhVerifyStat"><small>買い目的中</small><b id="bhVHit">0%</b></div><div class="bhVerifyStat"><small>見推奨</small><b id="bhVWatch">0R</b></div><div class="bhVerifyStat"><small>見推奨除外時収支</small><b id="bhVWatchProfit">0円</b></div></div><div class="bhVerifyNote">結果取得時に、実着順・3連単払戻・投資額・払戻額・収支・回収率・見推奨判定・イン逃げ率・1M展開・壁/絞り状態を保存する検証領域です。既存の結果取得データと接続できる構造にしてあります。</div><button id="bhVerifyClose" class="subBtn" type="button">閉じる</button></div>
 <div class="footer">BOAT HUNTER © 2026</div>
 <button class="topBtn" id="topBtn" type="button">⬆️ 1番上へ</button>
 </div>
@@ -5142,7 +5142,11 @@ function bhSavePredictionSnapshot(tickets,outlook){
   let day=bhTodayKey(),v=Number(document.getElementById("venue")?.value||0),r=Number(document.getElementById("race")?.value||0),key=bhRaceKey(day,v,r);
   if(!key||!tickets?.length||bhIsRaceRecorded(key))return;
   let expanded=[...new Set(tickets.flatMap(t=>bhExpandTicket(t)))];
-  let store=bhSnapshotStore();store[key]={day,venue:v,race:r,pct:num(outlook?.escape||0),alerts:bhAlertNames(),band:bhBandName(num(outlook?.escape||0)),expanded,scored:false,updatedAt:Date.now()};
+  let store=bhSnapshotStore();
+  let ticketDetails=(tickets||[]).map(t=>({legs:Array.isArray(t.legs)?t.legs.slice():[],betType:t.betType||((t.legs||[]).length===2?'2連単':'3連単'),amount:Number(t.amount||0),odds:Number(t.odds||0),prob:Number(t.prob??t.pct??0)}));
+  let invested=ticketDetails.reduce((a,t)=>a+Number(t.amount||0),0);
+  let finance=window.bhFinanceEvaluate?window.bhFinanceEvaluate(tickets):null;
+  store[key]={day,venue:v,race:r,pct:num(outlook?.escape||0),alerts:bhAlertNames(),band:bhBandName(num(outlook?.escape||0)),expanded,ticketDetails,invested,budget:window.bhRaceBudget?window.bhRaceBudget():invested,watch:!!finance?.watch,scored:false,updatedAt:Date.now()};
   bhSaveSnapshotStore(store);setTimeout(()=>bhAutoCheckResults(false),1200)
 }
 function bhResultBoatNo(x,race){
@@ -5473,7 +5477,7 @@ bhV3Render=function(tickets,outlook){bhVol7BaseRender(tickets,outlook);let box=d
 .bhVol9Rule{margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(20,70,115,.18);border:1px solid rgba(90,170,255,.28);font-size:11px;color:#cce7ff;line-height:1.55}
 </style>
 <script id="bh-vol9-engine">
-// vol.9
+// vol.11
 // 1) 差し率があるだけでは裏展開にしない。
 // 2) 裏展開は「主攻め艇のひとつ外側」かつ、1Mでその外艇が主攻め艇の後ろにいる時だけ。
 // 3) 1M最大差0.60艇身未満は攻め未成立。1号艇防御を攻め側より強く評価し、1頭を明確に強化。
@@ -5562,5 +5566,53 @@ bhOneMTheoryHTML=function(rows){
  return html+`<div class="bhVol9Rule">🛡️ vol.9 1M基準：${txt} ／ 最大差 ${sig.spread.toFixed(2)}艇身</div>`;
 };
 </script>
+
+<style id="bh-vol11-result-css">
+.bhV11ResultWrap{margin-top:12px}.bhV11TopSummary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}.bhV11Sum{background:#0c0c0c;border:1px solid #3a3218;border-radius:10px;padding:10px;text-align:center}.bhV11Sum small{display:block;color:#8f98a0;font-size:10px}.bhV11Sum b{display:block;margin-top:4px;font-size:18px;color:#ffe071}.bhV11Sum b.plus{color:#62e690}.bhV11Sum b.minus{color:#ff6b6b}
+.bhV11VenueGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:start}.bhV11Venue{background:#0b0b0b;border:1px solid #4b401b;border-radius:12px;overflow:hidden}.bhV11VenueHead{padding:10px;background:linear-gradient(180deg,#201a07,#111);border-bottom:1px solid #5d4d18}.bhV11VenueName{font-size:18px;font-weight:1000;color:#ffe071}.bhV11VenueMoney{font-size:12px;margin-top:4px;color:#c7d1d7}.bhV11VenueProfit{font-weight:1000}.bhV11VenueProfit.plus{color:#62e690}.bhV11VenueProfit.minus{color:#ff6b6b}.bhV11R{display:grid;grid-template-columns:32px 48px 28px 28px minmax(72px,1fr);gap:4px;align-items:center;padding:7px 6px;border-bottom:1px solid #202020;font-size:10px}.bhV11R:last-child{border-bottom:0}.bhV11R .race{font-weight:1000;color:#ffd84d}.bhV11R .result{font-weight:1000;font-size:12px}.bhV11Judge{font-weight:1000;text-align:center;font-size:14px}.bhV11Judge.hit{color:#58e084}.bhV11Judge.miss{color:#ff6262}.bhV11Judge.none{color:#666}.bhV11Money{line-height:1.35;color:#aeb9bf}.bhV11Money strong{display:block}.bhV11Money .plus{color:#62e690}.bhV11Money .minus{color:#ff6b6b}.bhV11Legend{display:grid;grid-template-columns:32px 48px 28px 28px 1fr;gap:4px;padding:6px;background:#151515;color:#777;font-size:9px}.bhV11OldStats{margin-top:14px}
+@media(max-width:760px){.bhV11VenueGrid{grid-template-columns:repeat(3,minmax(250px,1fr));overflow-x:auto;padding-bottom:6px}.bhV11TopSummary{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script id="bh-vol11-result-js">
+(function(){
+ const y=n=>'¥'+Math.round(Number(n)||0).toLocaleString('ja-JP');
+ function cls(n){return n>0?'plus':n<0?'minus':''}
+ function calcRow(x){
+   let snaps=bhSnapshotStore(),snap=snaps[x.key]||null,invested=Number(snap?.invested||0);
+   if(!invested&&Array.isArray(snap?.ticketDetails))invested=snap.ticketDetails.reduce((a,t)=>a+Number(t.amount||0),0);
+   let returned=0;
+   if(x.result&&x.payout>0&&snap){
+     let win=(snap.ticketDetails||[]).find(t=>Array.isArray(t.legs)&&t.legs.length===3&&t.legs.join('-')===x.result);
+     if(win&&Number(win.amount)>0)returned=(Number(x.payout)/100)*Number(win.amount);
+     else if(x.th===true&&!snap.ticketDetails?.length) returned=Number(x.payout); // old snapshots: 100円相当のみ
+   }
+   return {...x,snap,invested,returned,profit:returned-invested};
+ }
+ function judge(v){return v===true?'<span class="bhV11Judge hit">○</span>':v===false?'<span class="bhV11Judge miss">×</span>':'<span class="bhV11Judge none">－</span>'}
+ function venueCard(v,rows){
+   let by=new Map(rows.map(x=>[x.race,calcRow(x)])),inv=0,ret=0,hit=0,judged=0,outHit=0,outJudged=0;
+   for(let x of by.values()){inv+=x.invested;ret+=x.returned;if(x.th!=null){judged++;if(x.th)hit++}if(x.oh!=null){outJudged++;if(x.oh)outHit++}}
+   let profit=ret-inv,body='';
+   for(let r=1;r<=12;r++){
+     let x=by.get(r);
+     if(!x){body+=`<div class="bhV11R"><span class="race">${r}R</span><span class="result">－</span>${judge(null)}${judge(null)}<span class="bhV11Money">結果待ち</span></div>`;continue}
+     let odds=x.payout>0?(x.payout/100).toFixed(1)+'倍':'－';
+     let money=x.invested>0?`投 ${y(x.invested)} / 払 ${y(x.returned)}<strong class="${cls(x.profit)}">収支 ${x.profit>=0?'+':''}${y(x.profit)}</strong>`:`払戻 ${x.payout>0?y(x.payout):'－'} / ${odds}`;
+     body+=`<div class="bhV11R"><span class="race">${r}R</span><span class="result">${x.result||'－'}</span>${judge(x.th)}${judge(x.oh)}<span class="bhV11Money">${odds}<br>${money}</span></div>`;
+   }
+   return `<div class="bhV11Venue"><div class="bhV11VenueHead"><div class="bhV11VenueName">${bhVenueLabel(v)}</div><div class="bhV11VenueMoney">投資 ${y(inv)} / 払戻 ${y(ret)}<br><span class="bhV11VenueProfit ${cls(profit)}">この場の収支 ${profit>=0?'+':''}${y(profit)}</span><br>買 ${judged?((hit/judged)*100).toFixed(1):'0.0'}% / 見 ${outJudged?((outHit/outJudged)*100).toFixed(1):'0.0'}%</div></div><div class="bhV11Legend"><span>R</span><span>結果</span><span>買</span><span>見</span><span>オッズ・収支</span></div>${body}</div>`;
+ }
+ window.bhRenderResultHistory=function(dayKey=window.bhStatsDate||bhTodayKey()){
+   let e=document.getElementById('bhResultHistory');if(!e)return;let rows=bhRecordedRows(dayKey);
+   if(!rows.length){e.innerHTML='<div class="bhResultHistoryEmpty">まだ取得済みのレース結果はありません。</div>';return}
+   let calc=rows.map(calcRow),inv=calc.reduce((a,x)=>a+x.invested,0),ret=calc.reduce((a,x)=>a+x.returned,0),profit=ret-inv;
+   let judged=calc.filter(x=>x.th!=null),outJudged=calc.filter(x=>x.oh!=null),hit=judged.filter(x=>x.th).length,outHit=outJudged.filter(x=>x.oh).length;
+   let venues=[...new Set(calc.map(x=>x.venue))].sort((a,b)=>a-b);
+   e.innerHTML=`<div class="bhV11ResultWrap"><div class="bhV11TopSummary"><div class="bhV11Sum"><small>投資</small><b>${y(inv)}</b></div><div class="bhV11Sum"><small>払戻</small><b>${y(ret)}</b></div><div class="bhV11Sum"><small>収支</small><b class="${cls(profit)}">${profit>=0?'+':''}${y(profit)}</b></div><div class="bhV11Sum"><small>回収率</small><b>${inv?((ret/inv)*100).toFixed(1):'0.0'}%</b></div><div class="bhV11Sum"><small>買 / 見</small><b>${judged.length?((hit/judged.length)*100).toFixed(1):'0.0'}% / ${outJudged.length?((outHit/outJudged.length)*100).toFixed(1):'0.0'}%</b></div></div><div class="bhV11VenueGrid">${venues.map(v=>venueCard(v,calc.filter(x=>x.venue===v))).join('')}</div></div>`;
+ };
+ // 結果確認ボタンはパネルを開き、当日結果を横3場で即表示
+ document.getElementById('bhVerifyOpen')?.addEventListener('click',()=>{let p=document.getElementById('bhVerifyPanel');if(p){p.innerHTML='<h2>🏁 結果確認</h2><div id="bhResultHistory"></div><div class="bhV11OldStats"><h3>📊 的中率・見通し集計（前回フォーマット）</h3><div id="bhV11LegacyStats"></div></div><button id="bhVerifyCloseV11" class="subBtn" type="button">閉じる</button>';p.classList.add('open');window.bhStatsDate=bhTodayKey();bhRenderResultHistory(bhTodayKey());let store=bhLoadStatsStore(),st=store.days[bhTodayKey()]||bhEmptyStat(),q=document.getElementById('bhV11LegacyStats');if(q)q.innerHTML=bhStatDetail(st)+bhPayoutStatsHTML(bhTodayKey());document.getElementById('bhVerifyCloseV11')?.addEventListener('click',()=>p.classList.remove('open'));p.scrollIntoView({behavior:'smooth',block:'start'});}});
+})();
+</script>
+
 </body>
 </html>

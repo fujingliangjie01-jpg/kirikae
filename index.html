@@ -2214,7 +2214,7 @@ function renderStartPrediction(){
  let fastest=[...usable].sort((a,b)=>a.predict-b.predict)[0],stable=[...usable].filter(x=>x.count>=3).sort((a,b)=>a.sd-b.sd)[0]||fastest;
  let spread=Math.max(...usable.map(x=>x.predict))-Math.min(...usable.map(x=>x.predict)),body=spread/.15;
  let oneM=bhOneMModel(stats);
- box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。</div>`;
+ box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、1Mを主軸65%で最終統合。0.60艇身=本線60%、1.00艇身=本線90%を基準にします。</div>`;
 }
 
 
@@ -2709,6 +2709,58 @@ v[k]=Math.max(0,v[k]/total*100)
 });
 return v
 }
+
+// ===== 全体見通し v2：AI評価と1M理論を別計算し、最後に統合 =====
+function bhTideInfo(){
+ let w=weatherSource();
+ let raw=String(w.tide_name||w.tideName||w.tide||w.tide_type||w.tideType||w.tidal||w.tidal_name||"").trim();
+ let level=num(w.tide_level||w.tideLevel||w.tide_height||w.tideHeight||w.water_level||w.waterLevel);
+ let flow=String(w.tide_flow||w.tideFlow||w.current||w.current_direction||"").trim();
+ return {raw,level,flow,available:!!raw||level>0||!!flow};
+}
+function bhWaterEnvironment(){
+ let vt=venueTrait(),wi=windInfo(),ti=bhTideInfo();
+ // 場特性×風×潮位はAI評価には混ぜず、1M側の水面補正として保持。
+ let escape=0,out=0;
+ escape+=(vt.escape-1)*18;
+ out+=((vt.maki+vt.makiSashi)/2-1)*18;
+ if(wi.speed>=3){
+   if(wi.mode==='tail'){escape+=4;out-=2}
+   if(wi.mode==='head'){escape-=4;out+=4}
+ }
+ // 潮位データが取れた時だけ弱い補正。場別の潮流実績が蓄積したらここを学習値へ置換。
+ if(ti.available){
+   let txt=(ti.raw+' '+ti.flow).toLowerCase();
+   if(txt.includes('上げ')||txt.includes('満')){escape-=1;out+=1}
+   if(txt.includes('下げ')||txt.includes('干')){escape+=1;out-=1}
+ }
+ return {escape,out,venue:vt.name,wind:wi,tide:ti};
+}
+function bhOneMOutlookSignal(){
+ try{
+   let stats=[1,2,3,4,5,6].map(bhStartStats),rows=bhOneMModel(stats);
+   if(!rows||!rows.some(x=>Number.isFinite(x.arrival)))return null;
+   let t=bhOneMTheory(rows);
+   let vals=rows.filter(x=>Number.isFinite(x.boatBehind)).map(x=>x.boatBehind);
+   if(!vals.length)return null;
+   let spread=Math.max(...vals)-Math.min(...vals);
+   // ユーザー基準：0.60艇身=本線60%、1.00艇身=本線90%。間は線形。
+   let mainProb;
+   if(spread>=1)mainProb=90;
+   else if(spread>=.6)mainProb=60+(spread-.6)/.4*30;
+   else mainProb=30+(spread/.6)*30; // 0.6未満は「型候補」扱い
+   mainProb=Math.max(30,Math.min(90,mainProb));
+   let remain=100-mainProb;
+   // 外攻め型は残りを「イン逃げ/裏展開」に半分ずつ。0.60なら60/20/20。
+   let escapeProb=t.inside?mainProb:remain/2;
+   let reverseProb=t.inside?remain/2:remain/2;
+   let env=bhWaterEnvironment();
+   escapeProb+=env.escape;
+   escapeProb=Math.max(5,Math.min(92,escapeProb));
+   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,theory:t,env};
+ }catch(e){return null}
+}
+
 function overallEscapeProbability(){
 let r1=racer(1);
 if(!r1||course(1)!==1)
@@ -2823,11 +2875,24 @@ p+=relativeAdjustment;
 
 if(matchPenalty>=10&&d.escape<83&&p>=75)p=74.9;
 
+// 1M理論とAI系評価は別々に算出し、全体見通しで初めて統合する。
+let oneMSignal=bhOneMOutlookSignal();
+let aiEscapeP=p;
+if(oneMSignal){
+  // 1M隊形を主軸(65%)、AI/選手能力側を35%。89.9%張り付き防止にもなる。
+  p=oneMSignal.escape*.65+aiEscapeP*.35;
+  // 1M差が小さい時は断定を避け、50%側へ軽く収縮。
+  if(oneMSignal.spread<.6){
+    let certainty=.55+.45*(oneMSignal.spread/.6);
+    p=50+(p-50)*certainty;
+  }
+}
 let rawEscapeP=p;
-if(rawEscapeP>95)p=89.6+(rawEscapeP-95)*.18;
-else if(rawEscapeP>85)p=85+(rawEscapeP-85)*.46;
-
-p=Math.max(5,Math.min(93,p));
+// 高率帯の89.9%張り付きを廃止。極端値だけ滑らかに圧縮して全域を使う。
+if(rawEscapeP>92)p=92+(rawEscapeP-92)*.22;
+else if(rawEscapeP>82)p=82+(rawEscapeP-82)*.72;
+else p=rawEscapeP;
+p=Math.max(5,Math.min(95,p));
 
 
 let aiRankNow=ranking();
@@ -2858,8 +2923,10 @@ let qualify90=
   strongerOutside===0 &&
   exhibitAdjustment>0;
 
-if(p>=90&&!qualify90)p=qualify80?89.9:79.9;
-else if(p>=80&&!qualify80)p=79.9;
+// 旧89.9/79.9固定上限は廃止。突破条件未達は減点にして値を分散させる。
+if(p>=90&&!qualify90)p-=qualify80?3.5:8.0;
+else if(p>=80&&!qualify80)p-=5.0;
+p=Math.max(5,Math.min(95,p));
 
 let matchAdjustment=matchBonus-matchPenalty+exhibitAdjustment+relativeAdjustment;
 let baseMatchLabel=noMeaningfulAttack?
@@ -2871,7 +2938,8 @@ let gateLabel=
 p>=90?" / 90%突破条件クリア":
 p>=80?" / 80%突破条件クリア":
 (!qualify80&&rawEscapeP>=80?" / 80%突破条件未達→79.9%上限":"");
-let matchLabel=`${baseMatchLabel} / 展示 ${exhibitAdjustment>=0?"+":""}${exhibitAdjustment.toFixed(1)}pt / 相対戦力 ${relativeAdjustment>=0?"+":""}${relativeAdjustment.toFixed(1)}pt${gateLabel}`;
+let oneMLabel=oneMSignal?` / 1M ${oneMSignal.theory.id}型・差${oneMSignal.spread.toFixed(2)}艇身・本線${oneMSignal.main.toFixed(0)}% / 水面補正${oneMSignal.env.escape>=0?"+":""}${oneMSignal.env.escape.toFixed(1)}pt`:" / 1Mデータ不足";
+let matchLabel=`${baseMatchLabel} / 展示 ${exhibitAdjustment>=0?"+":""}${exhibitAdjustment.toFixed(1)}pt / 相対戦力 ${relativeAdjustment>=0?"+":""}${relativeAdjustment.toFixed(1)}pt${oneMLabel}${gateLabel}`;
 return{
 escape:p,
 nonEscape:100-p,

@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.31</div>
+<body><div class="bhVol">vol.32</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -6686,6 +6686,87 @@ function bhV30ResistanceReverse(){
       return r;
     };
   }
+})();
+</script>
+
+
+<script id="bh-vol32-probability-first-nonin">
+/* vol.32
+   イン以外:
+   - 頭数を固定しない
+   - 3連単候補を確率順で上位10点
+   - 決まり手も固定しない
+   - 2連単は「頭違い」制約なし。候補確率順で上位2点
+   - 裏展開（抵抗型含む）は既存の別枠最大4点を変更しない
+*/
+function bhV32P(t){return Number(t?.prob??t?.percent??t?.pct??0)||0}
+function bhV32Key(t){return Array.isArray(t?.legs)?t.legs.join("-"):""}
+function bhV32NonIn(outlook){
+  const p=Number(outlook?.escapeRate??outlook?.escape??outlook?.prob??outlook?.inEscape);
+  if(Number.isFinite(p))return p<45;
+  return /イン以外|非イン/.test(String(outlook?.status??outlook?.type??""));
+}
+function bhV32ExactaCandidates(tris){
+  const map=new Map();
+  for(const t of tris){
+    if(!Array.isArray(t?.legs)||t.legs.length<2)continue;
+    const legs=[Number(t.legs[0]),Number(t.legs[1])];
+    if(!legs[0]||!legs[1]||legs[0]===legs[1])continue;
+    const k=legs.join("-");
+    // 2連単確率は同じ1-2着組の3連単候補確率を合算。
+    let x=map.get(k);
+    if(!x)x={...t,legs,prob:0,percent:0,pct:0,bhV32Exacta:true,label:"次点2連単"};
+    const p=bhV32P(t);
+    x.prob=(Number(x.prob)||0)+p;
+    x.percent=x.prob;x.pct=x.prob;
+    map.set(k,x);
+  }
+  return [...map.values()].sort((a,b)=>bhV32P(b)-bhV32P(a));
+}
+function bhV32ProbabilityStructure(tickets,outlook){
+  if(!Array.isArray(tickets))return tickets;
+  // イン逃げはvol.30仕様の最大10点を維持。
+  if(!bhV32NonIn(outlook))return tickets.slice().sort((a,b)=>bhV32P(b)-bhV32P(a)).slice(0,10);
+
+  const tris=tickets.filter(t=>Array.isArray(t?.legs)&&t.legs.length===3);
+  const triMap=new Map();
+  for(const t of tris){
+    const k=bhV32Key(t); if(!k)continue;
+    const old=triMap.get(k);
+    if(!old||bhV32P(t)>bhV32P(old))triMap.set(k,t);
+  }
+  const rankedTri=[...triMap.values()].sort((a,b)=>bhV32P(b)-bhV32P(a));
+  const top10=rankedTri.slice(0,10);
+
+  // 頭違い条件なし。同じ頭の2連単が上位2点なら両方採用。
+  const top2Exacta=bhV32ExactaCandidates(rankedTri).slice(0,2);
+  return [...top10,...top2Exacta].slice(0,12);
+}
+
+/* vol.30の「主頭1艇固定」を最終出力段で上書き。
+   可能ならvol.28のcoverage generatorを直接使って候補母集団を広く取り直す。
+*/
+(function(){
+  const prior=window.bhV3Generate;
+  if(typeof prior!=="function"||prior.__bhV32Wrapped)return;
+  const wrap=function(){
+    const args=[...arguments];
+    let res=prior.apply(this,args);
+    let outlook=args.find(x=>x&&typeof x==="object"&&("escapeRate" in x||"status" in x||"inEscape" in x))||{};
+    if(!Array.isArray(res))return res;
+
+    // If vol.30 left only one non-in trifecta head, expand from the current tickets
+    // through the existing vol.28 coverage helper before probability ranking.
+    if(bhV32NonIn(outlook)&&typeof bhV28ExpandNonInCoverage==="function"){
+      try{
+        const expanded=bhV28ExpandNonInCoverage(res,outlook);
+        if(Array.isArray(expanded)&&expanded.length)res=expanded;
+      }catch(e){}
+    }
+    return bhV32ProbabilityStructure(res,outlook);
+  };
+  wrap.__bhV32Wrapped=true;
+  window.bhV3Generate=wrap;
 })();
 </script>
 

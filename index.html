@@ -2080,14 +2080,14 @@ function bhOneMModel(stats){
   // 行き足補正：直前タイムが中央値より良いほど、スリット後の加速で前へ。
   // 通常は±0.25艇身以内。実測が無い時だけ手入力「行き足」を±0.12艇身で補助。
   let accelBody=0;
-  if(Number.isFinite(pre)&&Number.isFinite(preMedian))accelBody=bhClamp((preMedian-pre)*2.5,-.25,.25);
-  else accelBody=bhClamp((er.iki||0)*.12,-.12,.12);
+  if(Number.isFinite(pre)&&Number.isFinite(preMedian))accelBody=bhClamp((preMedian-pre)*4.2,-.45,.45);
+  else accelBody=bhClamp((er.iki||0)*.22,-.22,.22);
 
   // 伸び補正：展示タイムが中央値より良いほど、加速後〜1M手前で前へ。
   // 行き足より少し長く効くため±0.40艇身。実測が無い時だけ手入力「伸び足」を±0.18艇身。
   let stretchBody=0;
-  if(Number.isFinite(ex)&&Number.isFinite(exMedian))stretchBody=bhClamp((exMedian-ex)*3.0,-.40,.40);
-  else stretchBody=bhClamp((er.nobi||0)*.18,-.18,.18);
+  if(Number.isFinite(ex)&&Number.isFinite(exMedian))stretchBody=bhClamp((exMedian-ex)*5.5,-.85,.85);
+  else stretchBody=bhClamp((er.nobi||0)*.38,-.38,.38);
 
   // 表示用の推定速度。1M隊形の位置計算そのものはこの絶対速度ではなく相対補正で行う。
   let speed=74.5;
@@ -2110,7 +2110,7 @@ function bhOneMModel(stats){
 
  // スタート最速艇を0として、スタート時の相対艇身差を作る。
  let startLead=Math.min(...usable.map(x=>x.predict));
- const MAX_MOVE_BODY=.70; // 行き足＋伸びによる変化は合計±0.70艇身まで
+ const MAX_MOVE_BODY=1.60; // 150mの距離蓄積型：行き足＋伸び差を最大±1.60艇身まで反映
  usable.forEach(x=>{
    x.startDelay=x.predict-startLead;
    x.startBoatBehind=x.startDelay/.15;
@@ -2134,7 +2134,7 @@ function bhOneMSlipHTML(rows){
  let usable=rows.filter(x=>Number.isFinite(x.arrival));
  if(!usable.length)return `<div class="bhStartNone">1マーク到達予測を計算できません。</div>`;
  let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
- return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。位置変化は最大±0.70艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
+ return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。150mの距離蓄積型で行き足・伸び差を反映。位置変化は最大±1.60艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
   let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
   let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';
@@ -2145,7 +2145,8 @@ function bhOneMSlipHTML(rows){
 function bhOneMDetailHTML(rows){
  let usable=rows.filter(x=>Number.isFinite(x.arrival)); if(!usable.length)return '';
  let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
- return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論</b><br><b>直前タイム＝行き足（加速）</b>、<b>展示タイム＝伸び足（最高速側）</b>として別々に計算。予測STの隊形を土台に、直前タイムはスリット後の加速区間、展示タイムは加速後〜1M手前の伸び区間へ反映します。実測タイムがある場合は手入力評価より優先し、両補正を合わせてもスタート隊形から最大±0.70艇身に制限。<b>階級は艇速ではなく予測の再現性（信頼度）</b>へ使います。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';let preTxt=Number.isFinite(x.pre)?`直前 ${x.pre.toFixed(2)} / 行き足 ${x.accelBody>=0?'+':''}${x.accelBody.toFixed(2)}艇`:'直前 未取得';let exTxt=Number.isFinite(x.ex)?`展示 ${x.ex.toFixed(2)} / 伸び ${x.stretchBody>=0?'+':''}${x.stretchBody.toFixed(2)}艇`:'展示 未取得';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span><br>${preTxt}<br>${exTxt}${x.fCount?`<br>F${x.fCount}（ST側で慎重補正）`:''}</div>`}).join('')}</div></div>`;
+ let sq=bhSqueezeSignals(rows),sqTxt=sq.length?`<br><b>🎯 絞り判定：</b>${sq.map(x=>`${x.attacker}号艇→${x.victim}号艇 ${x.gap.toFixed(2)}艇身 / ${x.cls} ${x.probability.toFixed(0)}%${x.mandatoryHead?' / 1着必須':''}`).join('　')}`:'<br><b>🎯 絞り判定：</b>0.60艇身以上の対象なし';
+ return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論</b>${sqTxt}<br><b>直前タイム＝行き足（加速）</b>、<b>展示タイム＝伸び足（最高速側）</b>として別々に計算。予測STの隊形を土台に、直前タイムはスリット後の加速区間、展示タイムは加速後〜1M手前の伸び区間へ反映します。実測タイムがある場合は手入力評価より優先し、150mを走る間の差として蓄積し、両補正を合わせてスタート隊形から最大±1.60艇身まで反映。<b>階級は艇速ではなく予測の再現性（信頼度）</b>へ使います。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';let preTxt=Number.isFinite(x.pre)?`直前 ${x.pre.toFixed(2)} / 行き足 ${x.accelBody>=0?'+':''}${x.accelBody.toFixed(2)}艇`:'直前 未取得';let exTxt=Number.isFinite(x.ex)?`展示 ${x.ex.toFixed(2)} / 伸び ${x.stretchBody>=0?'+':''}${x.stretchBody.toFixed(2)}艇`:'展示 未取得';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span><br>${preTxt}<br>${exTxt}${x.fCount?`<br>F${x.fCount}（ST側で慎重補正）`:''}</div>`}).join('')}</div></div>`;
 }
 
 function bhRacerByBoat(b){return racers.find((r,i)=>num(r?.boat||r?.entry_number||r?.boat_number||r?.waku||r?.frame_number)==b)||racers[b-1]||null}
@@ -2276,7 +2277,7 @@ function renderStartPrediction(){
  let fastest=[...usable].sort((a,b)=>a.predict-b.predict)[0],stable=[...usable].filter(x=>x.count>=3).sort((a,b)=>a.sd-b.sd)[0]||fastest;
  let spread=Math.max(...usable.map(x=>x.predict))-Math.min(...usable.map(x=>x.predict)),body=spread/.15;
  let oneM=bhOneMModel(stats);
- box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、1Mの攻め成立度を基礎にAI評価・1号艇の負け方・水面条件を補正します。0.30艇身未満は明確な攻めなし、0.60艇身=本線60%、1.00艇身=本線90%を基準にします。</div>`;
+ box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大30走を使用。30走データを基礎に予測し、STが安定している選手は中央値も反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、1Mの攻め成立度を基礎にAI評価・1号艇の負け方・水面条件を補正します。0.30艇身未満は明確な攻めなし、0.60艇身=本線60%、1.00艇身=本線90%を基準にします。</div>`;
 }
 
 
@@ -2803,6 +2804,47 @@ function bhWaterEnvironment(){
  }
  return {escape,out,venue:vt.name,wind:wi,tide:ti};
 }
+// ===== 1M 絞りロジック =====
+// 外艇が「ひとつ内側の艇」より0.60艇身以上前なら絞り判定を開始。
+// 本人の同コース決まり手に、まくり/まくり差し実績があることが必須。
+function bhSqueezeBaseRate(cls){
+ cls=String(cls||'').toUpperCase();
+ return cls==='A1'?100:cls==='A2'?80:cls==='B1'?50:cls==='B2'?40:40;
+}
+function bhSqueezeProbability(gap,cls){
+ if(!Number.isFinite(gap)||gap<.60)return 0;
+ let base=bhSqueezeBaseRate(cls);
+ if(gap>=1.50)return 100;
+ return bhClamp(base+(100-base)*((gap-.60)/.90),0,100);
+}
+function bhSqueezeSignals(rows){
+ let byCourse=[...rows].filter(x=>Number.isFinite(x.boatBehind)).sort((a,b)=>course(a.boat)-course(b.boat));
+ let out=[];
+ for(let i=1;i<byCourse.length;i++){
+   let attacker=byCourse[i],inner=byCourse[i-1];
+   if(course(attacker.boat)!==course(inner.boat)+1)continue;
+   // boatBehindは小さいほど前。内艇との差が正なら外艇がその艇身分だけ前。
+   let gap=inner.boatBehind-attacker.boatBehind;
+   let d=bhDecisionProfile(attacker.boat);
+   let hasSqueezeMethod=num(d.maki)>0||num(d.makiSashi)>0;
+   if(gap<.60||!hasSqueezeMethod)continue;
+   let probability=bhSqueezeProbability(gap,attacker.cls||bhClassOfBoat(attacker.boat));
+   let victimState=probability>=95?'cut':probability>=60?'third':probability>=40?'down':'normal';
+   out.push({attacker:attacker.boat,victim:inner.boat,gap,probability,victimState,maki:num(d.maki),makiSashi:num(d.makiSashi),cls:attacker.cls||bhClassOfBoat(attacker.boat),mandatoryHead:gap>=1.50&&num(d.maki)>0});
+ }
+ return out.sort((a,b)=>b.probability-a.probability||b.gap-a.gap);
+}
+function bhCurrentSqueezeSignals(){
+ try{return bhSqueezeSignals(bhOneMModel([1,2,3,4,5,6].map(bhStartStats)))}catch(e){return []}
+}
+function bhSqueezeStateForBoat(b){
+ let hits=bhCurrentSqueezeSignals().filter(x=>x.victim===b);
+ if(!hits.length)return null;
+ return hits.sort((a,b)=>b.probability-a.probability)[0];
+}
+function bhSqueezeAttackForBoat(b){return bhCurrentSqueezeSignals().find(x=>x.attacker===b)||null}
+function bhSqueezeMandatoryHeads(){return bhCurrentSqueezeSignals().filter(x=>x.mandatoryHead).map(x=>x.attacker)}
+
 function bhOneMOutlookSignal(){
  try{
    let stats=[1,2,3,4,5,6].map(bhStartStats),rows=bhOneMModel(stats);
@@ -2858,7 +2900,8 @@ function bhOneMOutlookSignal(){
 
    let methodBudget=hasAttack?mainProb:0;
    let methodProbs=bhNormalizeMethodProbabilities(t.methods,methodBudget);
-   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,zone,theory:t,env,methodProbs,hasAttack,strongAttack};
+   let squeezes=bhSqueezeSignals(rows);
+   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,zone,theory:t,env,methodProbs,hasAttack,strongAttack,squeezes};
  }catch(e){return null}
 }
 
@@ -4278,6 +4321,15 @@ function bhPartnerScore(b,head,rankings,remain){
     else if(c===3)v+=w.level===2?34:24;
     else if(c>=4)v-=w.level===2?28:16;
   }
+  // イン逃げ時も1M絞りをヒモ選定へ直結。
+  // 絞る艇は2着候補を強化、絞られた艇は確率に応じ3着寄り/3連対切りへ落とす。
+  let sqAtk=bhSqueezeAttackForBoat(b),sqVict=bhSqueezeStateForBoat(b);
+  if(head===1&&sqAtk)v+=18+sqAtk.probability*.45;
+  if(sqVict){
+    if(sqVict.victimState==='cut')v-=120;
+    else if(sqVict.victimState==='third')v-=55;
+    else if(sqVict.victimState==='down')v-=22;
+  }
   return v
 }
 function bhMakeTickets(head,count,rankings,kind,remain){
@@ -4298,6 +4350,11 @@ function bhMakeTickets(head,count,rankings,kind,remain){
   for(let b of boats)for(let c of boats){
     if(out.length>=count)break;
     if(b===c||b===head||c===head)continue;
+    if(head===1){
+      let sb=bhSqueezeStateForBoat(b),sc=bhSqueezeStateForBoat(c);
+      if(sb&&(sb.victimState==='third'||sb.victimState==='cut'))continue;
+      if(sc&&sc.victimState==='cut')continue;
+    }
     if(head!==1&&!req.includes(b)&&!req.includes(c))continue;
     let t={legs:[head,b,c],pattern:kind,label:"",decision:head===1?"逃げ":(e?.label||"展開"),head};
     let key=t.legs.join("-");
@@ -4548,10 +4605,22 @@ function supplementBigHoleAfterBundle(arr,rankings,reducedCount,pct){
   return [...arr,...added]
 }
 
+function bhSqueezeMandatoryTickets(rankings){
+ let out=[];
+ for(let h of bhSqueezeMandatoryHeads()){
+   let boats=[1,2,3,4,5,6].filter(b=>b!==h&&bhSqueezeStateForBoat(b)?.victimState!=='cut')
+     .sort((a,b)=>bhPartnerScore(b,h,rankings,bhRemainJudge())-bhPartnerScore(a,h,rankings,bhRemainJudge()));
+   let b=boats[0],c=boats.find(x=>x!==b);
+   if(b&&c)out.push({legs:[h,b,c],pattern:'1M強制',label:'1.5艇身＋まくり実績',decision:'まくり',head:h,mandatory:true,squeezeMandatory:true});
+ }
+ return out;
+}
+
 function finalizeTickets(base,rankings,skipMandatory=false){
   let pct=num(overallEscapeProbability()?.escape),plan=bhBandPlan(pct),mandatory=[],heads=new Map();
   base.forEach(t=>{if(t.legs?.length!==3||t.head===1)return;let e=safeNonEscapeDecisionRanking().find(x=>x.boat===t.head&&x.label===t.decision);if(e&&!heads.has(e.boat+":"+e.type))heads.set(e.boat+":"+e.type,e)});
   if(!skipMandatory)heads.forEach(e=>mandatory.push(...mandatoryTicketsFor(e)));
+  mandatory.push(...bhSqueezeMandatoryTickets(rankings));
   let map=new Map();
   [...base,...mandatory].forEach(t=>{
     if(!Array.isArray(t.legs)||new Set(t.legs).size!==t.legs.length)return;
@@ -4626,6 +4695,11 @@ function classification(boat,a){
   // イン逃げ以外・中間では基本的に切り候補/3着までを自動発生させない。
   let type=(outlookStatus==="イン逃げ"&&x.score<=100)?"cut":"normal";
   let reason=type==="cut"?"イン逃げ見通し＋AI期待値100以下":"";
+  let sq=bhSqueezeStateForBoat(boat);
+  if(sq){
+    if(sq.victimState==='cut'){type='cut';reason=`${sq.attacker}号艇の絞り${sq.probability.toFixed(0)}%（${sq.gap.toFixed(2)}艇身差）`}
+    else if(sq.victimState==='third'){type='third';reason=`${sq.attacker}号艇の絞り${sq.probability.toFixed(0)}%で3着寄り`}
+  }
   return {type,reason,diff,rankGap}
 }
 function renderPatternBets(rankings,outlook){

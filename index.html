@@ -2179,7 +2179,35 @@ function bhPatternMatch(rows){
  let total=scored.slice(0,3).reduce((z,x)=>z+x.sim,0)||1;scored.slice(0,3).forEach(x=>x.pct=x.sim/total*100);
  return {best:scored[0],ranks:scored.slice(0,3),obs};
 }
-function bhMethodStrength(b,type){let d=bhDecisionProfile(b);let rate=type==='差し'?d.sashi:type==='まくり'?d.maki:d.makiSashi;return {rate,eval:bhEvalScore(b),score:rate*2+bhEvalScore(b)*.08}}
+function bhMethodStrength(b,type){
+ let d=bhDecisionProfile(b);
+ let rate=type==='差し'?d.sashi:type==='まくり'?d.maki:d.makiSashi;
+ // 得意決まり手率は『攻め艇を決める』ためには使わない。
+ // 1M隊形で攻め艇・可能な技が決まった後、その技との相性としてだけ使う。
+ return {rate,eval:bhEvalScore(b),score:bhEvalScore(b)*.10};
+}
+function bhMethodDefenseRate(b,type){
+ let d1=bhDecisionProfile(1),d2=bhDecisionProfile(2),d3=bhDecisionProfile(3);
+ if(type==='差し')return d1.sasareRate;
+ if(type==='まくり')return Math.max(d1.makareRate,b>=3?d2.makareRate:0,b>=4?d3.makareRate:0);
+ return Math.max(d1.makiSashiSareRate,b>=3?d2.makiSashiSareRate:0,b>=4?d3.makiSashiSareRate:0);
+}
+function bhNormalizeMethodProbabilities(methods,mainProb){
+ if(!methods.length)return [];
+ // 1Mロジックが作った候補の中だけで、本人の得意率×内側の負け方×AI成功力を総合。
+ // 得意率だけが高くても、1M候補に無い技はここへ入らない。
+ let aiVals=methods.map(x=>Math.max(1,bhEvalScore(x.boat))), aiMin=Math.min(...aiVals),aiMax=Math.max(...aiVals),aiSpan=aiMax-aiMin||1;
+ let weighted=methods.map((x,i)=>{
+   let skill=Math.max(1,x.rate);                  // 本人の得意決まり手率
+   let defense=Math.max(1,bhMethodDefenseRate(x.boat,x.type)); // 内側の負け方との一致
+   let ai=0.75+((aiVals[i]-aiMin)/aiSpan)*0.50;   // AIは成功力。技の発生源にはしない
+   let hole=x.hole?0.72:1;
+   let w=skill*defense*ai*hole;
+   return {...x,defense,weight:w};
+ });
+ let total=weighted.reduce((z,x)=>z+x.weight,0)||1;
+ return weighted.map(x=>({...x,conditional:x.weight/total*100,raceProb:(x.weight/total)*mainProb})).sort((a,b)=>b.raceProb-a.raceProb);
+}
 function bhOneMTheory(rows){
  let m=bhPatternMatch(rows),id=m.best.id,methods=[],main='',sub='',bad=[];
  let d1=bhDecisionProfile(1),d2=bhDecisionProfile(2),d3=bhDecisionProfile(3);
@@ -2196,15 +2224,15 @@ function bhOneMTheory(rows){
  if(id===10){main='2コースまくり本線。3・4号艇が2着〜3連対に残りやすい。1号艇は不利。';add(2,'まくり','3・4連動');add(4,'差し','2号艇2着の裏展開',true);bad=[1];}
  if(id===11){main='2〜6のまくり、または3〜6のまくり差し。総合評価と本人の得意決まり手が高い艇を頭候補。';for(let b=2;b<=6;b++){add(b,'まくり');if(b>=3)add(b,'まくり差し');}}
  if(id===12){main='4号艇まくり＋5・6号艇まくり差しを中心とするアウト決着。4-5-6系を強く評価。';add(4,'まくり','5・6連動');add(5,'まくり差し','5-4-○裏展開',true);add(6,'まくり差し');bad=[3];}
- // 本人の得意決まり手 × 内側の負け方が一致する時に上乗せ。
- methods.forEach(x=>{let defense=0;if(x.type==='差し')defense=d1.sasareRate;else if(x.type==='まくり')defense=Math.max(d1.makareRate,x.boat>=3?d2.makareRate:0,x.boat>=4?d3.makareRate:0);else defense=Math.max(d1.makiSashiSareRate,x.boat>=3?d2.makiSashiSareRate:0,x.boat>=4?d3.makiSashiSareRate:0);x.defense=defense;x.final=x.score+defense*.7+(x.hole?-4:0)});
+ // ここでは『攻め候補』だけ確定。決まり手の最終確率化は艇身差から本線率を出した後に行う。
+ methods.forEach(x=>{x.defense=bhMethodDefenseRate(x.boat,x.type);x.final=x.score+(x.hole?-4:0)});
  methods.sort((a,b)=>b.final-a.final);
  return {match:m,id,title:m.best.title,inside:m.best.inside,main,sub,bad,methods};
 }
 function bhOneMTheoryHTML(rows){
  let t=bhOneMTheory(rows),top=t.methods.slice(0,6);let badge=t.inside?'イン逃げ寄り':'イン以外警戒';
  let rank=t.match.ranks.map(x=>`${x.id}型 ${x.pct.toFixed(0)}%`).join(' / ');
- return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開理論：${t.id}型 ${t.title}</b><span class="bhTenkaiBadge${t.inside?'':' out'}">${badge}</span></div><div class="bhTenkaiMain"><strong>${t.main}</strong>${t.sub?`<div class="bhTenkaiSub">${t.sub}</div>`:''}${t.bad.length?`<div class="bhTenkaiSub bhDisadv">不利判定：${t.bad.join('・')}号艇</div>`:''}<div class="bhTenkaiMethods">${top.map((x,i)=>`<span class="bhMethod${x.hole?' hole':i<2?' hot':''}">${x.boat}号艇 ${x.type} ${x.rate.toFixed(1)}%${x.note?'｜'+x.note:''}</span>`).join('')||'<span class="bhMethod">隊形優先・AI総合評価で相手選定</span>'}</div><div class="bhPatternRanks">12型類似度：${rank}<br>決まり手評価＝1M隊形 × 本人の得意決まり手 × 1〜3コースの負け方 × AI総合評価。旧固定決まり手ルールは使用しません。</div></div></div>`;
+ return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開理論：${t.id}型 ${t.title}</b><span class="bhTenkaiBadge${t.inside?'':' out'}">${badge}</span></div><div class="bhTenkaiMain"><strong>${t.main}</strong>${t.sub?`<div class="bhTenkaiSub">${t.sub}</div>`:''}${t.bad.length?`<div class="bhTenkaiSub bhDisadv">不利判定：${t.bad.join('・')}号艇</div>`:''}<div class="bhTenkaiMethods">${top.map((x,i)=>`<span class="bhMethod${x.hole?' hole':i<2?' hot':''}">${x.boat}号艇 ${x.type} ${x.rate.toFixed(1)}%${x.note?'｜'+x.note:''}</span>`).join('')||'<span class="bhMethod">隊形優先・AI総合評価で相手選定</span>'}</div><div class="bhPatternRanks">12型類似度：${rank}<br>攻め艇＝1M隊形で先に決定。決まり手確率＝1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力。得意率だけでは攻め艇にしません。旧固定決まり手ルールは使用しません。</div></div></div>`;
 }
 function renderStartPrediction(){
  let card=$("startPredictionCard"),box=$("startPrediction");if(!card||!box||racers.length!==6)return;
@@ -2751,13 +2779,16 @@ function bhOneMOutlookSignal(){
    else mainProb=30+(spread/.6)*30; // 0.6未満は「型候補」扱い
    mainProb=Math.max(30,Math.min(90,mainProb));
    let remain=100-mainProb;
-   // 外攻め型は残りを「イン逃げ/裏展開」に半分ずつ。0.60なら60/20/20。
-   let escapeProb=t.inside?mainProb:remain/2;
-   let reverseProb=t.inside?remain/2:remain/2;
+   // 外攻め型は残りをイン逃げ/裏展開へ。0.60艇身なら60/20/20が基準。
+   // 明確な攻め候補が無い内型では、1号艇へ初期優位を与える。ただし逃げ確定にはしない。
+   let hasAttack=t.methods.some(x=>!x.hole);
+   let escapeProb=t.inside?(hasAttack?mainProb:Math.min(88,mainProb+remain*.25)):remain/2;
+   let reverseProb=t.inside?Math.max(0,100-mainProb-escapeProb):remain/2;
    let env=bhWaterEnvironment();
    escapeProb+=env.escape;
    escapeProb=Math.max(5,Math.min(92,escapeProb));
-   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,theory:t,env};
+   let methodProbs=bhNormalizeMethodProbabilities(t.methods,mainProb);
+   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,theory:t,env,methodProbs,hasAttack};
  }catch(e){return null}
 }
 
@@ -2803,39 +2834,27 @@ if(windMode()==="head"&&windInfo().speed>=3)p-=10;
 let vt=venueTrait();
 p+=(vt.escape-1)*35;
 let matchup=[];
-let maxOutsideAttack=0;
-for(let b=2;b<=6;b++){
-let rb=racer(b);
-if(!rb)continue;
-let ad=decisions(rb);
-let items=[
-{method:"差し",attack:ad.sashi,defense:d.sasareRate},
-{method:"まくり",attack:ad.maki,defense:d.makareRate},
-{method:"まくり差し",attack:ad.makiSashi,defense:d.makiSashiSareRate}
-];
-items.forEach(x=>{
-maxOutsideAttack=Math.max(maxOutsideAttack,x.attack);
-if(x.attack>=15&&x.defense>=15){
-let penalty=Math.min(11,3+(x.attack-15)*.18+(x.defense-15)*.15);
-matchup.push({boat:b,method:x.method,attack:x.attack,defense:x.defense,penalty})
+let oneMPre=bhOneMOutlookSignal();
+if(oneMPre&&Array.isArray(oneMPre.methodProbs)){
+  // 攻めの発生源は1Mロジック。得意決まり手率単独では攻め判定しない。
+  matchup=oneMPre.methodProbs.filter(x=>!x.hole&&x.raceProb>=8).map(x=>({
+    boat:x.boat,method:x.type,attack:x.raceProb,defense:x.defense,
+    penalty:Math.min(14,x.raceProb*.16 + x.defense*.08)
+  })).sort((a,b)=>b.penalty-a.penalty);
 }
-})
-}
-matchup.sort((a,b)=>b.penalty-a.penalty);
+let maxOutsideAttack=matchup.length?Math.max(...matchup.map(x=>x.attack)):0;
 let matchPenalty=0;
 if(matchup[0])matchPenalty+=matchup[0].penalty;
-if(matchup[1])matchPenalty+=matchup[1].penalty*.45;
-if(matchup[2])matchPenalty+=matchup[2].penalty*.20;
+if(matchup[1])matchPenalty+=matchup[1].penalty*.40;
 matchPenalty=Math.min(18,matchPenalty);
-let noMeaningfulAttack=maxOutsideAttack<15;
+let noMeaningfulAttack=!oneMPre||!oneMPre.hasAttack||maxOutsideAttack<12;
 let matchBonus=0;
 if(noMeaningfulAttack){
-matchBonus=p<45?10:6;
-p+=matchBonus;
-if(d.escape>=40&&p<45)p=45
+  // 誰も明確に攻めない時だけ1号艇へ優位性。ただし逃げ確定ではない。
+  matchBonus=p<45?9:6;
+  p+=matchBonus;
 }
 if(matchPenalty>0)p-=matchPenalty;
-
 
 let exhibitInside=exhibitPoint(1),exhibitOutside=[];
 for(let b=2;b<=6;b++)exhibitOutside.push({boat:b,point:exhibitPoint(b)});
@@ -2876,7 +2895,7 @@ p+=relativeAdjustment;
 if(matchPenalty>=10&&d.escape<83&&p>=75)p=74.9;
 
 // 1M理論とAI系評価は別々に算出し、全体見通しで初めて統合する。
-let oneMSignal=bhOneMOutlookSignal();
+let oneMSignal=oneMPre||bhOneMOutlookSignal();
 let aiEscapeP=p;
 if(oneMSignal){
   // 1M隊形を主軸(65%)、AI/選手能力側を35%。89.9%張り付き防止にもなる。
@@ -2930,9 +2949,9 @@ p=Math.max(5,Math.min(95,p));
 
 let matchAdjustment=matchBonus-matchPenalty+exhibitAdjustment+relativeAdjustment;
 let baseMatchLabel=noMeaningfulAttack?
-`外の攻め手15%以上なし → イン逃げ +${matchBonus.toFixed(1)}pt補正`:
+`1Mで明確な攻め艇なし → 1号艇優位 +${matchBonus.toFixed(1)}pt補正`:
 matchup.length?
-`${matchup[0].boat}号艇 ${matchup[0].method}${matchup[0].attack.toFixed(1)}% × 1号艇対応弱点${matchup[0].defense.toFixed(1)}% → イン逃げ -${matchPenalty.toFixed(1)}pt補正`:
+`${matchup[0].boat}号艇 ${matchup[0].method} 総合発生${matchup[0].attack.toFixed(1)}% × 内側弱点${matchup[0].defense.toFixed(1)}% → イン逃げ -${matchPenalty.toFixed(1)}pt補正`:
 "決まり手一致の強い攻めなし → 補正なし";
 let gateLabel=
 p>=90?" / 90%突破条件クリア":

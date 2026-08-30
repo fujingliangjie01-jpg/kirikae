@@ -896,7 +896,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 #bhNewBetRows{margin-top:12px}.bhV3Bet{display:grid;grid-template-columns:34px minmax(95px,1fr) 72px 72px 82px 92px;gap:6px;align-items:center;padding:10px 7px;border-top:1px solid #303030;font-size:12px}.bhV3Bet:first-child{border-top:0}.bhV3Rank{font-weight:1000;color:#ffd75a}.bhV3Ticket{font-size:22px;font-weight:1000;letter-spacing:1.5px;color:#fff}.bhV3Pct{font-weight:1000;color:#ffd75a}.bhV3Odds{font-weight:900;color:#8edfff}.bhV3Amount{font-weight:900}.bhV3Return{font-weight:900;color:#9ef0b5}.bhV3Method{grid-column:2/-1;font-size:10px;color:#aaa;margin-top:-3px}.bhV3HeadMandatory{box-shadow:inset 3px 0 0 #ff6666}.bhV3DefenseNote{margin:10px 0;padding:9px;border:1px solid #4a3f28;border-radius:9px;background:#17130b;color:#e9d38a;font-size:11px;line-height:1.6}@media(max-width:650px){.bhV3Bet{grid-template-columns:30px minmax(88px,1fr) 58px 60px}.bhV3Amount,.bhV3Return{grid-column:auto}.bhV3Method{grid-column:2/-1}.bhV3Ticket{font-size:19px}}
 </style>
 </head>
-<body><div class="bhVol">vol.6</div>
+<body><div class="bhVol">vol.7</div>
 <div class="bhBudgetTop"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🧪 検証画面</button></div></div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
@@ -1809,6 +1809,9 @@ let st=num(
 );
 return{raw:x,no,c,place,technique,st:(st>0&&st<1?st:null)}
 }).filter(x=>x.no>0&&x.c>=1&&x.c<=6&&x.place>=1&&x.place<=6);
+// vol.7: 各過去レース内のST順位を保存（同STは同順位）。絶対STだけでなく「その6艇の中で何番手だったか」を30走評価へ使う。
+let stOrder=normalized.filter(x=>Number.isFinite(x.st)).slice().sort((a,b)=>a.st-b.st);
+normalized.forEach(x=>{if(!Number.isFinite(x.st)){x.stRank=null;return;}x.stRank=1+stOrder.filter(y=>y.st<x.st-1e-9).length;});
 let winner=normalized.find(x=>x.place===1);
 let winningDecision=winner?.technique||null;
 let winningBoat=num(winner?.raw?.entry_number||winner?.raw?.boat_number||winner?.raw?.boat||winner?.raw?.waku||winner?.raw?.frame_number||winner?.c);
@@ -1825,6 +1828,7 @@ place,
 course:c,
 decision:x.technique&&x.technique!=="-"?x.technique:null,
 st:x.st,
+stRank:x.stRank,
 againstDecision:null
 });
 return
@@ -1835,6 +1839,7 @@ place,
 course:c,
 decision:null,
 st:x.st,
+stRank:x.stRank,
 againstDecision:
 winningDecision&&winningDecision!=="-"?
 winningDecision:null,
@@ -1879,14 +1884,14 @@ if(arr.length>HISTORY_RACES)arr.splice(HISTORY_RACES)
 )
 }
 function historyCacheKey(){
-return "bh-history-course-v20-start-"+
+return "bh-history-course-v21-start-rank-"+
 today().ymd+"-"+
 $("venue").value+"-"+
 racers.map(r=>getRacerNumber(r)).join("-")+"-"+
 Object.values(manualCourses).join("")
 }
 function playerCourseCacheKey(no,c){
-return `bh-player-course-v20-start-${today().ymd}-${no}-${c}`
+return `bh-player-course-v21-start-rank-${today().ymd}-${no}-${c}`
 }
 function hydratePlayerCourseCache(targets){
 racers.forEach(r=>{
@@ -2000,15 +2005,21 @@ function bhStartRows(b){
 }
 function bhStartStats(b){
  let rows=bhStartRows(b),vals=rows.map(x=>x.st),n=vals.length;
- if(!n)return{boat:b,count:0,avg:null,median:null,min:null,max:null,sd:null,cv:null,fast10:0,fast15:0,predict:null,stable:false,label:"データなし",rows:[]};
+ if(!n)return{boat:b,count:0,avg:null,median:null,min:null,max:null,sd:null,cv:null,fast10:0,fast15:0,predict:null,stable:false,label:"データなし",rows:[],avgRank:null,firstRate:0,top2Rate:0,rankCount:0};
  let avg=vals.reduce((a,v)=>a+v,0)/n,sorted=[...vals].sort((a,v)=>a-v),median=n%2?sorted[(n-1)/2]:(sorted[n/2-1]+sorted[n/2])/2;
- let variance=vals.reduce((a,v)=>a+(v-avg)*(v-avg),0)/n,sd=Math.sqrt(variance),recent=vals.slice(0,Math.min(5,n)),recentAvg=recent.reduce((a,v)=>a+v,0)/recent.length;
- // 15走平均を軸に、直近5走を30%だけ反映。安定型は中央値へ10%寄せる
+ let variance=vals.reduce((a,v)=>a+(v-avg)*(v-avg),0)/n,sd=Math.sqrt(variance),recent=vals.slice(0,Math.min(15,n)),recentAvg=recent.reduce((a,v)=>a+v,0)/recent.length;
+ // vol.7: 30走を基礎70%、直近15走30%。さらに同コースの実ST順位を最大±0.020秒だけ補正。
  let base=avg*.70+recentAvg*.30,predict=base;
  if(sd<=.025)predict=base*.90+median*.10;
+ let ranked=rows.filter(r=>Number.isFinite(num(r.stRank))&&num(r.stRank)>=1&&num(r.stRank)<=6),rankCount=ranked.length;
+ let avgRank=rankCount?ranked.reduce((a,r)=>a+num(r.stRank),0)/rankCount:null;
+ let firstRate=rankCount?ranked.filter(r=>num(r.stRank)===1).length/rankCount*100:0;
+ let top2Rate=rankCount?ranked.filter(r=>num(r.stRank)<=2).length/rankCount*100:0;
+ let rankAdj=avgRank!=null?bhClamp((avgRank-3.5)/2.5*.020,-.020,.020):0;
+ predict+=rankAdj;
  predict=Math.max(.01,Math.min(.30,predict));
  let stable=sd<=.025,label=sd<=.018?"かなり安定":sd<=.025?"安定":sd<=.040?"標準":"ばらつき大";
- return{boat:b,count:n,avg,median,min:Math.min(...vals),max:Math.max(...vals),sd,cv:avg?sd/avg:0,fast10:vals.filter(v=>v<=.10).length/n*100,fast15:vals.filter(v=>v<=.15).length/n*100,recentAvg,predict,stable,label,rows};
+ return{boat:b,count:n,avg,median,min:Math.min(...vals),max:Math.max(...vals),sd,cv:avg?sd/avg:0,fast10:vals.filter(v=>v<=.10).length/n*100,fast15:vals.filter(v=>v<=.15).length/n*100,recentAvg,predict,stable,label,rows,avgRank,firstRate,top2Rate,rankCount,rankAdj};
 }
 function bhFmtST(v){return Number.isFinite(v)?Number(v).toFixed(2):"－"}
 function bhBoatLabel(b){let r=racer(b);return `${b}号艇 ${esc(r?.name||"")}`.trim()}
@@ -2020,7 +2031,7 @@ function bhStartCardHTML(x){
   if(x.fast10>=25)tags.push(`<span class="bhStartTag good">🔥 0.10以内 ${x.fast10.toFixed(0)}%</span>`);
   if(x.sd>.04)tags.push(`<span class="bhStartTag warn">⚠️ ST幅大</span>`);
  }
- return `<div class="bhStartBoatCard"><div class="bhStartBoatHead"><div><div class="bhStartBoatName">${bhBoatLabel(x.boat)}</div><div class="bhStartBoatCourse">今回 ${c}コース / 同コース ${x.count}走</div></div><div class="bhStartAvg">${x.count?bhFmtST(x.predict):'－'}</div></div>${x.count?`<div class="bhStartTags">${tags.join('')}</div><div style="font-size:11px;color:#a7aebb">平均 ${bhFmtST(x.avg)}　中央値 ${bhFmtST(x.median)}　最速 ${bhFmtST(x.min)}　最遅 ${bhFmtST(x.max)}　σ ${x.sd.toFixed(3)}</div><div class="bhStartSeries">${x.rows.map((r,i)=>`<span class="bhStartChip ${r.st<=.10?'fast':r.st>=.20?'slow':''}">${i+1}:${bhFmtST(r.st)}</span>`).join('')}</div>`:`<div class="bhStartNone">今回と同じ${c}コースのSTを取得できていません。データ元にSTが無いレースは集計から除外します。</div>`}</div>`;
+ return `<div class="bhStartBoatCard"><div class="bhStartBoatHead"><div><div class="bhStartBoatName">${bhBoatLabel(x.boat)}</div><div class="bhStartBoatCourse">今回 ${c}コース / 同コース ${x.count}走</div></div><div class="bhStartAvg">${x.count?bhFmtST(x.predict):'－'}</div></div>${x.count?`<div class="bhStartTags">${tags.join('')}</div><div style="font-size:11px;color:#a7aebb">平均 ${bhFmtST(x.avg)}　中央値 ${bhFmtST(x.median)}　最速 ${bhFmtST(x.min)}　最遅 ${bhFmtST(x.max)}　σ ${x.sd.toFixed(3)}${x.rankCount?`<br><b style="color:#7ee6ff">ST順位 平均${x.avgRank.toFixed(2)}位 / 1st ${x.firstRate.toFixed(0)}% / 2nd以内 ${x.top2Rate.toFixed(0)}%</b>`:''}</div><div class="bhStartSeries">${x.rows.map((r,i)=>`<span class="bhStartChip ${r.st<=.10?'fast':r.st>=.20?'slow':''}">${i+1}:${bhFmtST(r.st)}${num(r.stRank)>0?` / ${num(r.stRank)}位`:``}</span>`).join('')}</div>`:`<div class="bhStartNone">今回と同じ${c}コースのSTを取得できていません。データ元にSTが無いレースは集計から除外します。</div>`}</div>`;
 }
 function bhSlipBoatSvg(b){
  const colors={1:["#f7f7f7","#c6c9cc","#111"],2:["#15171b","#050505","#fff"],3:["#e63b36","#8f0f0f","#fff"],4:["#2d7eea","#0c3f9d","#fff"],5:["#f2d21b","#a47f00","#111"],6:["#35a853","#0f6d25","#fff"]};
@@ -5419,5 +5430,43 @@ bhV3Render=function(tickets,outlook){
 };
 </script>
 
+\n<style id="bh-vol7-css">
+.bhLapAdjBox{margin:10px 0;padding:10px;border:1px solid #5b4d22;border-radius:12px;background:#171407;font-size:11px;line-height:1.55}.bhLapAdjBox b{color:#ffd86a}.bhLapAdjGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px}.bhLapAdjCell{background:#101010;border:1px solid #333;border-radius:8px;padding:7px}.bhLapAdjCell.hot{border-color:#d4af37}.bhLapAdjCell strong{display:block;color:#fff;font-size:13px}@media(max-width:650px){.bhLapAdjGrid{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script id="bh-vol7-engine">
+// vol.7 一周タイム：外コースほど引き波等で0.15〜0.20秒程度悪化するという検証仮説を0.175秒/コースで正規化。
+// 公式の一周タイム自体は総合力の参考データ。0.175はBOAT HUNTERの検証パラメータであり公式値ではない。
+const BH_LAP_COURSE_STEP=.175;
+function bhLapRaw(b){let p=preview(b)||{};let v=num(p.lap_time||p.lapTime||p.one_round_time||p.oneRoundTime||p.round_time);return v>0?v:null}
+function bhLapAdjusted(b){let v=bhLapRaw(b);return Number.isFinite(v)?v-(Math.max(1,course(b))-1)*BH_LAP_COURSE_STEP:null}
+function bhLapContext(){
+ let rows=[1,2,3,4,5,6].map(b=>({boat:b,raw:bhLapRaw(b),adj:bhLapAdjusted(b),course:course(b)})).filter(x=>Number.isFinite(x.raw));
+ let rawRank=[...rows].sort((a,b)=>a.raw-b.raw),adjRank=[...rows].sort((a,b)=>a.adj-b.adj);
+ rows.forEach(x=>{x.rawRank=rawRank.findIndex(y=>y.boat===x.boat)+1;x.adjRank=adjRank.findIndex(y=>y.boat===x.boat)+1});
+ return {rows,rawWinner:rawRank[0]?.boat||null,adjWinner:adjRank[0]?.boat||null,oneLost:rows.some(x=>x.boat===1)&&rawRank[0]?.boat!==1};
+}
+function bhLapBonus(b,pos){let c=bhLapContext(),x=c.rows.find(z=>z.boat===b);if(!x)return 0;let bonus=(7-x.adjRank)*4;if(c.oneLost&&b!==1){bonus+=(7-x.rawRank)*5;if(x.rawRank===1)bonus+=25;}if(b===1&&c.oneLost)bonus-=18;return bonus*(pos===1?.75:pos===2?1:.8)}
+function bhVol7Attacker(){try{return bhV5MainAttacker()?.boat||num(bhOneMOutlookSignal()?.main?.boat||bhOneMOutlookSignal()?.attacker)||null}catch(e){return null}}
+function bhVol7RemainBoats(head,method){
+ method=String(method||'');let atk=bhVol7Attacker(),a=[];
+ if(head===6){if(method.includes('まくり差し'))a=[1];else if(method.includes('まくり'))a=[1,5];else if(method.includes('差し'))a=[1,atk];}
+ else if(method.includes('まくり差し'))a=[1,atk];
+ else if(method.includes('まくり'))a=[1,head+1];
+ else if(method.includes('差し'))a=[1];
+ return [...new Set(a.filter(x=>x>=1&&x<=6&&x!==head))];
+}
+// 買い目の2・3着評価へ「決まり手で残りやすい艇」と一周補正を加える。
+const bhVol7BaseLegScore=bhV3LegScore;
+bhV3LegScore=function(b,pos,head){
+ let v=bhVol7BaseLegScore(b,pos,head);let method=bhV3MethodForHead(head),remain=bhVol7RemainBoats(head,method);
+ if(remain.includes(b))v+=(pos===2?58:42);
+ v+=bhLapBonus(b,pos);return v;
+};
+const bhVol7BaseHeadScore=bhV3HeadScore;
+bhV3HeadScore=function(b,outlook){return bhVol7BaseHeadScore(b,outlook)+bhLapBonus(b,1)};
+function bhLapAdjHTML(){let c=bhLapContext();if(!c.rows.length)return '';return `<div class="bhLapAdjBox"><b>🏁 一周タイム・コース補正評価</b><br>検証補正：外へ1コースずれるごとに0.175秒を差し引いて比較。${c.oneLost?'<b>⚠️ 1コースが生一周1位ではありません。上回った艇を強めに評価。</b>':'1コース生一周1位は通常想定として大幅加点しません。'}<div class="bhLapAdjGrid">${c.rows.sort((a,b)=>a.adj-b.adj).map(x=>`<div class="bhLapAdjCell ${x.adjRank===1?'hot':''}">${x.boat}号艇 / ${x.course}C<strong>生 ${x.raw.toFixed(2)} → 補正 ${x.adj.toFixed(3)}</strong>補正順位 ${x.adjRank}位</div>`).join('')}</div></div>`}
+const bhVol7BaseRender=bhV3Render;
+bhV3Render=function(tickets,outlook){bhVol7BaseRender(tickets,outlook);let box=document.getElementById('bhNewBetRows');if(box)box.insertAdjacentHTML('afterbegin',bhLapAdjHTML());};
+</script>\n
 </body>
 </html>

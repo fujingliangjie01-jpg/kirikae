@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.38</div>
+<body><div class="bhVol">vol.39</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -7538,7 +7538,7 @@ function bhV30ResistanceReverse(){
     2連単も○×・払戻・収支へ正式算入
 
   過去30走:
-    取得件数は30走維持。永続キャッシュ＋大きめ並列バッチで高速化。
+    AI解析安定性を優先し、既存取得ルートを維持。大量並列化は使用しない。
 */
 (function(){
  const V38={};
@@ -7686,104 +7686,11 @@ function bhV30ResistanceReverse(){
  }
 
  // -----------------------
- // 30走 高速化
+ // 30走取得
  // -----------------------
- const FAST_PLAYER_PREFIX="bh-v38-player30-";
- function persistentPlayerKey(no,c){return `${FAST_PLAYER_PREFIX}${no}-${c}`}
- function hydratePersistent(targets){
-   racers.forEach(r=>{
-     const no=getRacerNumber(r),c=course(num(r.entry_number));
-     if(!no||!targets[no])return;
-     try{
-       const obj=JSON.parse(localStorage.getItem(persistentPlayerKey(no,c))||"null");
-       if(obj&&Array.isArray(obj.rows)&&obj.rows.length){
-         targets[no].boats[c]=obj.rows.slice(0,HISTORY_RACES);
-       }
-     }catch(e){}
-   });
- }
- function savePersistent(targets){
-   racers.forEach(r=>{
-     const no=getRacerNumber(r),c=course(num(r.entry_number)),arr=targets[no]?.boats?.[c];
-     if(!no||!Array.isArray(arr)||!arr.length)return;
-     try{localStorage.setItem(persistentPlayerKey(no,c),JSON.stringify({savedAt:Date.now(),rows:arr.slice(0,HISTORY_RACES)}))}catch(e){}
-   });
- }
-
- // 日別URLを「失敗したURLを1本ずつ待つ」のではなく並列で開始し、
- // 成功データを得た時点でその日を処理。
- async function fastHistoryDay(daysAgo){
-   let d=new Date();d.setDate(d.getDate()-daysAgo);
-   let p=dateInfo(d);
-   const urls=[
-     `${API_V1}/${p.year}/${p.ymd}.json`,
-     `${API_V3}/${p.year}/${p.ymd}.json`,
-     `${API_V2}/${p.year}/${p.ymd}.json`
-   ];
-   // historyJson自体に同URL Promiseキャッシュあり。
-   const jobs=urls.map(u=>historyJson(u).then(data=>({ok:true,data})).catch(()=>({ok:false,data:null})));
-   const results=await Promise.all(jobs);
-   return results.find(x=>x.ok)?.data||null;
- }
-
- const oldLoadHistory=window.loadHistory||loadHistory;
- window.loadHistory=loadHistory=async function(options={}){
-   const silent=!!options.silent,key=historyCacheKey();
-   try{
-     const cached=JSON.parse(sessionStorage.getItem(key)||"null");
-     if(cached&&historyComplete(cached)){historyData=cached;savePlayerCourseCache(cached);savePersistent(cached);return}
-   }catch(e){}
-
-   if(historyLoadPromise&&historyLoadPromiseKey===key){await historyLoadPromise;return}
-
-   const task=(async()=>{
-     let targets=emptyHistory();
-     hydratePlayerCourseCache(targets);
-     hydratePersistent(targets);
-     let wanted=new Set(Object.keys(targets).map(Number));
-
-     if(historyComplete(targets)){
-       sortHistory(targets);historyData=targets;savePlayerCourseCache(targets);
-       try{sessionStorage.setItem(key,JSON.stringify(historyData))}catch(e){}
-       return;
-     }
-
-     const FAST_BATCH=36;
-     for(let start=1;start<=HISTORY_DAYS;start+=FAST_BATCH){
-       if(historyComplete(targets))break;
-       const days=[];
-       for(let x=start;x<start+FAST_BATCH&&x<=HISTORY_DAYS;x++)days.push(x);
-
-       // 36日を同時取得。各日V1/V3/V2も並列開始。
-       const got=await Promise.all(days.map(async day=>{
-         try{return {day,data:await fastHistoryDay(day)}}catch(e){return {day,data:null}}
-       }));
-       // 新しい日から順に処理し30走を維持
-       got.sort((a,b)=>a.day-b.day).forEach(x=>{
-         if(x.data)collectHistoryFromDay(x.data,targets,wanted);
-       });
-
-       sortHistory(targets);
-       savePlayerCourseCache(targets);
-       savePersistent(targets);
-
-       if(!silent){
-         const counts=racers.map(x=>{
-           const no=getRacerNumber(x),c=course(num(x.entry_number));
-           return targets[no]?.boats?.[c]?.length||0;
-         });
-         const msg=document.getElementById("message");
-         if(msg)msg.innerHTML=`<span class="loading">⚡ 過去30走を高速取得中…<br>現在：${counts.join(" / ")}走<br>対象：今回と同じ進入コース<br>検索：過去${Math.min(start+FAST_BATCH-1,HISTORY_DAYS)}日</span>`;
-       }
-     }
-     sortHistory(targets);historyData=targets;savePlayerCourseCache(targets);savePersistent(targets);
-     try{sessionStorage.setItem(key,JSON.stringify(historyData))}catch(e){}
-   })();
-
-   historyLoadPromise=task;historyLoadPromiseKey=key;
-   try{await task}
-   finally{if(historyLoadPromise===task){historyLoadPromise=null;historyLoadPromiseKey=""}}
- };
+ // vol.39: AI解析安定性を最優先し、vol38の大量並列取得は撤回。
+ // 元のloadHistory / historyJson / sessionStorage・playerCourseCacheをそのまま使用する。
+ // 既存の30走数・評価項目・取得順序は変更しない。
 
  // -----------------------
  // 結果ダッシュボード
@@ -7860,6 +7767,56 @@ function bhV30ResistanceReverse(){
       return ret;
     };
   }
+})();
+</script>
+
+
+<script id="bh-vol39-safe-history-cache">
+/* vol.39
+   過去30走高速化の安全側対応：
+   取得関数・並列数・API順序には触れない。
+   既存loadHistoryが正常完了した後のhistoryDataだけをrace/course単位でlocalStorageへ保存。
+   AI解析の実行経路は元コードのまま。
+*/
+(function(){
+  const KEY_PREFIX="bh-v39-history-safe-";
+  function key(){
+    try{return KEY_PREFIX+(typeof historyCacheKey==="function"?historyCacheKey():"default")}
+    catch(e){return KEY_PREFIX+"default"}
+  }
+  function valid(x){
+    try{return x&&typeof x==="object"&&typeof historyComplete==="function"&&historyComplete(x)}
+    catch(e){return false}
+  }
+
+  // 起動時、既存sessionStorageに完成キャッシュが無い時だけlocalStorageから復元。
+  // loadHistory自体は一切上書きしない。
+  try{
+    const sk=typeof historyCacheKey==="function"?historyCacheKey():"";
+    const ss=sk?JSON.parse(sessionStorage.getItem(sk)||"null"):null;
+    if(!valid(ss)){
+      const saved=JSON.parse(localStorage.getItem(key())||"null");
+      if(saved&&valid(saved.data)){
+        historyData=saved.data;
+        if(sk)sessionStorage.setItem(sk,JSON.stringify(saved.data));
+        if(typeof savePlayerCourseCache==="function")savePlayerCourseCache(saved.data);
+      }
+    }
+  }catch(e){}
+
+  // AI解析完了後に既に取得済みの30走を保存するだけ。
+  // 取得途中や不完全データは保存しない。
+  document.addEventListener("click",function(e){
+    const el=e.target?.closest?.("button");
+    if(!el)return;
+    setTimeout(()=>{
+      try{
+        if(valid(historyData)){
+          localStorage.setItem(key(),JSON.stringify({savedAt:Date.now(),data:historyData}));
+        }
+      }catch(_){}
+    },2500);
+  },{passive:true});
 })();
 </script>
 

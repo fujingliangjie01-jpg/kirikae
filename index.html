@@ -919,18 +919,24 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhLapCorrectionFold{display:none;margin-top:8px}.bhLapCorrectionFold.open{display:block}
 </style>
 <style id="bh-vol14-css">
-#startPredictionCard .bhSlip.bhOneM,#startPredictionCard .bhVol9Rule{display:none!important}
+#startPredictionCard .bhVol9Rule{display:none!important}
 .bhGoBetBtn{width:100%;min-height:68px;margin:14px 0;padding:14px 18px;border-radius:18px;font-size:20px;font-weight:1000;cursor:pointer}
 .bhBudgetInnerV13{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:10px!important}
 .bhBudgetSide{display:flex!important;min-width:0!important;flex-direction:column!important}
 .bhBudgetSide .bhVerifyBtn{display:block!important;visibility:visible!important;opacity:1!important;width:100%!important;min-height:58px!important}
 </style>
 <style id="bh-vol15-css">
-.bhAttackHidden{display:none!important}
-.bhGoBetBtn{min-height:48px!important;margin:10px 0!important;padding:9px 14px!important;border-radius:13px!important;font-size:16px!important;font-weight:850!important;background:rgba(18,18,18,.78)!important;border:1px solid rgba(214,171,55,.58)!important;box-shadow:none!important}
+.bhGoBetBtn{min-height:48px!important;margin:10px 0!important;padding:9px 14px!important;border-radius:13px!important;font-size:16px!important;font-weight:850!important;background:rgba(20,20,20,.72)!important;border:1px solid rgba(214,168,48,.72)!important;box-shadow:none!important}
+</style>
+<style id="bh-vol16-1m-fix-css">
+/* 1Mスリットは常時表示。説明だけ隠す */
+#startPredictionCard .bhSlip.bhOneM{display:block!important}
+#startPredictionCard .bhTheoryBox{display:none!important}
+#startPredictionCard .bhStartNote{display:none!important}
+#startPredictionCard .bhTenkai{display:block!important}
 </style>
 </head>
-<body><div class="bhVol">vol.15</div>
+<body><div class="bhVol">vol.16</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -975,7 +981,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 
 </div>
 <div class="container">
-<div class="card">
+<div class="card bhAttackExplainCard">
 <h2>🎯 レース選択</h2>
 <div class="grid2">
 <div>
@@ -1037,8 +1043,8 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <div id="analysisCard" class="card analysisCardFlash" style="display:none">
 <h2>🤖 AI期待値ランキング</h2>
 <div id="ranking"></div>
-<h3 class="bhAttackHidden">🔥 このレースの攻め手</h3>
-<div id="attack" class="bhAttackHidden"></div>
+<h3>🔥 このレースの攻め手</h3>
+<div id="attack"></div>
 <div id="exclusions" style="display:none"></div>
 
 </div>
@@ -4868,8 +4874,8 @@ function bhExpandTicket(t){
 function bhTicketHit(result,tickets){return tickets.some(t=>bhExpandTicket(t).includes(result))}
 function bhOutlookHit(first,pct){return pct>=50?first===1:first!==1}
 function bhBandName(p){return p>=90?"90以上":p>=80?"80台":p>=70?"70台":p>=60?"60台":p>=50?"50台":p>=40?"40台":"40未満"}
-const BH_RESULT_STATS_KEY_V1="BOAT_HUNTER_RESULT_STATS_V1_FROM_20260830";
-const BH_RESULT_STATS_KEY="BOAT_HUNTER_RESULT_STATS_V2_FROM_20260830";
+const BH_RESULT_STATS_KEY_V1="BOAT_HUNTER_RESULT_STATS_V1";
+const BH_RESULT_STATS_KEY="BOAT_HUNTER_RESULT_STATS_V2";
 const BH_SEED_20260827={"total":123,"ticketHit":72,"outlookHit":87,"alerts":{"展開不透明":{"n":12,"ticket":6,"outlook":8},"強力な壁":{"n":25,"ticket":15,"outlook":18},"アラートなし":{"n":57,"ticket":32,"outlook":38},"1コース まくり差され率高め":{"n":16,"ticket":10,"outlook":11},"1コース まくられ率高め":{"n":19,"ticket":10,"outlook":14},"壁崩壊警戒":{"n":2,"ticket":2,"outlook":2}},"bands":{"60台":{"n":9,"ticket":7,"outlook":6},"70台":{"n":25,"ticket":13,"outlook":16},"80台":{"n":44,"ticket":29,"outlook":33},"50台":{"n":10,"ticket":8,"outlook":4},"40未満":{"n":25,"ticket":11,"outlook":19},"40台":{"n":10,"ticket":4,"outlook":9}}};
 function bhTodayKey(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function bhDateLabel(k){if(k==="all")return"全期間";let p=k.split("-");return p.length===3?`${Number(p[1])}/${Number(p[2])}`:k}
@@ -4910,7 +4916,7 @@ function bhLoadStatsStoreCore(){
   return s
 }
 function bhSaveStatsStoreCore(s){try{localStorage.setItem(BH_RESULT_STATS_KEY,JSON.stringify(s))}catch(e){}}
-const BH_RESULT_STATS_BACKUP_KEY="BOAT_HUNTER_RESULT_STATS_BACKUP_V1_FROM_20260830";
+const BH_RESULT_STATS_BACKUP_KEY="BOAT_HUNTER_RESULT_STATS_BACKUP_V1";
 function bhLoadStatsStore(){
   let main=bhLoadStatsStoreCore(),backup=null;
   try{backup=JSON.parse(localStorage.getItem(BH_RESULT_STATS_BACKUP_KEY)||"null")}catch(e){}
@@ -5068,9 +5074,9 @@ function bhResultPanelHTML(){
   return `<div class="bhResultPanel"><button id="bhResultToggle" class="bhResultToggle" type="button" onclick="bhToggleResultPanel()">${toggleText}</button><div id="bhResultBody" class="bhResultBody${openClass}"><h3>📊 AI解析・累計成績</h3><div id="bhAutoResultStatus" class="bhAutoResultStatus"><span>🤖 全場結果自動取得：直近3日保持・待機中</span><button type="button" onclick="bhAutoCheckResults(true)">今すぐ確認</button></div><div id="bhResultMsg" class="bhResultMsg"></div><div class="bhStatsTools"><span>成績表示</span><select id="bhStatsDate" onchange="bhSetStatsDate(this.value)"></select></div><div id="bhStats" class="bhStats"></div><button id="bhResultListToggle" class="bhResultListToggle" type="button" onclick="bhToggleResultList()">🏁 全場レース結果を表示</button><div id="bhResultListWrap" class="bhResultListWrap"><div id="bhResultHistory" class="bhResultHistory"></div></div></div></div>`
 }
 
-const BH_PREDICTION_SNAPSHOT_KEY="BOAT_HUNTER_PREDICTION_SNAPSHOTS_V1_FROM_20260830";
-const BH_RESULT_RECORDED_KEY="BOAT_HUNTER_RECORDED_RACES_V1_FROM_20260830";
-const BH_ALL_RESULTS_KEY="BOAT_HUNTER_ALL_RESULTS_3D_V1_FROM_20260830";
+const BH_PREDICTION_SNAPSHOT_KEY="BOAT_HUNTER_PREDICTION_SNAPSHOTS_V1";
+const BH_RESULT_RECORDED_KEY="BOAT_HUNTER_RECORDED_RACES_V1";
+const BH_ALL_RESULTS_KEY="BOAT_HUNTER_ALL_RESULTS_3D_V1";
 function bhAllResultStore(){try{let x=JSON.parse(localStorage.getItem(BH_ALL_RESULTS_KEY)||"null");return x&&typeof x==="object"?x:{}}catch(e){return{}}}
 function bhSaveAllResultStore(x){try{localStorage.setItem(BH_ALL_RESULTS_KEY,JSON.stringify(x))}catch(e){}}
 function bhExtractAllV1Races(data,day){
@@ -5763,6 +5769,19 @@ function bhGoToBets(){
  const t=[...document.querySelectorAll("h1,h2,h3,.sectionTitle,.cardTitle,b,strong")].find(x=>/買い目/.test(x.textContent||""));
  if(t)t.scrollIntoView({behavior:"smooth",block:"start"});
 }
+</script>
+<script id="bh-vol15-ui-js">
+function bhV15TrimAttackExplanation(){
+ const card=document.querySelector(".bhAttackExplainCard");if(!card)return;
+ const els=[...card.children],outlook=els.find(el=>/全体見通し/.test(el.textContent||""));
+ if(!outlook)return;
+ for(const el of els){if(el===outlook)break;el.style.display="none";}
+}
+document.addEventListener("DOMContentLoaded",bhV15TrimAttackExplanation);
+</script>
+<script id="bh-vol15-stats-start-js">
+window.BH_STATS_START_DATE="2026-08-30";
+try{localStorage.setItem("boat_hunter_stats_start_date","2026-08-30")}catch(e){}
 </script>
 </body>
 </html>

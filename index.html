@@ -2047,54 +2047,81 @@ function bhFCount(b){
  return 0;
 }
 function bhExTime(b){let p=preview(b)||{};let v=num(p.exhibition_time||p.exhibition);return v>0?v:null}
+// 直前タイム＝行き足（スタート後の加速部分）。取得元ごとの表記揺れを吸収する。
+function bhPreTime(b){
+ let p=preview(b)||{};
+ const vals=[
+  p.straight_time,p.straightTime,
+  p.pre_time,p.preTime,p.preliminary_time,p.preliminaryTime,
+  p.before_time,p.beforeTime,p.chokuzen_time,p.chokuzenTime,
+  p.direct_time,p.directTime,p.pre_race_time,p.preRaceTime
+ ];
+ for(const v of vals){let n=num(v);if(n>0&&n<20)return n}
+ return null;
+}
+function bhMedian(vals){
+ let a=vals.filter(Number.isFinite).slice().sort((a,b)=>a-b);if(!a.length)return null;
+ return a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2;
+}
+function bhClamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function bhOneMModel(stats){
- // 1M到達理論・開き抑制版
- // スタート隊形を主役にし、150mの速度差は「有効伸び補正」として25%だけ反映。
- // 伸びで動かせる量はスタート隊形から最大±0.70艇身までに制限する。
- let exVals=[1,2,3,4,5,6].map(bhExTime).filter(Number.isFinite).sort((a,b)=>a-b);
- let exMedian=exVals.length?(exVals.length%2?exVals[(exVals.length-1)/2]:(exVals[exVals.length/2-1]+exVals[exVals.length/2])/2):null;
+ // 1M到達理論：スタート隊形を土台に、
+ // ①直前タイム＝行き足（加速） ②展示タイム＝伸び足（最高速側）を別々に反映。
+ // タイム未取得時だけ手入力の行き足/伸び足評価を補助に使う。
+ let exMedian=bhMedian([1,2,3,4,5,6].map(bhExTime));
+ let preMedian=bhMedian([1,2,3,4,5,6].map(bhPreTime));
  let rows=stats.map(x=>{
   if(!Number.isFinite(x.predict))return {...x,speed:null,arrival:null,confidence:0};
+  let ex=bhExTime(x.boat),pre=bhPreTime(x.boat),er=exhibitRatings[x.boat]||{};
+
+  // 行き足補正：直前タイムが中央値より良いほど、スリット後の加速で前へ。
+  // 通常は±0.25艇身以内。実測が無い時だけ手入力「行き足」を±0.12艇身で補助。
+  let accelBody=0;
+  if(Number.isFinite(pre)&&Number.isFinite(preMedian))accelBody=bhClamp((preMedian-pre)*2.5,-.25,.25);
+  else accelBody=bhClamp((er.iki||0)*.12,-.12,.12);
+
+  // 伸び補正：展示タイムが中央値より良いほど、加速後〜1M手前で前へ。
+  // 行き足より少し長く効くため±0.40艇身。実測が無い時だけ手入力「伸び足」を±0.18艇身。
+  let stretchBody=0;
+  if(Number.isFinite(ex)&&Number.isFinite(exMedian))stretchBody=bhClamp((exMedian-ex)*3.0,-.40,.40);
+  else stretchBody=bhClamp((er.nobi||0)*.18,-.18,.18);
+
+  // 表示用の推定速度。1M隊形の位置計算そのものはこの絶対速度ではなく相対補正で行う。
   let speed=74.5;
-  // ST能力は最高速そのものではなく、行き足へきれいに乗せる小補正。
-  if(x.fast10>=40)speed+=.45; else if(x.fast15>=75)speed+=.25;
-  if(x.predict>=.18)speed-=.45; else if(x.predict<=.10)speed+=.20;
-  // F持ちは踏み込み抑制を小さく反映（ST予測側と二重に効かせすぎない）。
-  let fc=bhFCount(x.boat); if(fc>=2)speed-=.50; else if(fc===1)speed-=.25;
-  // 展示タイムは場内相対差のみ。0.10秒良くても約+0.8km/h、最大±1.2km/h。
-  let ex=bhExTime(x.boat); if(Number.isFinite(ex)&&Number.isFinite(exMedian))speed+=Math.max(-1.2,Math.min(1.2,(exMedian-ex)*8));
-  // 手入力の行き足・伸び足も控えめ。合計効果は後段のレンジで抑える。
-  let er=exhibitRatings[x.boat]||{}; speed+=(er.iki||0)*.35+(er.nobi||0)*.55;
-  speed=Math.max(72,Math.min(77,speed));
-  let travel=150/(speed/3.6);
-  // 階級は速度ではなく予測再現性（信頼度）へ。
-  let cls=bhClassOfBoat(x.boat),confidence=cls==='A1'?90:cls==='A2'?83:cls==='B1'?74:cls==='B2'?66:70;
+  if(Number.isFinite(ex)&&Number.isFinite(exMedian))speed+=bhClamp((exMedian-ex)*8,-1.2,1.2);
+  else speed+=(er.nobi||0)*.45;
+  speed=bhClamp(speed,72,77);
+
+  let fc=bhFCount(x.boat),cls=bhClassOfBoat(x.boat);
+  // 階級は艇速ではなく「この予測を再現する確率」の信頼度に使う。
+  let confidence=cls==='A1'?90:cls==='A2'?83:cls==='B1'?74:cls==='B2'?66:70;
   confidence+=x.sd<=.018?5:x.sd<=.025?3:x.sd>.04?-6:0;
-  confidence-=fc*4; confidence=Math.max(50,Math.min(96,confidence));
-  return {...x,speed,travel,ex,exMedian,confidence,fCount:fc,cls};
+  confidence-=fc*4;
+  if(Number.isFinite(pre))confidence+=2;
+  if(Number.isFinite(ex))confidence+=2;
+  confidence=bhClamp(confidence,50,96);
+  return {...x,speed,ex,pre,exMedian,preMedian,accelBody,stretchBody,confidence,fCount:fc,cls};
  });
- let usable=rows.filter(x=>Number.isFinite(x.predict)&&Number.isFinite(x.travel));
+ let usable=rows.filter(x=>Number.isFinite(x.predict));
  if(!usable.length)return rows;
- // スタート時の相対差をそのまま土台にする。
+
+ // スタート最速艇を0として、スタート時の相対艇身差を作る。
  let startLead=Math.min(...usable.map(x=>x.predict));
- let travelBest=Math.min(...usable.map(x=>x.travel));
- const STRETCH_WEIGHT=.25;       // 150m速度差のうち25%だけ有効化
- const MAX_MOVE_BODY=.70;       // スタート隊形からの変化は最大±0.70艇身
- const MAX_MOVE_SEC=.15*MAX_MOVE_BODY;
+ const MAX_MOVE_BODY=.70; // 行き足＋伸びによる変化は合計±0.70艇身まで
  usable.forEach(x=>{
    x.startDelay=x.predict-startLead;
-   // 最速艇を0として、遅い艇ほどプラスになる生の150m差。
-   let rawStretch=x.travel-travelBest;
-   x.stretchEffect=Math.max(-MAX_MOVE_SEC,Math.min(MAX_MOVE_SEC,rawStretch*STRETCH_WEIGHT));
-   x.arrivalScore=x.startDelay+x.stretchEffect;
+   x.startBoatBehind=x.startDelay/.15;
+   // 良いタイムは「前へ」なので、後方差から差し引く。
+   let moveForwardBody=bhClamp(x.accelBody+x.stretchBody,-MAX_MOVE_BODY,MAX_MOVE_BODY);
+   x.moveForwardBody=moveForwardBody;
+   x.arrivalScore=x.startDelay-(moveForwardBody*.15);
  });
  let finalLead=Math.min(...usable.map(x=>x.arrivalScore));
  rows.forEach(x=>{
    if(Number.isFinite(x.arrivalScore)){
      x.delay=x.arrivalScore-finalLead;
      x.boatBehind=x.delay/.15;
-     x.startBoatBehind=x.startDelay/.15;
-     x.moveBody=(x.boatBehind-x.startBoatBehind);
+     x.moveBody=x.boatBehind-x.startBoatBehind;
      x.arrival=x.arrivalScore;
    }
  });
@@ -2104,7 +2131,7 @@ function bhOneMSlipHTML(rows){
  let usable=rows.filter(x=>Number.isFinite(x.arrival));
  if(!usable.length)return `<div class="bhStartNone">1マーク到達予測を計算できません。</div>`;
  let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
- return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形を主役に、150mの行き足/伸び差は25%だけ反映。スタート位置からの変化は最大±0.70艇身に制限。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
+ return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。位置変化は最大±0.70艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
   let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
   let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';
@@ -2115,7 +2142,7 @@ function bhOneMSlipHTML(rows){
 function bhOneMDetailHTML(rows){
  let usable=rows.filter(x=>Number.isFinite(x.arrival)); if(!usable.length)return '';
  let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
- return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論・暫定モデル</b><br>予測STの隊形を土台に、スタートラインから1Mまで150mの相対速度差を「有効伸び補正25%」として追加。速度モデルは72〜77km/h内に抑え、展示タイム相対差・行き足/伸び足・スタート傾向・F状況を反映。スタート時から動かせる量は最大±0.70艇身です。<b>階級は艇速ではなく予測の再現性（信頼度）へ反映</b>しています。実測の直線タイムが取得できる場合は今後そちらを優先します。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span>${x.fCount?`<br>F${x.fCount}補正`:''}</div>`}).join('')}</div></div>`;
+ return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論</b><br><b>直前タイム＝行き足（加速）</b>、<b>展示タイム＝伸び足（最高速側）</b>として別々に計算。予測STの隊形を土台に、直前タイムはスリット後の加速区間、展示タイムは加速後〜1M手前の伸び区間へ反映します。実測タイムがある場合は手入力評価より優先し、両補正を合わせてもスタート隊形から最大±0.70艇身に制限。<b>階級は艇速ではなく予測の再現性（信頼度）</b>へ使います。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';let preTxt=Number.isFinite(x.pre)?`直前 ${x.pre.toFixed(2)} / 行き足 ${x.accelBody>=0?'+':''}${x.accelBody.toFixed(2)}艇`:'直前 未取得';let exTxt=Number.isFinite(x.ex)?`展示 ${x.ex.toFixed(2)} / 伸び ${x.stretchBody>=0?'+':''}${x.stretchBody.toFixed(2)}艇`:'展示 未取得';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span><br>${preTxt}<br>${exTxt}${x.fCount?`<br>F${x.fCount}（ST側で慎重補正）`:''}</div>`}).join('')}</div></div>`;
 }
 function renderStartPrediction(){
  let card=$("startPredictionCard"),box=$("startPrediction");if(!card||!box||racers.length!==6)return;
@@ -2125,7 +2152,7 @@ function renderStartPrediction(){
  let fastest=[...usable].sort((a,b)=>a.predict-b.predict)[0],stable=[...usable].filter(x=>x.count>=3).sort((a,b)=>a.sd-b.sd)[0]||fastest;
  let spread=Math.max(...usable.map(x=>x.predict))-Math.min(...usable.map(x=>x.predict)),body=spread/.15;
  let oneM=bhOneMModel(stats);
- box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は開き抑制モデル（速度差25%反映・最大±0.70艇身）で、実測の直線タイム・行き足データ取得後に精密化します。</div>`;
+ box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映し、スタート隊形からの変化は最大±0.70艇身に制限します。</div>`;
 }
 
 

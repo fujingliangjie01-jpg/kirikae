@@ -2772,206 +2772,145 @@ function bhOneMOutlookSignal(){
    let vals=rows.filter(x=>Number.isFinite(x.boatBehind)).map(x=>x.boatBehind);
    if(!vals.length)return null;
    let spread=Math.max(...vals)-Math.min(...vals);
-   // ユーザー基準：0.60艇身=本線60%、1.00艇身=本線90%。間は線形。
+
+   // 新1M基準：艇身差が小さい「先頭表示」だけでは攻め成立にしない。
+   // 0.00〜0.29艇身 = 明確な攻めなし → 1コース初期優位
+   // 0.30〜0.59艇身 = 攻め気配 → 総合判断
+   // 0.60〜0.99艇身 = 明確な攻め → 本線60〜89%
+   // 1.00艇身以上 = 強攻め → 本線90%級
+   let zone=spread<.30?'none':spread<.60?'hint':spread<1?'attack':'strong';
    let mainProb;
-   if(spread>=1)mainProb=90;
-   else if(spread>=.6)mainProb=60+(spread-.6)/.4*30;
-   else mainProb=30+(spread/.6)*30; // 0.6未満は「型候補」扱い
-   mainProb=Math.max(30,Math.min(90,mainProb));
-   let remain=100-mainProb;
-   // 外攻め型は残りをイン逃げ/裏展開へ。0.60艇身なら60/20/20が基準。
-   // 明確な攻め候補が無い内型では、1号艇へ初期優位を与える。ただし逃げ確定にはしない。
-   let hasAttack=t.methods.some(x=>!x.hole);
-   let escapeProb=t.inside?(hasAttack?mainProb:Math.min(88,mainProb+remain*.25)):remain/2;
-   let reverseProb=t.inside?Math.max(0,100-mainProb-escapeProb):remain/2;
+   if(zone==='none') mainProb=0;
+   else if(zone==='hint') mainProb=30+(spread-.30)/.30*25;   // 30〜55%
+   else if(zone==='attack') mainProb=60+(spread-.60)/.40*30; // 60〜90%
+   else mainProb=90;
+   mainProb=Math.max(0,Math.min(90,mainProb));
+
+   let rawMethods=t.methods.filter(x=>!x.hole);
+   let hasCandidate=rawMethods.length>0;
+   let hasAttack=zone!=='none'&&hasCandidate;
+   let strongAttack=(zone==='attack'||zone==='strong')&&hasCandidate;
+
+   let escapeProb,reverseProb;
+   if(!hasAttack){
+     // 誰も明確に攻めない場合は1コースへ優位性。ただし逃げ確定にはしない。
+     escapeProb=64;
+     reverseProb=18;
+   }else if(t.inside){
+     // 内決着型の本線はイン側へ寄せる。
+     escapeProb=Math.max(52,mainProb);
+     reverseProb=(100-escapeProb)*.45;
+   }else{
+     // 外攻め型：0.60艇身なら 本線60 / イン逃げ20 / 裏展開20。
+     let remain=100-mainProb;
+     escapeProb=remain/2;
+     reverseProb=remain/2;
+     // 0.30〜0.59はまだ攻め気配。イン側へ少し優位を残す。
+     if(zone==='hint'){
+       escapeProb+=10;
+       reverseProb=Math.max(0,reverseProb-10);
+     }
+   }
+
    let env=bhWaterEnvironment();
+   // 場特性・風・潮は1M側の水面補正として使用。
    escapeProb+=env.escape;
    escapeProb=Math.max(5,Math.min(92,escapeProb));
-   let methodProbs=bhNormalizeMethodProbabilities(t.methods,mainProb);
-   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,theory:t,env,methodProbs,hasAttack};
+
+   let methodBudget=hasAttack?mainProb:0;
+   let methodProbs=bhNormalizeMethodProbabilities(t.methods,methodBudget);
+   return {escape:escapeProb,main:mainProb,reverse:reverseProb,spread,zone,theory:t,env,methodProbs,hasAttack,strongAttack};
  }catch(e){return null}
 }
 
 function overallEscapeProbability(){
-let r1=racer(1);
-if(!r1||course(1)!==1)
-return{escape:0,nonEscape:100,status:"イン以外",matchAdjustment:0,matchLabel:"1コース不成立"};
-let d=decisions(r1),p=55;
-p+=(d.escape-50)*.45;
-if(d.escape>=65)p+=8;
-if(d.escape>=83)p+=10;
-if(d.makareRate<7)p+=5;
-else if(d.makareRate>=15)p-=8;
-else if(d.makareRate>=7)p-=3;
-if(d.sasareRate<7)p+=4;
-else if(d.sasareRate>=15)p-=7;
-else if(d.sasareRate>=7)p-=3;
-if(d.makiSashiSareRate<7)p+=3;
-else if(d.makiSashiSareRate>=15)p-=5;
-let r=recentForm(1);
-p+=r.score*.45;
-let m=num(
-r1.motor_top_2_percent||
-r1.motor_2ren_rate||
-r1.motor_2ren
-);
-if(m>=40)p+=5;
-else if(m>=35)p+=3;
-else if(m<20)p-=4;
-let ex=num(
-preview(1).exhibition_time||
-preview(1).exhibition
-);
-if(ex>0){
-if(ex<=6.70)p+=5;
-else if(ex<=6.80)p+=2;
-else if(ex>=6.95)p-=3
+ let r1=racer(1);
+ if(!r1||course(1)!==1)
+   return{escape:0,nonEscape:100,status:"イン以外",matchAdjustment:0,matchLabel:"1コース不成立"};
+
+ // ================================
+ // 新・全体見通し（旧イン逃げ率ロジックは完全廃止）
+ // ① 1M物理隊形 → 攻め成立度
+ // ② AI評価 = 各艇の強さ（1M計算とは別系統）
+ // ③ 1〜3コースの負け方 × 攻め艇の決まり手適性
+ // ④ 場特性・風・潮 = 1M水面補正
+ // 最後にだけ統合してイン逃げ率を出す。
+ // ================================
+ let oneM=bhOneMOutlookSignal();
+ let d1=decisions(r1);
+ let ai=ranking();
+ let ai1=ai.find(x=>x.boat===1);
+ let ai1Score=num(ai1?.score||score(1));
+ let outsideScores=[2,3,4,5,6].map(b=>num(ai.find(x=>x.boat===b)?.score||score(b))).filter(Number.isFinite);
+ let outAvg=outsideScores.length?outsideScores.reduce((a,b)=>a+b,0)/outsideScores.length:ai1Score;
+ let outMax=outsideScores.length?Math.max(...outsideScores):ai1Score;
+
+ // AI評価は「誰が強いか」の補正だけ。1Mの攻め艇そのものはAIでは決めない。
+ let strengthGap=ai1Score-outAvg;
+ let aiAdjustment=Math.max(-12,Math.min(12,strengthGap*.18));
+ if(ai1Score>=outMax)aiAdjustment+=2;
+ else if(outMax-ai1Score>=20)aiAdjustment-=3;
+ aiAdjustment=Math.max(-14,Math.min(14,aiAdjustment));
+
+ // 1号艇自身の逃げ性能・負け方。旧グラフ式の閾値加点は使わず、弱い連続補正だけにする。
+ let defenseAdjustment=0;
+ defenseAdjustment+=(num(d1.escape)-50)*.10;
+ defenseAdjustment-=(num(d1.makareRate)-10)*.08;
+ defenseAdjustment-=(num(d1.sasareRate)-10)*.06;
+ defenseAdjustment-=(num(d1.makiSashiSareRate)-10)*.05;
+ defenseAdjustment=Math.max(-10,Math.min(10,defenseAdjustment));
+
+ let p=oneM?oneM.escape:58;
+ let attackAdjustment=0;
+ let attackLabel='';
+
+ if(oneM){
+   let methods=(oneM.methodProbs||[]).filter(x=>!x.hole).sort((a,b)=>num(b.raceProb)-num(a.raceProb));
+   if(oneM.zone==='none'){
+     // 0.30艇身未満は「先頭艇が外」というだけでインを下げない。
+     p=64;
+     attackLabel=`1M差${oneM.spread.toFixed(2)}艇身：明確な攻めなし → イン初期優位`;
+   }else if(oneM.zone==='hint'){
+     attackLabel=`1M差${oneM.spread.toFixed(2)}艇身：攻め気配 → 総合判断`;
+   }else{
+     attackLabel=`1M差${oneM.spread.toFixed(2)}艇身：攻め成立 本線${oneM.main.toFixed(0)}%`;
+   }
+
+   // 攻めが成立した後で初めて「1M決まり手率 × 本人の得意技 × 内側の負け方」を使う。
+   if(oneM.hasAttack&&methods.length){
+     let top=methods[0],second=methods[1];
+     let pressure=num(top?.raceProb)*.12 + num(top?.defense)*.05;
+     if(second)pressure+=num(second.raceProb)*.035;
+     // 0.30〜0.59では圧力を半分、0.60以上で本格反映。
+     if(oneM.zone==='hint')pressure*=.50;
+     attackAdjustment=-Math.min(oneM.strongAttack?18:10,pressure);
+   }
+ }
+
+ // 最終統合。1Mを主役にし、AIと1号艇防御力は補正としてのみ使う。
+ p+=aiAdjustment+defenseAdjustment+attackAdjustment;
+ p=Math.max(5,Math.min(95,p));
+
+ // 極端値に固定上限は置かない。自然な連続値のまま表示する。
+ let status=p>=75?'イン逃げ':p>=45?'中間':'イン以外';
+ let methodTxt='';
+ if(oneM?.hasAttack){
+   let top=(oneM.methodProbs||[]).filter(x=>!x.hole).sort((a,b)=>num(b.raceProb)-num(a.raceProb))[0];
+   if(top)methodTxt=` / 最有力 ${top.boat}号艇${top.type} ${num(top.raceProb).toFixed(1)}%`;
+ }
+ let waterTxt=oneM?` / 水面補正 ${oneM.env.escape>=0?'+':''}${oneM.env.escape.toFixed(1)}pt`:'';
+ let matchLabel=`${attackLabel||'1Mデータ不足'} / AI強さ ${aiAdjustment>=0?'+':''}${aiAdjustment.toFixed(1)}pt / 1号艇防御 ${defenseAdjustment>=0?'+':''}${defenseAdjustment.toFixed(1)}pt / 攻め適性 ${attackAdjustment>=0?'+':''}${attackAdjustment.toFixed(1)}pt${methodTxt}${waterTxt}`;
+ return{
+   escape:p,
+   nonEscape:100-p,
+   matchAdjustment:aiAdjustment+defenseAdjustment+attackAdjustment,
+   matchLabel,
+   status,
+   oneMZone:oneM?.zone||'none',
+   oneMSpread:oneM?.spread||0
+ };
 }
-let o=overview();
-p+=(o.escape-50)*.22;
-if(windMode()==="tail"&&windInfo().speed>=3)p+=10;
-if(windMode()==="head"&&windInfo().speed>=3)p-=10;
-let vt=venueTrait();
-p+=(vt.escape-1)*35;
-let matchup=[];
-let oneMPre=bhOneMOutlookSignal();
-if(oneMPre&&Array.isArray(oneMPre.methodProbs)){
-  // 攻めの発生源は1Mロジック。得意決まり手率単独では攻め判定しない。
-  matchup=oneMPre.methodProbs.filter(x=>!x.hole&&x.raceProb>=8).map(x=>({
-    boat:x.boat,method:x.type,attack:x.raceProb,defense:x.defense,
-    penalty:Math.min(14,x.raceProb*.16 + x.defense*.08)
-  })).sort((a,b)=>b.penalty-a.penalty);
-}
-let maxOutsideAttack=matchup.length?Math.max(...matchup.map(x=>x.attack)):0;
-let matchPenalty=0;
-if(matchup[0])matchPenalty+=matchup[0].penalty;
-if(matchup[1])matchPenalty+=matchup[1].penalty*.40;
-matchPenalty=Math.min(18,matchPenalty);
-let noMeaningfulAttack=!oneMPre||!oneMPre.hasAttack||maxOutsideAttack<12;
-let matchBonus=0;
-if(noMeaningfulAttack){
-  // 誰も明確に攻めない時だけ1号艇へ優位性。ただし逃げ確定ではない。
-  matchBonus=p<45?9:6;
-  p+=matchBonus;
-}
-if(matchPenalty>0)p-=matchPenalty;
 
-let exhibitInside=exhibitPoint(1),exhibitOutside=[];
-for(let b=2;b<=6;b++)exhibitOutside.push({boat:b,point:exhibitPoint(b)});
-let exhibitAdjustment=Math.max(-8,Math.min(8,exhibitInside/5));
-let attackExhibit=exhibitOutside.find(x=>x.boat===bestAttackBoat(dominant(overview())))?.point||0;
-let strongOutsideExhibit=exhibitOutside.map(x=>x.point).sort((a,b)=>b-a).slice(0,2);
-let outsideExhibitPressure=0;
-if(attackExhibit>0)outsideExhibitPressure+=Math.min(4,attackExhibit/10);
-for(const ep of strongOutsideExhibit)if(ep>0)outsideExhibitPressure+=Math.min(2,ep/20);
-outsideExhibitPressure=Math.min(8,outsideExhibitPressure);
-exhibitAdjustment-=outsideExhibitPressure;
-p+=exhibitAdjustment;
-
-
-let insideBase=Math.max(0,score(1)-exhibitPoint(1));
-let outsideBase=[2,3,4,5,6].map(b=>({boat:b,value:Math.max(0,score(b)-exhibitPoint(b))}));
-let outsideAvg=outsideBase.reduce((s,x)=>s+x.value,0)/(outsideBase.length||1);
-let relativeGap=insideBase-outsideAvg,relativeAdjustment=0;
-if(relativeGap>=25)relativeAdjustment+=6;
-else if(relativeGap>=15)relativeAdjustment+=3;
-else if(relativeGap>=5)relativeAdjustment+=0;
-else if(relativeGap>=-5)relativeAdjustment-=5;
-else if(relativeGap>=-14)relativeAdjustment-=10;
-else relativeAdjustment-=18;
-let strongerOutside=outsideBase.filter(x=>x.value>=insideBase).length;
-if(strongerOutside>=3)relativeAdjustment-=15;
-else if(strongerOutside===2)relativeAdjustment-=10;
-else if(strongerOutside===1)relativeAdjustment-=5;
-let attackBoat=bestAttackBoat(dominant(overview()));
-let attackBase=outsideBase.find(x=>x.boat===attackBoat)?.value||0;
-let outsideRank=[...outsideBase].sort((a,b)=>b.value-a.value).findIndex(x=>x.boat===attackBoat)+1;
-if(attackBoat>=2&&attackBoat<=6&&outsideRank>0&&outsideRank<=2)relativeAdjustment-=7;
-if(attackBoat>=2&&attackBoat<=6&&exhibitPoint(attackBoat)>=20)relativeAdjustment-=6;
-if(insideBase-outsideAvg>=20&&exhibitPoint(1)>=20&&strongerOutside===0)relativeAdjustment+=5;
-relativeAdjustment=Math.max(-40,Math.min(11,relativeAdjustment));
-p+=relativeAdjustment;
-
-if(matchPenalty>=10&&d.escape<83&&p>=75)p=74.9;
-
-// 1M理論とAI系評価は別々に算出し、全体見通しで初めて統合する。
-let oneMSignal=oneMPre||bhOneMOutlookSignal();
-let aiEscapeP=p;
-if(oneMSignal){
-  // 1M隊形を主軸(65%)、AI/選手能力側を35%。89.9%張り付き防止にもなる。
-  p=oneMSignal.escape*.65+aiEscapeP*.35;
-  // 1M差が小さい時は断定を避け、50%側へ軽く収縮。
-  if(oneMSignal.spread<.6){
-    let certainty=.55+.45*(oneMSignal.spread/.6);
-    p=50+(p-50)*certainty;
-  }
-}
-let rawEscapeP=p;
-// 高率帯の89.9%張り付きを廃止。極端値だけ滑らかに圧縮して全域を使う。
-if(rawEscapeP>92)p=92+(rawEscapeP-92)*.22;
-else if(rawEscapeP>82)p=82+(rawEscapeP-82)*.72;
-else p=rawEscapeP;
-p=Math.max(5,Math.min(95,p));
-
-
-let aiRankNow=ranking();
-let aiTopBoat=aiRankNow[0]?.boat||0;
-let noHigherOutside=aiTopBoat===1;
-
-let strongMatchedAttack=matchup.some(x=>x.attack>=15&&x.defense>=15);
-let mainAttackBoat=bestAttackBoat(dominant(overview()));
-let mainAttackType=dominant(overview());
-let wallRisk={strong:false,max:0,rates:[]};
-if(mainAttackType==="maki"&&mainAttackBoat>=2&&mainAttackBoat<=6){
-  wallRisk=insideWallMakiRisk(mainAttackBoat)
-}
-let displayNotBad=exhibitAdjustment>=-4;
-
-let qualify80=
-  d.escape>=65 &&
-  noHigherOutside &&
-  !strongMatchedAttack &&
-  displayNotBad &&
-  !wallRisk.strong;
-
-let qualify90=
-  qualify80 &&
-  d.escape>=83 &&
-  noMeaningfulAttack &&
-  relativeGap>0 &&
-  strongerOutside===0 &&
-  exhibitAdjustment>0;
-
-// 旧89.9/79.9固定上限は廃止。突破条件未達は減点にして値を分散させる。
-if(p>=90&&!qualify90)p-=qualify80?3.5:8.0;
-else if(p>=80&&!qualify80)p-=5.0;
-p=Math.max(5,Math.min(95,p));
-
-let matchAdjustment=matchBonus-matchPenalty+exhibitAdjustment+relativeAdjustment;
-let baseMatchLabel=noMeaningfulAttack?
-`1Mで明確な攻め艇なし → 1号艇優位 +${matchBonus.toFixed(1)}pt補正`:
-matchup.length?
-`${matchup[0].boat}号艇 ${matchup[0].method} 総合発生${matchup[0].attack.toFixed(1)}% × 内側弱点${matchup[0].defense.toFixed(1)}% → イン逃げ -${matchPenalty.toFixed(1)}pt補正`:
-"決まり手一致の強い攻めなし → 補正なし";
-let gateLabel=
-p>=90?" / 90%突破条件クリア":
-p>=80?" / 80%突破条件クリア":
-(!qualify80&&rawEscapeP>=80?" / 80%突破条件未達→79.9%上限":"");
-let oneMLabel=oneMSignal?` / 1M ${oneMSignal.theory.id}型・差${oneMSignal.spread.toFixed(2)}艇身・本線${oneMSignal.main.toFixed(0)}% / 水面補正${oneMSignal.env.escape>=0?"+":""}${oneMSignal.env.escape.toFixed(1)}pt`:" / 1Mデータ不足";
-let matchLabel=`${baseMatchLabel} / 展示 ${exhibitAdjustment>=0?"+":""}${exhibitAdjustment.toFixed(1)}pt / 相対戦力 ${relativeAdjustment>=0?"+":""}${relativeAdjustment.toFixed(1)}pt${oneMLabel}${gateLabel}`;
-return{
-escape:p,
-nonEscape:100-p,
-matchAdjustment,
-matchLabel,
-status:
-p>=75?
-"イン逃げ":
-p>=45?
-"中間":
-"イン以外"
-}
-}
 function dominant(o){
 return Object.entries(o)
 .sort((a,b)=>b[1]-a[1])[0][0]

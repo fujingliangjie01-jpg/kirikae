@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.27</div>
+<body><div class="bhVol">vol.29</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -6280,6 +6280,59 @@ document.addEventListener("DOMContentLoaded",()=>{
      .slice(0,n).map(x=>x.t);
  };
  wrap.__bh27=true;window.bhV3Generate=wrap;
+})();
+</script>
+
+
+<script id="bh-vol28-90plus-eight">
+/* vol.28: イン逃げ率90%以上はイン逃げ頭(1号艇)だけを8点に絞り、予算を厚く配分 */
+(function(){
+ const base=window.bhV3Generate;
+ if(typeof base!=="function"||base.__bh28)return;
+ const wrap=function(){
+   const args=[...arguments];
+   let tickets=base.apply(this,args);
+   if(!Array.isArray(tickets))return tickets;
+   const outlook=args.find(x=>x&&typeof x==="object"&&(
+     "escapeRate" in x||"escape" in x||"inEscape" in x||"prob" in x
+   ))||{};
+   const esc=Number(outlook.escapeRate??outlook.escape??outlook.inEscape??outlook.prob);
+   if(!Number.isFinite(esc)||esc<90)return tickets;
+
+   // 90%以上は1号艇頭の3連単のみ。確率上位8点。
+   const map=new Map();
+   for(const t of tickets){
+     if(!Array.isArray(t?.legs)||t.legs.length!==3||Number(t.legs[0])!==1)continue;
+     const k=t.legs.join("-");
+     const p=Number(t.prob??t.percent??t.pct??0)||0;
+     const old=map.get(k);
+     const op=Number(old?.prob??old?.percent??old?.pct??0)||0;
+     if(!old||p>op)map.set(k,t);
+   }
+   return [...map.values()]
+     .sort((a,b)=>(Number(b.prob??b.percent??b.pct??0)||0)-(Number(a.prob??a.percent??a.pct??0)||0))
+     .slice(0,8)
+     .map(t=>({...t,bhV28NinetyPlus:true,label:t.label||"イン逃げ・厚張り"}));
+ };
+ wrap.__bh28=true;
+ window.bhV3Generate=wrap;
+})();
+</script>
+
+
+<script id="bh-vol29-hit-result-reset">
+/* vol.29: 的中結果・結果集計のみ新規開始。設定/予算/買い目ロジックは維持。 */
+(function(){
+ const flag="boat_hunter_result_reset_done_vol29";
+ try{
+   if(localStorage.getItem(flag)==="1")return;
+   const exact=[
+    "boat_hunter_result_records","boat_hunter_results","boat_hunter_result_store",
+    "boat_hunter_all_results","boat_hunter_recorded","boat_hunter_stats","boat_hunter_cumulative"
+   ];
+   exact.forEach(k=>localStorage.removeItem(k));
+   localStorage.setItem(flag,"1");
+ }catch(e){}
 })();
 </script>
 

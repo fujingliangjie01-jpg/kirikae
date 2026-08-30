@@ -978,8 +978,11 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
  .bhV3Pct{font-size:16px!important}
 }
 </style>
+<style id="bh-vol21-result-css">
+.bhExactaHitLine{display:block!important;margin-top:3px!important;font-size:10px!important;font-weight:900!important;opacity:1!important;white-space:nowrap;color:#bfffd8}
+</style>
 </head>
-<body><div class="bhVol">vol.20</div>
+<body><div class="bhVol">vol.21</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -5713,17 +5716,26 @@ function bhToggleStartHistory(){
  }
  function rowHTML(x){
    if(!x)return `<div class="bhResultDashRow pending"><span>-</span><span>-</span><span>－</span><span>－</span><span>-</span><span class="bhResultDashPnL na">未確定</span></div>`;
-   const f=ticketFinance(x);
-   const triResult=x.result||"-",exResult=x.result?x.result.split("-").slice(0,2).join("-"):"-";
+   const f=ticketFinance(x),snap=snapFor(x.key);
+   const triResult=x.result||"-";
    const triOd=x.payout>0?(x.payout/100).toFixed(1)+"倍":"-";
-   const exOd=x.exactaPayout>0?(x.exactaPayout/100).toFixed(1)+"倍":"-";
+
+   // 2連単は「そのレースで2連単買い目が的中した時」だけ3連単の下に表示。
+   const top2=x.result?x.result.split("-").slice(0,2).join("-"):"";
+   const exactaHit=!!(top2 && Array.isArray(snap?.tickets) && snap.tickets.some(t=>
+     Array.isArray(t?.legs) && t.legs.length===2 && t.legs.join("-")===top2
+   ));
+   const exactaLine=exactaHit
+     ? `<small class="bhExactaHitLine">🎯 2連 ${top2}${x.exactaPayout>0?` ・ ${(x.exactaPayout/100).toFixed(1)}倍`:""}</small>`
+     : "";
+
    let pnl=f.profit==null?"未解析":signed(Math.round(f.profit));
    let cls=f.profit==null?"na":f.profit>=0?"plus":"minus";
    return `<div class="bhResultDashRow">
      <span>${x.race}R</span>
-     <span class="bhResultDashResult"><b>3連 ${triResult}</b><small>2連 ${exResult}</small></span>
+     <span class="bhResultDashResult"><b>3連 ${triResult}</b>${exactaLine}</span>
      ${bhMiniJudge(x.th)}${bhMiniJudge(x.oh)}
-     <span class="bhResultDashOdds"><b>3連 ${triOd}</b><small>2連 ${exOd}</small></span>
+     <span class="bhResultDashOdds"><b>${triOd}</b></span>
      <span class="bhResultDashPnL ${cls}" title="${f.analyzed?`投資 ${yen(f.used)} / 払戻 ${yen(Math.round(f.ret))}${f.hitType?` / ${f.hitType}`:""}`:"AI解析なし"}">${pnl}</span>
    </div>`;
  }
@@ -5777,7 +5789,7 @@ function bhToggleStartHistory(){
       <div class="bhResultDayStat profit ${profit>=0?"plus":"minus"}"><small>全買い収支 / ROI</small><b>${used?signed(Math.round(profit))+" / "+roi.toFixed(1)+"%":"-"}</b></div>
       <div class="bhResultDayStat profit ${buyProfit>=0?"plus":"minus"}"><small>見推奨を除外</small><b>${buyUsed?signed(Math.round(buyProfit))+" / "+(buyRet/buyUsed*100).toFixed(1)+"%":"-"}</b></div>
     </div>
-    <div class="bhResultDashFoot">各R：3連単・2連単結果 / 買い目○× / 見通し○× / 3連単・2連単オッズ / 収支。投資は「1レース資金 × 買い目を出したレース数」で計算。見推奨を除外した場合の収支も別表示します。</div>`;
+    <div class="bhResultDashFoot">各R：3連単結果 / 買い目○× / 見通し○× / 3連単オッズ / 収支。2連単は買い目的中時のみ3連単の下に表示。投資は「1レース資金 × 買い目を出したレース数」で計算。見推奨を除外した場合の収支も別表示します。</div>`;
    $("bhResultDashGrid").innerHTML=venues.length?venues.map(v=>venueCard(v,venueMap.get(v))).join(""):`<div class="bhResultHistoryEmpty">この日の結果はまだ取得されていません。</div>`;
    // 前回の集計フォーマットをそのまま下段へ
    const store=bhLoadStatsStore(),s=store.days?.[day]||bhEmptyStat();

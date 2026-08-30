@@ -896,7 +896,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 #bhNewBetRows{margin-top:12px}.bhV3Bet{display:grid;grid-template-columns:34px minmax(95px,1fr) 72px 72px 82px 92px;gap:6px;align-items:center;padding:10px 7px;border-top:1px solid #303030;font-size:12px}.bhV3Bet:first-child{border-top:0}.bhV3Rank{font-weight:1000;color:#ffd75a}.bhV3Ticket{font-size:22px;font-weight:1000;letter-spacing:1.5px;color:#fff}.bhV3Pct{font-weight:1000;color:#ffd75a}.bhV3Odds{font-weight:900;color:#8edfff}.bhV3Amount{font-weight:900}.bhV3Return{font-weight:900;color:#9ef0b5}.bhV3Method{grid-column:2/-1;font-size:10px;color:#aaa;margin-top:-3px}.bhV3HeadMandatory{box-shadow:inset 3px 0 0 #ff6666}.bhV3DefenseNote{margin:10px 0;padding:9px;border:1px solid #4a3f28;border-radius:9px;background:#17130b;color:#e9d38a;font-size:11px;line-height:1.6}@media(max-width:650px){.bhV3Bet{grid-template-columns:30px minmax(88px,1fr) 58px 60px}.bhV3Amount,.bhV3Return{grid-column:auto}.bhV3Method{grid-column:2/-1}.bhV3Ticket{font-size:19px}}
 </style>
 </head>
-<body><div class="bhVol">vol.5</div>
+<body><div class="bhVol">vol.6</div>
 <div class="bhBudgetTop"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🧪 検証画面</button></div></div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
@@ -984,7 +984,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <div id="message" class="message"></div>
 </div>
 <div id="bhBeforeInfoCard" class="card" style="display:none">
-<h2>⚡ 直前情報</h2>
+<h2>⚡ 直前情報</h2><button type="button" class="subBtn" onclick="bhReloadRealtimeVol4()">🔄 直前情報・オッズを再取得</button>
 <div class="bhStartLead">展示タイムだけでなく、スタート展示ST・進入・直線/直前タイム・一周・まわり足・チルト・体重・調整重量・部品交換・気象を、取得できた項目だけ表示します。</div>
 <div id="bhBeforeInfoRows"></div>
 </div>
@@ -1027,6 +1027,7 @@ const API_RESULTS_V2="https://boatraceopenapi.github.io/results/v2";
 let raceData=null,racers=[],previewRacers={},manualCourses={},historyData={},currentBets=null,exhibitRatings={},mandatoryBetProtectedBoats=new Set();
 let bhLiveWind=null;
 let bhRealtimeOdds={};
+let bhRealtimeOdds2={};
 let bhRealtimePreviewLoaded=false;
 const BH_CSV_BASE="https://boatracecsv.github.io/data/previews";
 const HISTORY_RACES=30;
@@ -2967,7 +2968,7 @@ function overallEscapeProbability(){
  // 1号艇自身の逃げ性能・負け方。旧グラフ式の閾値加点は使わず、弱い連続補正だけにする。
  let defenseAdjustment=0;
  defenseAdjustment+=(num(d1.escape)-50)*.14;
- // vol.3: 防御側を攻め率より強く反映。まくられ > 差され > まくり差されの順で重視。
+ // vol.6: 防御側を攻め率より強く反映。まくられ > 差され > まくり差されの順で重視。
  defenseAdjustment-=(num(d1.makareRate)-10)*.16;
  defenseAdjustment-=(num(d1.sasareRate)-10)*.13;
  defenseAdjustment-=(num(d1.makiSashiSareRate)-10)*.11;
@@ -4762,7 +4763,7 @@ function renderPatternBets(rankings,outlook){
 
 </script>
 
-<script id="bh-realtime-vol5-js">
+<script id="bh-realtime-vol6-js">
 function bhCsvParse(text){
  const rows=[];let row=[],cell='',q=false;
  for(let i=0;i<text.length;i++){let c=text[i];if(q){if(c==='"'&&text[i+1]==='"'){cell+='"';i++}else if(c==='"')q=false;else cell+=c}else{if(c==='"')q=true;else if(c===','){row.push(cell);cell=''}else if(c==='\n'){row.push(cell.replace(/\r$/,''));rows.push(row);row=[];cell=''}else cell+=c}}
@@ -4772,7 +4773,7 @@ function bhCsvParse(text){
 async function bhFetchPreviewCSV(type,ymd){let y=ymd.slice(0,4),m=ymd.slice(4,6),d=ymd.slice(6,8),u=`${BH_CSV_BASE}/${type}/${y}/${m}/${d}.csv`;let r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error(`${type} HTTP ${r.status}`);return bhCsvParse(await r.text())}
 function bhFindRaceCsvRow(rows,ymd,jcd,rno){let code=`${ymd}${jcd}${String(rno).padStart(2,'0')}`;return rows.find(x=>String(x['レースコード']||'').trim()===code)||rows.find(x=>String(x['レース場']||'').padStart(2,'0')===jcd&&parseInt(x['レース回'])===rno)||null}
 function bhVal(row,names){for(let n of names)if(row&&row[n]!==undefined&&String(row[n]).trim()!=='')return row[n];return null}
-function bhBoatCol(row,b,labels){for(let l of labels){for(let k of [`${b}号艇${l}`,`${b}号艇_${l}`,`${b}${l}`,`${b}枠${l}`,`${b}艇${l}`])if(row[k]!==undefined&&String(row[k]).trim()!=='')return row[k]}return null}
+function bhBoatCol(row,b,labels){for(let l of labels){for(let k of [`艇${b}_${l}`,`艇${b}${l}`,`${b}号艇_${l}`,`${b}号艇${l}`,`${b}_${l}`,`${b}${l}`,`${b}枠${l}`,`${b}艇${l}`])if(row&&row[k]!==undefined&&String(row[k]).trim()!=='')return row[k]}return null}
 function bhMergeRealtimeRows(tkz,stt,orig,sui){
  for(let b=1;b<=6;b++){let p=previewRacers[b]||previewRacers[String(b)]||{};
   let st=bhBoatCol(stt,b,['スタート展示','ST','スタートタイミング']);if(st!=null){let z=String(st).trim();p.start_timing=/^F/i.test(z)?-Math.abs(parseFloat(z.slice(1))):parseFloat(z)}
@@ -4786,13 +4787,14 @@ function bhMergeRealtimeRows(tkz,stt,orig,sui){
  }
  if(sui){raceData.preview=raceData.preview||{};for(let [to,names] of Object.entries({wind_speed:['風速(m)','風速'],wind_direction:['風向'],wave_height:['波の高さ(cm)','波高'],air_temperature:['気温(℃)','気温'],water_temperature:['水温(℃)','水温'],weather:['天候']})){let v=bhVal(sui,names);if(v!=null)raceData.preview[to]=v}}
 }
-function bhExtractOddsFromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/([1-6])\D+([1-6])\D+([1-6])/);if(!m)continue;let key=`${m[1]}-${m[2]}-${m[3]}`;if(new Set(m.slice(1)).size<3)continue;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
+function bhExtractOddsFromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:3連単[_：:]*)?([1-6])-([1-6])-([1-6])$/);if(!m)continue;let key=`${m[1]}-${m[2]}-${m[3]}`;if(new Set(m.slice(1)).size<3)continue;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
+function bhExtractOdds2FromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:2連単[_：:]*)?([1-6])-([1-6])$/);if(!m||m[1]===m[2])continue;let key=`${m[1]}-${m[2]}`;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
 async function bhLoadRealtimePreviewAndOdds(){
- let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od3'],got={};
+ let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od2','od3'],got={};
  await Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}}));
- bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);bhRealtimeOdds=bhExtractOddsFromCsvRow(got.od3);bhRealtimePreviewLoaded=!!(got.tkz||got.stt||got.sui||got.original_exhibition);return got;
+ bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);bhRealtimeOdds=bhExtractOddsFromCsvRow(got.od3);bhRealtimeOdds2=bhExtractOdds2FromCsvRow(got.od2);bhRealtimePreviewLoaded=!!(got.tkz||got.stt||got.sui||got.original_exhibition);return got;
 }
-function bhGetOdds(key){return Number(bhRealtimeOdds?.[key])||null}
+function bhGetOdds(key){let parts=String(key).split('-');return Number((parts.length===2?bhRealtimeOdds2:bhRealtimeOdds)?.[key])||null}
 async function bhReloadRealtimeVol4(){let btn=document.activeElement;try{if(btn)btn.disabled=true;await bhLoadRealtimePreviewAndOdds();bhRenderBeforeInfo();if(window.bhLastOutlook){let t=bhV3Generate(window.bhLastOutlook);window.bhLastTickets=t;currentBets=t;bhV3Render(t,window.bhLastOutlook)}}finally{if(btn)btn.disabled=false}}
 </script>
 <script id="bh-beforeinfo-vol2-js">
@@ -4816,7 +4818,7 @@ function bhRenderBeforeInfo(){
  let rows=[1,2,3,4,5,6].map(bhBeforeRow),has=rows.some(x=>[x.st,x.ex,x.straight,x.lap,x.turn,x.tilt,x.weight,x.adjust,x.parts].some(v=>v!==null));
  card.style.display="block";
  let wind="";try{let w=weatherSource()||{};wind=`<div class="bhVerifyNote">🌬️ 気象：風速 ${bhPickFirst(w,["wind_speed","windSpeed"])??"－"}m / 風向 ${bhPickFirst(w,["wind_direction","windDirection","wind_name"])??"－"} / 波高 ${bhPickFirst(w,["wave_height","waveHeight"])??"－"}cm / 水温 ${bhPickFirst(w,["water_temperature","waterTemperature"])??"－"}℃</div>`}catch(e){}
- box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${x.st==null?'－':bhFmtBefore(x.st)}</td><td>${x.straight==null?'－':bhFmtBefore(x.straight)}</td><td>${x.ex==null?'－':bhFmtBefore(x.ex)}</td><td>${x.lap==null?'－':bhFmtBefore(x.lap)}</td><td>${x.turn==null?'－':bhFmtBefore(x.turn)}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">締切直前データがまだ公開されていません。公開後に自動取得します。</div>':''}`;
+ box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${x.st==null?'－':bhFmtBefore(x.st)}</td><td>${x.straight==null?'－':bhFmtBefore(x.straight)}</td><td>${x.ex==null?'－':bhFmtBefore(x.ex)}</td><td>${x.lap==null?'－':bhFmtBefore(x.lap)}</td><td>${x.turn==null?'－':bhFmtBefore(x.turn)}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">直前情報スナップショットは締切1〜10分前（通常約5分前）に公開されます。公開後に再取得してください。</div>':''}`;
 }
 </script>
 <script id="bh-result-learning-js">
@@ -5272,7 +5274,7 @@ function bhStartAutoResultCheck(){
 })();
 </script>
 \n<script id="bh-vol3-new-bet-engine">
-// vol.3 新買い目: 決まり手ランキング非依存 / 1M展開・防御重視 / 個別3連単のみ最大10点
+// vol.6 新買い目: 決まり手ランキング非依存 / 1M展開・防御重視 / 個別3連単のみ最大10点
 function bhV3Defense(b){
  let d=decisions(racer(b)||{});
  return {escape:num(d.escape),makare:num(d.makareRate),sasare:num(d.sasareRate),mss:num(d.makiSashiSareRate)};
@@ -5305,24 +5307,30 @@ function bhV3LegScore(b,pos,head){
  return v*bhV3ClassPenalty(b);
 }
 function bhV3Generate(outlook){
- let mandatory=new Set(bhSqueezeMandatoryHeads()),heads=[1,2,3,4,5,6].sort((a,b)=>bhV3HeadScore(b,outlook)-bhV3HeadScore(a,outlook));
- mandatory.forEach(b=>{heads=heads.filter(x=>x!==b);heads.unshift(b)});
- let cand=[];
- for(let h of heads){
+ let mandatory=new Set(bhSqueezeMandatoryHeads()),allHeads=[1,2,3,4,5,6].sort((a,b)=>bhV3HeadScore(b,outlook)-bhV3HeadScore(a,outlook));
+ mandatory.forEach(b=>{allHeads=allHeads.filter(x=>x!==b);allHeads.unshift(b)});
+ // 通常の3連単頭は最大2艇。3艇目は2連単専用。裏展開はこの制限の例外。
+ let triHeads=allHeads.slice(0,2),thirdHead=allHeads[2]||null,cand=[];
+ for(let h of triHeads){
    let others=[1,2,3,4,5,6].filter(b=>b!==h);
    for(let b of others)for(let c of others){
      if(b===c)continue;
      let score=bhV3HeadScore(h,outlook)+bhV3LegScore(b,2,h)+bhV3LegScore(c,3,h);
      let victim=bhSqueezeStateForBoat(b);if(victim?.victimState==='cut')score-=160;
      let mandatoryHead=mandatory.has(h);if(mandatoryHead)score+=100;
-     cand.push({legs:[h,b,c],score,mandatoryHead,method:bhV3MethodForHead(h)});
+     cand.push({legs:[h,b,c],score,mandatoryHead,method:bhV3MethodForHead(h),betType:'3連単'});
    }
  }
  cand.sort((a,b)=>b.score-a.score);
  let chosen=[];
- // 必須頭は最低1点保護
- for(let h of mandatory){let t=cand.find(x=>x.legs[0]===h&&!chosen.some(y=>y.legs.join('-')===x.legs.join('-')));if(t)chosen.push(t)}
- for(let t of cand){if(chosen.length>=10)break;if(chosen.some(x=>x.legs.join('-')===t.legs.join('-')))continue;chosen.push(t)}
+ for(let h of mandatory){if(!triHeads.includes(h))continue;let t=cand.find(x=>x.legs[0]===h&&!chosen.some(y=>y.legs.join('-')===x.legs.join('-')));if(t)chosen.push(t)}
+ // 3連単は最大9点まで。3艇目頭の2連単を最低1点確保。
+ for(let t of cand){if(chosen.length>=9)break;if(chosen.some(x=>x.legs.join('-')===t.legs.join('-')))continue;chosen.push(t)}
+ if(thirdHead){
+   let secs=[1,2,3,4,5,6].filter(b=>b!==thirdHead).sort((a,b)=>bhV3LegScore(b,2,thirdHead)-bhV3LegScore(a,2,thirdHead));
+   if(secs[0])chosen.push({legs:[thirdHead,secs[0]],score:bhV3HeadScore(thirdHead,outlook)+bhV3LegScore(secs[0],2,thirdHead),mandatoryHead:mandatory.has(thirdHead),method:bhV3MethodForHead(thirdHead),betType:'2連単',thirdHead:true});
+ }
+ chosen=chosen.slice(0,10);
  let min=Math.min(...chosen.map(x=>x.score)),weights=chosen.map(x=>Math.max(1,x.score-min+20)),tot=weights.reduce((a,b)=>a+b,0)||1;
  chosen.forEach((t,i)=>{t.prob=weights[i]/tot*100;t.pct=t.prob;t.odds=bhGetOdds(t.legs.join('-'));});
  return chosen;
@@ -5338,22 +5346,22 @@ function bhV3Allocate(tickets){
 function bhV3Render(tickets,outlook){
  bhV3Allocate(tickets);let box=document.getElementById('bhNewBetRows'),card=document.getElementById('bhNewBetCard');if(!box||!card)return;card.style.display='block';
  let d=bhV3Defense(1);
- let defense=`1号艇防御：まくられ ${d.makare.toFixed(1)}% / 差され ${d.sasare.toFixed(1)}% / まくり差され ${d.mss.toFixed(1)}%　※vol.5も攻め率より防御側を強く反映`;
- let oddsCount=tickets.filter(t=>Number(t.odds)>0).length;let oddsStatus=oddsCount?`<div class=\"bhVerifyNote\">📈 3連単オッズ：${oddsCount}/${tickets.length}点取得</div>`:`<div class=\"bhVerifyNote\">⚠️ オッズ未公開または取得前　<button type=\"button\" onclick=\"bhReloadRealtimeVol4()\">再取得</button></div>`; box.innerHTML=`<div class="bhV3DefenseNote">🛡️ ${defense}</div>${oddsStatus}`+tickets.map((t,i)=>{let odds=Number(t.odds);let ret=odds>0?Math.floor(odds*t.amount):null;return `<div class="bhV3Bet ${t.mandatoryHead?'bhV3HeadMandatory':''}"><span class="bhV3Rank">${i+1}</span><span class="bhV3Ticket">${t.legs.join('-')}</span><span class="bhV3Pct">${t.prob.toFixed(1)}%</span><span class="bhV3Odds">${odds>0?odds.toFixed(1)+'倍':'取得待ち'}</span><span class="bhV3Amount">${t.amount.toLocaleString()}円</span><span class="bhV3Return">${ret!=null?ret.toLocaleString()+'円':'－'}</span><span class="bhV3Method">決まり手：${t.method}${t.mandatoryHead?'　🔥 1.5艇身以上＋まくり実績：1着必須':''}</span></div>`}).join('');
+ let defense=`1号艇防御：まくられ ${d.makare.toFixed(1)}% / 差され ${d.sasare.toFixed(1)}% / まくり差され ${d.mss.toFixed(1)}%　※vol.6も攻め率より防御側を強く反映`;
+ let oddsCount=tickets.filter(t=>Number(t.odds)>0).length;let oddsStatus=oddsCount?`<div class=\"bhVerifyNote\">📈 3連単オッズ：${oddsCount}/${tickets.length}点取得</div>`:`<div class=\"bhVerifyNote\">⚠️ オッズ未公開または取得前　<button type=\"button\" onclick=\"bhReloadRealtimeVol4()\">再取得</button></div>`; box.innerHTML=`<div class="bhV3DefenseNote">🛡️ ${defense}</div>${oddsStatus}`+tickets.map((t,i)=>{let odds=Number(t.odds);let ret=odds>0?Math.floor(odds*t.amount):null;return `<div class="bhV3Bet ${t.mandatoryHead?'bhV3HeadMandatory':''}"><span class="bhV3Rank">${i+1}</span><span class="bhV3Ticket">${t.legs.join('-')} <small style="font-size:10px;color:#9aa">${t.betType||'3連単'}${t.thirdHead?'・3艇目頭':''}</small></span><span class="bhV3Pct">${t.prob.toFixed(1)}%</span><span class="bhV3Odds">${odds>0?odds.toFixed(1)+'倍':'取得待ち'}</span><span class="bhV3Amount">${t.amount.toLocaleString()}円</span><span class="bhV3Return">${ret!=null?ret.toLocaleString()+'円':'－'}</span><span class="bhV3Method">決まり手：${t.method}${t.mandatoryHead?'　🔥 1.5艇身以上＋まくり実績：1着必須':''}</span></div>`}).join('');
  window.bhV3Tickets=tickets;window.bhFinanceEvaluate?.(tickets);
 }
 // 旧買い目表示は使わず、新10点を描画
 const bhV3OldRenderPatternBets=window.renderPatternBets;
 window.renderPatternBets=function(rankings,outlook){window.bhLastOutlook=outlook;let tickets=bhV3Generate(outlook);window.bhLastTickets=tickets;currentBets=tickets;bhV3Render(tickets,outlook);try{bhSavePredictionSnapshot(tickets,outlook)}catch(e){}};
 </script>\n
-<style id="bh-vol5-reverse-css">
+<style id="bh-vol6-reverse-css">
 .bhV5Reverse{margin-top:16px;border:1px solid rgba(126,220,255,.45);border-radius:16px;padding:13px;background:rgba(10,31,44,.78)}
 .bhV5ReverseTitle{font-size:18px;font-weight:1000;color:#83dcff;margin-bottom:5px}.bhV5ReverseNote{font-size:12px;color:#b9cbd5;margin-bottom:10px;line-height:1.55}
 .bhV5ReverseRow{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center;padding:9px 8px;border-top:1px solid rgba(255,255,255,.08)}
 .bhV5ReverseTicket{font-size:22px;font-weight:1000;letter-spacing:1px}.bhV5ReverseOdds{font-weight:900;color:#ffd56a}.bhV5ReverseMethod{grid-column:2/4;font-size:12px;color:#9fe8ff}
 </style>
-<script id="bh-vol5-reverse-engine">
-// vol.5 裏展開：本線10点とは完全別枠。買い目%100%には含めない。
+<script id="bh-vol6-reverse-engine">
+// vol.6 裏展開：本線10点とは完全別枠。買い目%100%には含めない。
 function bhV5SameCourseWinCount(b){return history(b).filter(x=>num(x.place)===1).length}
 function bhV5EligibleReverseHead(b){
  let cls=bhClassOfBoat(b),wins=bhV5SameCourseWinCount(b);
@@ -5401,7 +5409,7 @@ function bhV5ReverseHTML(reverse){
  let x=reverse[0];
  return `<div class="bhV5Reverse"><div class="bhV5ReverseTitle">🔄 裏展開・別枠 ${reverse.length}点</div><div class="bhV5ReverseNote">本線10点の買い目％には含めません。${x.attacker}号艇の攻めに対し、外の${x.head}号艇（${x.cls}・今回と同じコースで過去30走1着 ${x.wins}回）が差す展開。</div>${reverse.map((t,i)=>`<div class="bhV5ReverseRow"><b>${i+1}</b><span class="bhV5ReverseTicket">${t.key}</span><span class="bhV5ReverseOdds">${num(t.odds)>0?num(t.odds).toFixed(1)+'倍':'取得待ち'}</span><span class="bhV5ReverseMethod">裏展開決まり手：差し　／ 2着基本＝1号艇・主攻め${t.attacker}号艇</span></div>`).join('')}</div>`;
 }
-// vol.3描画を包み、本線10点の後ろに裏展開を追加。資金/期待値計算は本線のみのまま。
+// vol.6描画を包み、本線10点の後ろに裏展開を追加。資金/期待値計算は本線のみのまま。
 const bhV5BaseRender=bhV3Render;
 bhV3Render=function(tickets,outlook){
  bhV5BaseRender(tickets,outlook);

@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.30</div>
+<body><div class="bhVol">vol.31</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -6605,6 +6605,86 @@ function bhV30ResistanceReverse(){
       return out;
     };
     wrap.__bhV30ResistanceWrapped=true;window[name]=wrap;
+  }
+})();
+</script>
+
+
+<script id="bh-vol31-result-odds-pnl-hardfix">
+/* vol.31:
+   vol.27 は同じrace keyが既に存在すると、別store側の payout / exactaPayout / result を
+   上書き統合しなかった。そのため結果○×だけある行で確定オッズと収支が "-" になるケースを修正。
+*/
+(function(){
+  if(typeof window.bhRecordedRows!=="function")return;
+  const base=window.bhRecordedRows;
+
+  function mergeDefined(dst,src){
+    if(!src||typeof src!=="object")return dst;
+    const result=String(src.result||src.trifecta||src.result3||"");
+    const payout=Number(src.payout??src.trifectaPayout??src.pay3??0);
+    const exactaPayout=Number(src.exactaPayout??src.pay2??0);
+    if(result)dst.result=result;
+    if(payout>0){dst.payout=payout;dst.odds=payout/100}
+    if(exactaPayout>0){dst.exactaPayout=exactaPayout;dst.exactaOdds=exactaPayout/100}
+    if(src.ticketHit!=null)dst.th=src.ticketHit;
+    if(src.outlookHit!=null)dst.oh=src.outlookHit;
+    if(src.th!=null)dst.th=src.th;
+    if(src.oh!=null)dst.oh=src.oh;
+    if(src.analyzed!=null)dst.analyzed=!!src.analyzed;
+    return dst;
+  }
+
+  window.bhRecordedRows=function(dayKey){
+    const rows=base(dayKey)||[];
+    const map=new Map(rows.map(x=>[x.key,{...x}]));
+    const day=dayKey==="all"?null:dayKey;
+    const stores=[];
+    try{stores.push(window.bhRecordedMap?.()||{})}catch(e){}
+    try{stores.push(window.bhSnapshotStore?.()||{})}catch(e){}
+    try{stores.push(window.bhAllResultStore?.()||{})}catch(e){}
+
+    function absorb(key,x){
+      if(!key)return;
+      const p=String(key).split("|");
+      if(p.length<3||(day&&p[0]!==day))return;
+      let row=map.get(key)||{
+        key,day:p[0],venue:Number(p[1]),race:Number(p[2]),
+        result:"",th:null,oh:null,payout:0,exactaPayout:0,
+        odds:0,exactaOdds:0,analyzed:false,time:0
+      };
+      mergeDefined(row,x);
+      map.set(key,row);
+    }
+
+    for(const store of stores){
+      if(Array.isArray(store)){
+        for(const x of store)absorb(x?.key||x?.raceKey,x);
+      }else if(store&&typeof store==="object"){
+        for(const [key,x] of Object.entries(store))absorb(key,x);
+      }
+    }
+    return [...map.values()].sort((a,b)=>
+      String(a.day).localeCompare(String(b.day))||Number(a.venue)-Number(b.venue)||Number(a.race)-Number(b.race)
+    );
+  };
+
+  // Dashboard is defined in a closure, so force a fresh render after result acquisition / opening.
+  const oldOpen=window.bhOpenResultDashboard;
+  if(typeof oldOpen==="function"){
+    window.bhOpenResultDashboard=function(){
+      const r=oldOpen.apply(this,arguments);
+      setTimeout(()=>window.bhRenderResultDashboard?.(),50);
+      return r;
+    };
+  }
+  const oldAuto=window.bhAutoCheckResults;
+  if(typeof oldAuto==="function"){
+    window.bhAutoCheckResults=async function(){
+      const r=await oldAuto.apply(this,arguments);
+      setTimeout(()=>window.bhRenderResultDashboard?.(),50);
+      return r;
+    };
   }
 })();
 </script>

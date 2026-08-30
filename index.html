@@ -896,7 +896,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 #bhNewBetRows{margin-top:12px}.bhV3Bet{display:grid;grid-template-columns:34px minmax(95px,1fr) 72px 72px 82px 92px;gap:6px;align-items:center;padding:10px 7px;border-top:1px solid #303030;font-size:12px}.bhV3Bet:first-child{border-top:0}.bhV3Rank{font-weight:1000;color:#ffd75a}.bhV3Ticket{font-size:22px;font-weight:1000;letter-spacing:1.5px;color:#fff}.bhV3Pct{font-weight:1000;color:#ffd75a}.bhV3Odds{font-weight:900;color:#8edfff}.bhV3Amount{font-weight:900}.bhV3Return{font-weight:900;color:#9ef0b5}.bhV3Method{grid-column:2/-1;font-size:10px;color:#aaa;margin-top:-3px}.bhV3HeadMandatory{box-shadow:inset 3px 0 0 #ff6666}.bhV3DefenseNote{margin:10px 0;padding:9px;border:1px solid #4a3f28;border-radius:9px;background:#17130b;color:#e9d38a;font-size:11px;line-height:1.6}@media(max-width:650px){.bhV3Bet{grid-template-columns:30px minmax(88px,1fr) 58px 60px}.bhV3Amount,.bhV3Return{grid-column:auto}.bhV3Method{grid-column:2/-1}.bhV3Ticket{font-size:19px}}
 </style>
 </head>
-<body><div class="bhVol">vol.8</div>
+<body><div class="bhVol">vol.9</div>
 <div class="bhBudgetTop"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🧪 検証画面</button></div></div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
@@ -5468,5 +5468,99 @@ function bhLapAdjHTML(){let c=bhLapContext();if(!c.rows.length)return '';return 
 const bhVol7BaseRender=bhV3Render;
 bhV3Render=function(tickets,outlook){bhVol7BaseRender(tickets,outlook);let box=document.getElementById('bhNewBetRows');if(box)box.insertAdjacentHTML('afterbegin',bhLapAdjHTML());};
 </script>\n
+
+<style id="bh-vol9-css">
+.bhVol9Rule{margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(20,70,115,.18);border:1px solid rgba(90,170,255,.28);font-size:11px;color:#cce7ff;line-height:1.55}
+</style>
+<script id="bh-vol9-engine">
+// vol.9
+// 1) 差し率があるだけでは裏展開にしない。
+// 2) 裏展開は「主攻め艇のひとつ外側」かつ、1Mでその外艇が主攻め艇の後ろにいる時だけ。
+// 3) 1M最大差0.60艇身未満は攻め未成立。1号艇防御を攻め側より強く評価し、1頭を明確に強化。
+
+function bhV9OneMRow(b){
+ try{return (bhOneMOutlookSignal()?.theory?.rows||[]).find(x=>x.boat===b)||null}catch(e){return null}
+}
+function bhV9DefenseStrength(){
+ let d=bhV3Defense(1);
+ // 被弾率が低いほどプラス。防御を攻め率より強く使う。
+ let risk=d.makare*1.75+d.sasare*1.45+d.mss*1.25;
+ return Math.max(-30,Math.min(30,34-risk*.55));
+}
+
+// 通常本線の決まり手表示。差し=裏展開、という旧フォールバックを廃止。
+bhV3MethodForHead=function(b){
+ if(b===1)return '逃げ';
+ let sig=bhOneMOutlookSignal();
+ let ms=(sig?.methodProbs||[]).filter(x=>x.boat===b&&!x.hole).sort((a,z)=>num(z.raceProb)-num(a.raceProb));
+ if(ms[0])return ms[0].type;
+ return '展開';
+};
+
+// 0.60未満では1号艇を明確に強化。0.30未満はさらに強くする。
+const bhV9BaseHeadScore=bhV3HeadScore;
+bhV3HeadScore=function(b,outlook){
+ let v=bhV9BaseHeadScore(b,outlook),sig=bhOneMOutlookSignal();
+ if(b!==1||!sig)return v;
+ let def=bhV9DefenseStrength();
+ if(sig.spread<.30)v+=120+Math.max(0,def)*2.2;
+ else if(sig.spread<.60)v+=70+def*1.7;
+ return v;
+};
+
+// 全体見通し側も0.60未満は「攻め成立前」としてイン防御を再評価。
+const bhV9BaseOverallEscapeProbability=overallEscapeProbability;
+overallEscapeProbability=function(){
+ let o=bhV9BaseOverallEscapeProbability();
+ try{
+   let sig=bhOneMOutlookSignal();if(!sig||sig.spread>=.60)return o;
+   let def=bhV9DefenseStrength();
+   let floor=sig.spread<.30?68:58;
+   // 防御が強ければさらに底上げ、弱ければ無理に固定しない。
+   floor+=Math.max(-8,Math.min(10,def*.28));
+   if(o.escape<floor)o.escape=floor;
+   o.escape=Math.max(5,Math.min(95,o.escape));
+   o.nonEscape=100-o.escape;
+   o.status=o.escape>=75?'イン逃げ':o.escape>=45?'中間':'イン以外';
+   o.matchLabel=(o.matchLabel||'')+` / 0.60未満イン再評価 ${floor.toFixed(1)}%基準`;
+ }catch(e){}
+ return o;
+};
+
+// 裏展開：外側艇が「主攻め艇の後ろ」にいることを追加条件にする。
+// A1/A2・同コース過去30走1着あり、という既存条件も維持。
+bhV5ReverseTickets=function(mainTickets){
+ let atk=bhV5MainAttacker();if(!atk)return[];
+ let ac=course(atk.boat),rh=[1,2,3,4,5,6].find(b=>course(b)===ac+1);if(!rh)return[];
+ let elig=bhV5EligibleReverseHead(rh);if(!elig.ok)return[];
+ let ar=bhV9OneMRow(atk.boat),rr=bhV9OneMRow(rh);if(!ar||!rr)return[];
+ // boatBehindは小さいほど前。裏展開艇が攻め手より後ろにいる場合だけ差し返しを作る。
+ if(!(num(rr.boatBehind)>num(ar.boatBehind)+0.01))return[];
+ let seconds=[1,atk.boat].filter((v,i,a)=>v!==rh&&a.indexOf(v)===i);
+ let thirds=[1,2,3,4,5,6].filter(b=>b!==rh).sort((a,b)=>{
+   let sa=bhV3LegScore(a,3,rh),sb=bhV3LegScore(b,3,rh);
+   if(a===atk.boat)sa+=18;if(b===atk.boat)sb+=18;if(a===1)sa+=14;if(b===1)sb+=14;
+   return sb-sa;
+ });
+ let out=[];
+ for(let sec of seconds){
+   for(let th of thirds.filter(x=>x!==sec&&x!==rh).slice(0,2)){
+     let legs=[rh,sec,th],key=legs.join('-');if(out.some(x=>x.key===key))continue;
+     out.push({key,legs,odds:bhGetOdds(key),method:'差し',attacker:atk.boat,head:rh,cls:elig.cls,wins:elig.wins});
+     if(out.length>=4)return out;
+   }
+ }
+ return out.slice(0,4);
+};
+
+// 1M説明欄に現在の基準を明示。
+const bhV9BaseTheoryHTML=bhOneMTheoryHTML;
+bhOneMTheoryHTML=function(rows){
+ let html=bhV9BaseTheoryHTML(rows),sig=bhOneMOutlookSignal();
+ if(!sig)return html;
+ let txt=sig.spread<.30?'0.30未満：明確な攻めなし・1号艇強評価':sig.spread<.60?'0.30〜0.59：攻め気配止まり・1号艇防御優先':'0.60以上：攻め成立判定';
+ return html+`<div class="bhVol9Rule">🛡️ vol.9 1M基準：${txt} ／ 最大差 ${sig.spread.toFixed(2)}艇身</div>`;
+};
+</script>
 </body>
 </html>

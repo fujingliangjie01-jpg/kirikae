@@ -940,8 +940,18 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhStartHistoryWrap{display:none;margin-top:10px}
 .bhStartHistoryWrap.open{display:block}
 </style>
+<style id="bh-vol13-css">
+.bhBudgetInnerV13{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;align-items:stretch!important}
+.bhBudgetSide{min-width:0;display:flex;flex-direction:column;gap:7px}
+.bhBudgetSide label{margin:0!important;white-space:nowrap}
+.bhBudgetInputV13{display:flex;align-items:center;gap:7px;min-height:58px}
+.bhBudgetInputV13 input{width:100%!important;min-width:0!important}
+.bhBudgetSide .bhVerifyBtn{width:100%!important;min-height:58px!important;margin:0!important;flex:1}
+.bhLapToggle{width:100%;margin-top:12px;min-height:46px;font-weight:900}
+.bhLapCorrectionFold{display:none;margin-top:8px}.bhLapCorrectionFold.open{display:block}
+</style>
 </head>
-<body><div class="bhVol">vol.12</div>
+<body><div class="bhVol">vol.13</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -992,7 +1002,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <div>
 <label>本日の開催場</label>
 <select id="venue"></select>
-<div class="bhBudgetTop" style="padding:0;margin:10px 0 0;max-width:none"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhResultDashOpen" class="bhVerifyBtn" type="button">🏁 結果確認</button></div></div>
+<div class="bhBudgetTop" style="padding:0;margin:10px 0 0;max-width:none"><div class="bhBudgetInner bhBudgetInnerV13"><div class="bhBudgetSide"><label for="bhRaceBudget">💴 1レース資金</label><div class="bhBudgetInputV13"><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span></div></div><div class="bhBudgetSide"><label>🏁 結果</label><button id="bhResultDashOpen" class="bhVerifyBtn" type="button">結果確認</button></div></div></div>
 </div>
 <div>
 <label>レース</label>
@@ -2208,6 +2218,12 @@ function bhOneMModel(stats){
    x.startBoatBehind=x.startDelay/.15;
    // 良いタイムは「前へ」なので、後方差から差し引く。
    let moveForwardBody=bhClamp(x.accelBody+x.stretchBody,-MAX_MOVE_BODY,MAX_MOVE_BODY);
+   // vol.13: 後退側のみ抑制。伸びる側は従来感度を維持。
+   if(moveForwardBody<0){
+     moveForwardBody*=0.55;
+     const severe=(x.accelBody<-.25&&x.stretchBody<-.45);
+     moveForwardBody=Math.max(severe?-.95:-.65,moveForwardBody);
+   }
    x.moveForwardBody=moveForwardBody;
    x.arrivalScore=x.startDelay-(moveForwardBody*.15);
  });
@@ -3706,21 +3722,6 @@ main==="maki"||main==="makiSashi"?
 <div class="outlookBigMessage">${outlookBigMessage}</div>
 </div>
 ${slowWallAlertHTML()}
-<div class="overviewReason">
-イン逃げ/イン逃げしないを合計100%で評価。<br>
-${
-outlook.escape>=83?
-"🔥 1号艇の逃げ率83%以上。イン逃げ鉄板激アツ評価。":
-outlook.escape>=65?
-"🔴 イン逃げ65%以上。イン逃げとして評価。":
-outlook.escape>=50?
-"🟢 イン逃げ50.0〜64.9%。緑評価。":
-"🔵 イン逃げ49.9%以下。イン以外として評価。"
-}<br>
-決まり手評価：1号艇逃げ50%=場平均 / 65%=期待大 / 83%=鉄板激アツ。<br>
-差し・まくり・まくり差し：7%=場平均 / 15%=期待大 / 20%=期待プラス / 25%=激アツ。<br>
-1号艇のまくられ・差され・まくり差されは7%未満=プラス、7〜14%=やや危険、15%以上=危険、25%以上=かなりマイナス。
-</div>
 </div>
 <div class="aiDetail">
 <strong>🤖 AI総合評価の主要項目</strong><br>
@@ -5546,7 +5547,7 @@ bhV3LegScore=function(b,pos,head){
 };
 const bhVol7BaseHeadScore=bhV3HeadScore;
 bhV3HeadScore=function(b,outlook){return bhVol7BaseHeadScore(b,outlook)+bhLapBonus(b,1)};
-function bhLapAdjHTML(){let c=bhLapContext();if(!c.rows.length)return '';return `<div class="bhLapAdjBox"><b>🏁 一周タイム・コース補正評価</b><br>検証補正：外へ1コースずれるごとに0.175秒を差し引いて比較。${c.oneLost?'<b>⚠️ 1コースが生一周1位ではありません。上回った艇を強めに評価。</b>':'1コース生一周1位は通常想定として大幅加点しません。'}<div class="bhLapAdjGrid">${c.rows.sort((a,b)=>a.adj-b.adj).map(x=>`<div class="bhLapAdjCell ${x.adjRank===1?'hot':''}">${x.boat}号艇 / ${x.course}C<strong>生 ${x.raw.toFixed(2)} → 補正 ${x.adj.toFixed(3)}</strong>補正順位 ${x.adjRank}位</div>`).join('')}</div></div>`}
+function bhLapAdjHTML(){let c=bhLapContext();if(!c.rows.length)return '';return `<button class="subBtn bhLapToggle" type="button" onclick="bhToggleLapCorrection(this)">🏁 一周タイム補正を見る</button><div class="bhLapCorrectionFold"><div class="bhLapAdjBox"><b>🏁 一周タイム・コース補正評価</b><br>検証補正：外へ1コースずれるごとに0.175秒を差し引いて比較。${c.oneLost?'<b>⚠️ 1コースが生一周1位ではありません。上回った艇を強めに評価。</b>':'1コース生一周1位は通常想定として大幅加点しません。'}<div class="bhLapAdjGrid">${c.rows.sort((a,b)=>a.adj-b.adj).map(x=>`<div class="bhLapAdjCell ${x.adjRank===1?'hot':''}">${x.boat}号艇 / ${x.course}C<strong>生 ${x.raw.toFixed(2)} → 補正 ${x.adj.toFixed(3)}</strong>補正順位 ${x.adjRank}位</div>`).join('')}</div></div></div>`}
 const bhVol7BaseRender=bhV3Render;
 bhV3Render=function(tickets,outlook){bhVol7BaseRender(tickets,outlook);let box=document.getElementById('bhNewBetRows');if(box)box.insertAdjacentHTML('afterbegin',bhLapAdjHTML());};
 </script>\n
@@ -5795,5 +5796,8 @@ function bhToggleStartHistory(){
 })();
 </script>
 
+<script id="bh-vol13-ui-js">
+function bhToggleLapCorrection(btn){const fold=btn?.nextElementSibling;if(!fold)return;const open=fold.classList.toggle("open");btn.textContent=open?"🏁 一周タイム補正を閉じる":"🏁 一周タイム補正を見る";}
+</script>
 </body>
 </html>

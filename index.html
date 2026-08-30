@@ -896,7 +896,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 #bhNewBetRows{margin-top:12px}.bhV3Bet{display:grid;grid-template-columns:34px minmax(95px,1fr) 72px 72px 82px 92px;gap:6px;align-items:center;padding:10px 7px;border-top:1px solid #303030;font-size:12px}.bhV3Bet:first-child{border-top:0}.bhV3Rank{font-weight:1000;color:#ffd75a}.bhV3Ticket{font-size:22px;font-weight:1000;letter-spacing:1.5px;color:#fff}.bhV3Pct{font-weight:1000;color:#ffd75a}.bhV3Odds{font-weight:900;color:#8edfff}.bhV3Amount{font-weight:900}.bhV3Return{font-weight:900;color:#9ef0b5}.bhV3Method{grid-column:2/-1;font-size:10px;color:#aaa;margin-top:-3px}.bhV3HeadMandatory{box-shadow:inset 3px 0 0 #ff6666}.bhV3DefenseNote{margin:10px 0;padding:9px;border:1px solid #4a3f28;border-radius:9px;background:#17130b;color:#e9d38a;font-size:11px;line-height:1.6}@media(max-width:650px){.bhV3Bet{grid-template-columns:30px minmax(88px,1fr) 58px 60px}.bhV3Amount,.bhV3Return{grid-column:auto}.bhV3Method{grid-column:2/-1}.bhV3Ticket{font-size:19px}}
 </style>
 </head>
-<body><div class="bhVol">vol.7</div>
+<body><div class="bhVol">vol.8</div>
 <div class="bhBudgetTop"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🧪 検証画面</button></div></div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
@@ -1809,7 +1809,7 @@ let st=num(
 );
 return{raw:x,no,c,place,technique,st:(st>0&&st<1?st:null)}
 }).filter(x=>x.no>0&&x.c>=1&&x.c<=6&&x.place>=1&&x.place<=6);
-// vol.7: 各過去レース内のST順位を保存（同STは同順位）。絶対STだけでなく「その6艇の中で何番手だったか」を30走評価へ使う。
+// vol.8: 各過去レース内のST順位を保存（同STは同順位）。絶対STだけでなく「その6艇の中で何番手だったか」を30走評価へ使う。
 let stOrder=normalized.filter(x=>Number.isFinite(x.st)).slice().sort((a,b)=>a.st-b.st);
 normalized.forEach(x=>{if(!Number.isFinite(x.st)){x.stRank=null;return;}x.stRank=1+stOrder.filter(y=>y.st<x.st-1e-9).length;});
 let winner=normalized.find(x=>x.place===1);
@@ -2008,7 +2008,7 @@ function bhStartStats(b){
  if(!n)return{boat:b,count:0,avg:null,median:null,min:null,max:null,sd:null,cv:null,fast10:0,fast15:0,predict:null,stable:false,label:"データなし",rows:[],avgRank:null,firstRate:0,top2Rate:0,rankCount:0};
  let avg=vals.reduce((a,v)=>a+v,0)/n,sorted=[...vals].sort((a,v)=>a-v),median=n%2?sorted[(n-1)/2]:(sorted[n/2-1]+sorted[n/2])/2;
  let variance=vals.reduce((a,v)=>a+(v-avg)*(v-avg),0)/n,sd=Math.sqrt(variance),recent=vals.slice(0,Math.min(15,n)),recentAvg=recent.reduce((a,v)=>a+v,0)/recent.length;
- // vol.7: 30走を基礎70%、直近15走30%。さらに同コースの実ST順位を最大±0.020秒だけ補正。
+ // vol.8: 30走を基礎70%、直近15走30%。さらに同コースの実ST順位を最大±0.020秒だけ補正。
  let base=avg*.70+recentAvg*.30,predict=base;
  if(sd<=.025)predict=base*.90+median*.10;
  let ranked=rows.filter(r=>Number.isFinite(num(r.stRank))&&num(r.stRank)>=1&&num(r.stRank)<=6),rankCount=ranked.length;
@@ -5426,15 +5426,15 @@ bhV3Render=function(tickets,outlook){
  bhV5BaseRender(tickets,outlook);
  let reverse=bhV5ReverseTickets(tickets),box=document.getElementById('bhNewBetRows');
  if(box)box.insertAdjacentHTML('beforeend',bhV5ReverseHTML(reverse));
- window.bhV5ReverseTickets=reverse;
+ window.bhV5ReverseTicketList=reverse;
 };
 </script>
 
-\n<style id="bh-vol7-css">
+\n<style id="bh-vol8-css">
 .bhLapAdjBox{margin:10px 0;padding:10px;border:1px solid #5b4d22;border-radius:12px;background:#171407;font-size:11px;line-height:1.55}.bhLapAdjBox b{color:#ffd86a}.bhLapAdjGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:7px}.bhLapAdjCell{background:#101010;border:1px solid #333;border-radius:8px;padding:7px}.bhLapAdjCell.hot{border-color:#d4af37}.bhLapAdjCell strong{display:block;color:#fff;font-size:13px}@media(max-width:650px){.bhLapAdjGrid{grid-template-columns:repeat(2,1fr)}}
 </style>
-<script id="bh-vol7-engine">
-// vol.7 一周タイム：外コースほど引き波等で0.15〜0.20秒程度悪化するという検証仮説を0.175秒/コースで正規化。
+<script id="bh-vol8-engine">
+// vol.8 一周タイム：外コースほど引き波等で0.15〜0.20秒程度悪化するという検証仮説を0.175秒/コースで正規化。
 // 公式の一周タイム自体は総合力の参考データ。0.175はBOAT HUNTERの検証パラメータであり公式値ではない。
 const BH_LAP_COURSE_STEP=.175;
 function bhLapRaw(b){let p=preview(b)||{};let v=num(p.lap_time||p.lapTime||p.one_round_time||p.oneRoundTime||p.round_time);return v>0?v:null}

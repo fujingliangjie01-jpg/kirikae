@@ -981,8 +981,46 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <style id="bh-vol21-result-css">
 .bhExactaHitLine{display:block!important;margin-top:3px!important;font-size:10px!important;font-weight:900!important;opacity:1!important;white-space:nowrap;color:#bfffd8}
 </style>
+<style id="bh-vol22-result-layout-css">
+/* 結果文字と買い目○×を完全に分離 */
+.bhResultDashHeader,.bhResultDashRow{
+  grid-template-columns:48px minmax(150px,1.65fr) 58px 58px minmax(86px,.9fr) minmax(92px,1fr)!important;
+  column-gap:8px!important;
+}
+.bhResultDashResult{
+  min-width:0!important;
+  padding-right:8px!important;
+  overflow:visible!important;
+}
+.bhResultDashResult b{
+  display:block!important;
+  font-size:19px!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+}
+.bhResultMiniJudge{
+  width:42px!important;
+  min-width:42px!important;
+  height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  justify-self:center!important;
+  font-size:24px!important;
+  font-weight:1000!important;
+}
+.bhResultDashOdds{padding-left:4px!important}
+@media(max-width:520px){
+ .bhResultDashHeader,.bhResultDashRow{
+   grid-template-columns:42px minmax(132px,1.55fr) 46px 46px minmax(78px,.82fr) minmax(84px,.95fr)!important;
+   column-gap:6px!important;
+ }
+ .bhResultDashResult b{font-size:17px!important}
+ .bhResultMiniJudge{width:38px!important;min-width:38px!important;height:38px!important;font-size:22px!important}
+}
+</style>
 </head>
-<body><div class="bhVol">vol.21</div>
+<body><div class="bhVol">vol.22</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>

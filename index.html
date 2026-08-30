@@ -952,8 +952,34 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhTopActionSub .bhGoBetBtn{width:100%!important;min-height:44px!important;margin:0!important;font-size:15px!important}
 @media(max-width:390px){.bhTopActionMain{grid-template-columns:1fr 1fr;gap:7px}.bhTopActionMain button{font-size:16px!important;padding-left:7px!important;padding-right:7px!important}}
 </style>
+<style id="bh-vol19-result-css">
+.bhResultDashResult,.bhResultDashOdds{display:flex;flex-direction:column;gap:2px}
+.bhResultDashResult small,.bhResultDashOdds small{font-size:10px;opacity:.78;white-space:nowrap}
+.bhResultDashResult b,.bhResultDashOdds b{font-size:12px;white-space:nowrap}
+</style>
+<style id="bh-vol20-bet-visual-css">
+/* 買い目を大きく・判別しやすく */
+.bhV3Bet{padding:14px 12px!important;gap:10px!important;align-items:center!important}
+.bhV3Ticket{font-size:28px!important;font-weight:1000!important;letter-spacing:1.5px!important;line-height:1.05!important}
+.bhV3Ticket small{display:block!important;margin-top:5px!important;font-size:11px!important;letter-spacing:0!important}
+.bhV3Pct{font-size:18px!important;font-weight:1000!important}
+.bhV3Odds,.bhV3Amount,.bhV3Return{font-size:15px!important;font-weight:850!important}
+.bhV3Method{grid-column:2/-1!important;font-size:12px!important;line-height:1.5!important;display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-items:center!important}
+.bhBetPatch{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:1000;line-height:1.2;white-space:nowrap;border:1px solid rgba(255,255,255,.18)}
+.bhPatchMethod{background:rgba(38,126,190,.22);border-color:rgba(76,174,255,.55);color:#bfe6ff}
+.bhPatchReverse{background:rgba(159,88,225,.22);border-color:rgba(198,130,255,.62);color:#e7c8ff}
+.bhPatchMandatory{background:rgba(210,54,54,.24);border-color:rgba(255,92,92,.65);color:#ffd0d0}
+.bhPatchPhysical{background:rgba(220,160,30,.22);border-color:rgba(255,201,72,.65);color:#ffe39a}
+.bhPatchExacta{background:rgba(57,180,120,.20);border-color:rgba(88,225,154,.60);color:#c8ffe0}
+.bhV5ReverseTicket,.bhV17PhysicalReverseTicket{font-size:25px!important;font-weight:1000!important;letter-spacing:1px!important}
+.bhV5ReverseTitle,.bhV17PhysicalReverseTitle{font-size:19px!important}
+@media(max-width:430px){
+ .bhV3Ticket{font-size:25px!important}
+ .bhV3Pct{font-size:16px!important}
+}
+</style>
 </head>
-<body><div class="bhVol">vol.18</div>
+<body><div class="bhVol">vol.20</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -4887,16 +4913,28 @@ function bhAlertNames(){
   if(bhUncertaintyProfile().show)names.push("展開不透明");if(!names.length)names.push("アラートなし");return[...new Set(names)]
 }
 function bhExpandTicket(t){
-  let l=t?.legs;if(!Array.isArray(l)||l.length!==3)return[];let[a,b,c]=l,v=[1,2,3,4,5,6],out=[];
+  let l=t?.legs;if(!Array.isArray(l))return[];
+  if(l.length===2){
+    let a=Number(l[0]),b=Number(l[1]);
+    return a>=1&&a<=6&&b>=1&&b<=6&&a!==b?[`${a}-${b}`]:[];
+  }
+  if(l.length!==3)return[];
+  let[a,b,c]=l,v=[1,2,3,4,5,6],out=[];
   let bs=b==="全"?v.filter(x=>x!==Number(a)&&x!==Number(c)):[Number(b)];
   for(let bb of bs){let cs=(c==="全"||c==="○")?v.filter(x=>x!==Number(a)&&x!==bb):[Number(c)];for(let cc of cs)if(Number(a)!==bb&&Number(a)!==cc&&bb!==cc)out.push(`${Number(a)}-${bb}-${cc}`)}
   return out
 }
-function bhTicketHit(result,tickets){return tickets.some(t=>bhExpandTicket(t).includes(result))}
+function bhTicketHit(result,tickets){
+  const tri=String(result||""),ex=tri.split("-").slice(0,2).join("-");
+  return tickets.some(t=>{
+    const keys=bhExpandTicket(t);
+    return Array.isArray(t?.legs)&&t.legs.length===2?keys.includes(ex):keys.includes(tri);
+  });
+}
 function bhOutlookHit(first,pct){return pct>=50?first===1:first!==1}
 function bhBandName(p){return p>=90?"90以上":p>=80?"80台":p>=70?"70台":p>=60?"60台":p>=50?"50台":p>=40?"40台":"40未満"}
-const BH_RESULT_STATS_KEY_V1="BOAT_HUNTER_RESULT_STATS_V1";
-const BH_RESULT_STATS_KEY="BOAT_HUNTER_RESULT_STATS_V2";
+const BH_RESULT_STATS_KEY_V1="BOAT_HUNTER_RESULT_STATS_RESET_20260830_V1";
+const BH_RESULT_STATS_KEY="BOAT_HUNTER_RESULT_STATS_RESET_20260830_V2";
 const BH_SEED_20260827={"total":123,"ticketHit":72,"outlookHit":87,"alerts":{"展開不透明":{"n":12,"ticket":6,"outlook":8},"強力な壁":{"n":25,"ticket":15,"outlook":18},"アラートなし":{"n":57,"ticket":32,"outlook":38},"1コース まくり差され率高め":{"n":16,"ticket":10,"outlook":11},"1コース まくられ率高め":{"n":19,"ticket":10,"outlook":14},"壁崩壊警戒":{"n":2,"ticket":2,"outlook":2}},"bands":{"60台":{"n":9,"ticket":7,"outlook":6},"70台":{"n":25,"ticket":13,"outlook":16},"80台":{"n":44,"ticket":29,"outlook":33},"50台":{"n":10,"ticket":8,"outlook":4},"40未満":{"n":25,"ticket":11,"outlook":19},"40台":{"n":10,"ticket":4,"outlook":9}}};
 function bhTodayKey(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function bhDateLabel(k){if(k==="all")return"全期間";let p=k.split("-");return p.length===3?`${Number(p[1])}/${Number(p[2])}`:k}
@@ -4913,31 +4951,12 @@ function bhMergeStatInto(dst,src){
 function bhLoadStatsStoreCore(){
   let s=null;
   try{s=JSON.parse(localStorage.getItem(BH_RESULT_STATS_KEY)||"null")}catch(e){}
-  if(!(s&&s.version===2&&s.all&&s.days)){
-    s={version:2,all:bhEmptyStat(),days:{}};
-    try{
-      let old=JSON.parse(localStorage.getItem(BH_RESULT_STATS_KEY_V1)||"null");
-      if(old&&Number(old.total)>0){
-        let x=bhNormalizeStat(old);
-
-        s.all=bhCloneStat(x);s.days["2026-08-27"]=bhCloneStat(x);s.seed827=true
-      }
-    }catch(e){}
-  }
-  if(!s.seed827){
-
-    let d=s.days["2026-08-27"];
-    if(!(d&&Number(d.total)>=123)){
-      s.days["2026-08-27"]=bhCloneStat(BH_SEED_20260827);
-      bhMergeStatInto(s.all,BH_SEED_20260827)
-    }
-    s.seed827=true
-  }
+  if(!(s&&s.version===2&&s.all&&s.days))s={version:2,all:bhEmptyStat(),days:{}};
   try{localStorage.setItem(BH_RESULT_STATS_KEY,JSON.stringify(s))}catch(e){}
   return s
 }
 function bhSaveStatsStoreCore(s){try{localStorage.setItem(BH_RESULT_STATS_KEY,JSON.stringify(s))}catch(e){}}
-const BH_RESULT_STATS_BACKUP_KEY="BOAT_HUNTER_RESULT_STATS_BACKUP_V1";
+const BH_RESULT_STATS_BACKUP_KEY="BOAT_HUNTER_RESULT_STATS_RESET_20260830_BACKUP_V1";
 function bhLoadStatsStore(){
   let main=bhLoadStatsStoreCore(),backup=null;
   try{backup=JSON.parse(localStorage.getItem(BH_RESULT_STATS_BACKUP_KEY)||"null")}catch(e){}
@@ -5014,7 +5033,8 @@ function bhRecordedRows(dayKey){
     let th=snap?(typeof r?.ticketHit==="boolean"?r.ticketHit:(typeof snap?.ticketHit==="boolean"?snap.ticketHit:(result&&Array.isArray(snap?.expanded)?snap.expanded.includes(result):null))):null;
     let oh=snap?(typeof r?.outlookHit==="boolean"?r.outlookHit:(typeof snap?.outlookHit==="boolean"?snap.outlookHit:(result&&snap?.pct!=null?bhOutlookHit(Number(result.split("-")[0]),num(snap.pct)):null))):null;
     let payout=Number(base.payout??r?.payout??snap?.payout??0)||0;
-    rows.push({key,day,venue,race,result,th,oh,payout,odds:payout>0?payout/100:0,analyzed:!!snap,source:r?.source||"all",time:Number(base.time||r?.time||snap?.scoredAt||0)});
+    let exactaPayout=Number(base.exactaPayout??r?.exactaPayout??snap?.exactaPayout??0)||0;
+    rows.push({key,day,venue,race,result,th,oh,payout,exactaPayout,odds:payout>0?payout/100:0,exactaOdds:exactaPayout>0?exactaPayout/100:0,analyzed:!!snap,source:r?.source||"all",time:Number(base.time||r?.time||snap?.scoredAt||0)});
   };
   for(const [day,obj] of Object.entries(allStore)){
     if(dayKey!=="all"&&day!==dayKey)continue;
@@ -5095,8 +5115,8 @@ function bhResultPanelHTML(){
   return `<div class="bhResultPanel"><button id="bhResultToggle" class="bhResultToggle" type="button" onclick="bhToggleResultPanel()">${toggleText}</button><div id="bhResultBody" class="bhResultBody${openClass}"><h3>📊 AI解析・累計成績</h3><div id="bhAutoResultStatus" class="bhAutoResultStatus"><span>🤖 全場結果自動取得：直近3日保持・待機中</span><button type="button" onclick="bhAutoCheckResults(true)">今すぐ確認</button></div><div id="bhResultMsg" class="bhResultMsg"></div><div class="bhStatsTools"><span>成績表示</span><select id="bhStatsDate" onchange="bhSetStatsDate(this.value)"></select></div><div id="bhStats" class="bhStats"></div><button id="bhResultListToggle" class="bhResultListToggle" type="button" onclick="bhToggleResultList()">🏁 全場レース結果を表示</button><div id="bhResultListWrap" class="bhResultListWrap"><div id="bhResultHistory" class="bhResultHistory"></div></div></div></div>`
 }
 
-const BH_PREDICTION_SNAPSHOT_KEY="BOAT_HUNTER_PREDICTION_SNAPSHOTS_V1";
-const BH_RESULT_RECORDED_KEY="BOAT_HUNTER_RECORDED_RACES_V1";
+const BH_PREDICTION_SNAPSHOT_KEY="BOAT_HUNTER_PREDICTION_SNAPSHOTS_RESET_20260830_V1";
+const BH_RESULT_RECORDED_KEY="BOAT_HUNTER_RECORDED_RACES_RESET_20260830_V1";
 const BH_ALL_RESULTS_KEY="BOAT_HUNTER_ALL_RESULTS_3D_V1";
 function bhAllResultStore(){try{let x=JSON.parse(localStorage.getItem(BH_ALL_RESULTS_KEY)||"null");return x&&typeof x==="object"?x:{}}catch(e){return{}}}
 function bhSaveAllResultStore(x){try{localStorage.setItem(BH_ALL_RESULTS_KEY,JSON.stringify(x))}catch(e){}}
@@ -5307,7 +5327,7 @@ async function bhAutoCheckResults(force=false){
           if(needResult){
             let first=top[0],th=(snap.expanded||[]).includes(result),oh=bhOutlookHit(first,num(snap.pct)),store=bhLoadStatsStore();
             if(!store.days[snap.day])store.days[snap.day]=bhEmptyStat();bhAddResultStat(store.all,th,oh,snap.alerts?.length?snap.alerts:["アラートなし"],snap.band||bhBandName(num(snap.pct)));bhAddResultStat(store.days[snap.day],th,oh,snap.alerts?.length?snap.alerts:["アラートなし"],snap.band||bhBandName(num(snap.pct)));bhSaveStatsStore(store);
-            if(payout>0)bhPersistPayoutStat(snap.day,payout,th);bhMarkRaceRecorded(key,result,"auto",{ticketHit:th,outlookHit:oh,pct:num(snap.pct),payout:payout||0,exactaPayout:exactaPayout||0,payoutStatAdded:payout>0});snap.scored=true;snap.result=result;snap.ticketHit=th;snap.outlookHit=oh;snap.payout=payout||0;snap.scoredAt=Date.now();done++
+            if(payout>0)bhPersistPayoutStat(snap.day,payout,th);bhMarkRaceRecorded(key,result,"auto",{ticketHit:th,outlookHit:oh,pct:num(snap.pct),payout:payout||0,exactaPayout:exactaPayout||0,payoutStatAdded:payout>0});snap.scored=true;snap.result=result;snap.ticketHit=th;snap.outlookHit=oh;snap.payout=payout||0;snap.exactaPayout=exactaPayout||0;snap.scoredAt=Date.now();done++
           }else if(needPayout&&payout>0){
             let map=bhRecordedMap(),old=map[key]||{};if(!old.payoutStatAdded)bhPersistPayoutStat(snap.day,payout,typeof old.ticketHit==="boolean"?old.ticketHit:snap.ticketHit);map=bhRecordedMap();map[key]={...(map[key]||{}),payout,exactaPayout:exactaPayout||map[key]?.exactaPayout||0,payoutStatAdded:true};try{localStorage.setItem(BH_RESULT_RECORDED_KEY,JSON.stringify(map))}catch(e){}snap.payout=payout;enriched++
           }
@@ -5426,7 +5446,11 @@ function bhV3Render(tickets,outlook){
  bhV3Allocate(tickets);let box=document.getElementById('bhNewBetRows'),card=document.getElementById('bhNewBetCard');if(!box||!card)return;card.style.display='block';
  let d=bhV3Defense(1);
  let defense=`1号艇防御：まくられ ${d.makare.toFixed(1)}% / 差され ${d.sasare.toFixed(1)}% / まくり差され ${d.mss.toFixed(1)}%　※vol.6も攻め率より防御側を強く反映`;
- let oddsCount=tickets.filter(t=>Number(t.odds)>0).length;let oddsStatus=oddsCount?`<div class=\"bhVerifyNote\">📈 3連単オッズ：${oddsCount}/${tickets.length}点取得</div>`:`<div class=\"bhVerifyNote\">⚠️ オッズ未公開または取得前　<button type=\"button\" onclick=\"bhReloadRealtimeVol4()\">再取得</button></div>`; box.innerHTML=`<div class="bhV3DefenseNote">🛡️ ${defense}</div>${oddsStatus}`+tickets.map((t,i)=>{let odds=Number(t.odds);let ret=odds>0?Math.floor(odds*t.amount):null;return `<div class="bhV3Bet ${t.mandatoryHead?'bhV3HeadMandatory':''}"><span class="bhV3Rank">${i+1}</span><span class="bhV3Ticket">${t.legs.join('-')} <small style="font-size:10px;color:#9aa">${t.betType||'3連単'}${t.thirdHead?'・3艇目頭':''}</small></span><span class="bhV3Pct">${t.prob.toFixed(1)}%</span><span class="bhV3Odds">${odds>0?odds.toFixed(1)+'倍':'取得待ち'}</span><span class="bhV3Amount">${t.amount.toLocaleString()}円</span><span class="bhV3Return">${ret!=null?ret.toLocaleString()+'円':'－'}</span><span class="bhV3Method">決まり手：${t.method}${t.mandatoryHead?'　🔥 1.5艇身以上＋まくり実績：1着必須':''}</span></div>`}).join('');
+ let oddsCount=tickets.filter(t=>Number(t.odds)>0).length;let oddsStatus=oddsCount?`<div class=\"bhVerifyNote\">📈 3連単オッズ：${oddsCount}/${tickets.length}点取得</div>`:`<div class=\"bhVerifyNote\">⚠️ オッズ未公開または取得前　<button type=\"button\" onclick=\"bhReloadRealtimeVol4()\">再取得</button></div>`; box.innerHTML=`<div class="bhV3DefenseNote">🛡️ ${defense}</div>${oddsStatus}`+tickets.map((t,i)=>{let odds=Number(t.odds);let ret=odds>0?Math.floor(odds*t.amount):null;return `<div class="bhV3Bet ${t.mandatoryHead?'bhV3HeadMandatory':''}"><span class="bhV3Rank">${i+1}</span><span class="bhV3Ticket">${t.legs.join('-')} <small style="font-size:10px;color:#9aa">${t.betType||'3連単'}${t.thirdHead?'・3艇目頭':''}</small></span><span class="bhV3Pct">${t.prob.toFixed(1)}%</span><span class="bhV3Odds">${odds>0?odds.toFixed(1)+'倍':'取得待ち'}</span><span class="bhV3Amount">${t.amount.toLocaleString()}円</span><span class="bhV3Return">${ret!=null?ret.toLocaleString()+'円':'－'}</span><span class="bhV3Method">
+  <span class="bhBetPatch bhPatchMethod">決まり手：${t.method}</span>
+  ${t.betType==='2連単'?'<span class="bhBetPatch bhPatchExacta">2連単</span>':''}
+  ${t.mandatoryHead?'<span class="bhBetPatch bhPatchMandatory">🔥 1着必須</span>':''}
+</span></div>`}).join('');
  window.bhV3Tickets=tickets;window.bhFinanceEvaluate?.(tickets);
 }
 // 旧買い目表示は使わず、新10点を描画
@@ -5486,7 +5510,7 @@ function bhV5ReverseTickets(mainTickets){
 function bhV5ReverseHTML(reverse){
  if(!reverse.length)return '';
  let x=reverse[0];
- return `<div class="bhV5Reverse"><div class="bhV5ReverseTitle">🔄 裏展開・別枠 ${reverse.length}点</div><div class="bhV5ReverseNote">本線10点の買い目％には含めません。${x.attacker}号艇の攻めに対し、外の${x.head}号艇（${x.cls}・今回と同じコースで過去30走1着 ${x.wins}回）が差す展開。</div>${reverse.map((t,i)=>`<div class="bhV5ReverseRow"><b>${i+1}</b><span class="bhV5ReverseTicket">${t.key}</span><span class="bhV5ReverseOdds">${num(t.odds)>0?num(t.odds).toFixed(1)+'倍':'取得待ち'}</span><span class="bhV5ReverseMethod">裏展開決まり手：差し　／ 2着基本＝1号艇・主攻め${t.attacker}号艇</span></div>`).join('')}</div>`;
+ return `<div class="bhV5Reverse"><div class="bhV5ReverseTitle">🔄 裏展開・別枠 ${reverse.length}点</div><div class="bhV5ReverseNote">本線10点の買い目％には含めません。${x.attacker}号艇の攻めに対し、外の${x.head}号艇（${x.cls}・今回と同じコースで過去30走1着 ${x.wins}回）が差す展開。</div>${reverse.map((t,i)=>`<div class="bhV5ReverseRow"><b>${i+1}</b><span class="bhV5ReverseTicket">${t.key}</span><span class="bhV5ReverseOdds">${num(t.odds)>0?num(t.odds).toFixed(1)+'倍':'取得待ち'}</span><span class="bhV5ReverseMethod"><span class="bhBetPatch bhPatchReverse">🔄 裏展開</span> <span class="bhBetPatch bhPatchMethod">決まり手：差し</span>　2着基本＝1号艇・主攻め${t.attacker}号艇</span></div>`).join('')}</div>`;
 }
 // vol.6描画を包み、本線10点の後ろに裏展開を追加。資金/期待値計算は本線のみのまま。
 const bhV5BaseRender=bhV3Render;
@@ -5655,33 +5679,25 @@ function bhToggleStartHistory(){
    if(!snap)return {analyzed:false,used:0,ret:0,profit:null,roi:null,detail:"未解析"};
    const tickets=Array.isArray(snap.tickets)?snap.tickets:[];
    if(!tickets.length)return {analyzed:true,hasBet:false,used:0,ret:0,profit:null,roi:null,watch:!!snap.finance?.watch};
-   // 1レース資金は「そのレースに買い目が出たら全額投資」が基準。
-   // 保存時のbudgetを優先し、旧データは現在設定額へフォールバック。
    let used=Number(snap.finance?.budget)||Number(window.bhRaceBudget?.())||1200;
-   let ret=0,hitType="";
+   let ret=0,hitTypes=[];
    const result=String(row.result||"");
+   const calcAmt=(t)=>{
+     let amt=Number(t?.amount)||0;
+     if(amt)return amt;
+     const probs=tickets.map(x=>Math.max(0,Number(x.prob)||0)),sum=probs.reduce((a,b)=>a+b,0);
+     return sum?Math.max(100,Math.round(used*(Math.max(0,Number(t?.prob)||0)/sum)/100)*100):Math.max(100,Math.floor(used/tickets.length/100)*100);
+   };
    if(result){
      const tri=tickets.find(t=>Array.isArray(t.legs)&&t.legs.length===3&&t.legs.join("-")===result);
-     if(tri && Number(row.payout)>0){
-       let amt=Number(tri.amount)||0;
-       if(!amt){
-         const probs=tickets.map(t=>Math.max(0,Number(t.prob)||0)),sum=probs.reduce((a,b)=>a+b,0);
-         amt=sum?Math.max(100,Math.round(used*(Math.max(0,Number(tri.prob)||0)/sum)/100)*100):Math.max(100,Math.floor(used/tickets.length/100)*100);
-       }
-       ret=(Number(row.payout)/100)*amt; hitType="3連単";
-     }else{
-       const top2=result.split("-").slice(0,2).join("-");
-       const ex=tickets.find(t=>Array.isArray(t.legs)&&t.legs.length===2&&t.legs.join("-")===top2);
-       const exPay=Number(rec?.exactaPayout)||0;
-       if(ex && exPay>0){
-         let amt=Number(ex.amount)||0;
-         if(!amt)amt=Math.max(100,Math.floor(used/tickets.length/100)*100);
-         ret=(exPay/100)*amt;hitType="2連単"
-       }
-     }
+     if(tri && Number(row.payout)>0){ret+=(Number(row.payout)/100)*calcAmt(tri);hitTypes.push("3連単")}
+     const top2=result.split("-").slice(0,2).join("-");
+     const ex=tickets.find(t=>Array.isArray(t.legs)&&t.legs.length===2&&t.legs.join("-")===top2);
+     const exPay=Number(row.exactaPayout??rec?.exactaPayout)||0;
+     if(ex && exPay>0){ret+=(exPay/100)*calcAmt(ex);hitTypes.push("2連単")}
    }
    let profit=ret-used,roi=used?(ret/used*100):null;
-   return {analyzed:true,hasBet:true,used,ret,profit,roi,hitType,watch:!!snap.finance?.watch}
+   return {analyzed:true,hasBet:true,used,ret,profit,roi,hitType:hitTypes.join("＋"),watch:!!snap.finance?.watch}
  }
  function resultDates(){
    const set=new Set([bhTodayKey()]);
@@ -5697,14 +5713,17 @@ function bhToggleStartHistory(){
  }
  function rowHTML(x){
    if(!x)return `<div class="bhResultDashRow pending"><span>-</span><span>-</span><span>－</span><span>－</span><span>-</span><span class="bhResultDashPnL na">未確定</span></div>`;
-   const f=ticketFinance(x),od=x.payout>0?(x.payout/100).toFixed(1)+"倍":"-";
+   const f=ticketFinance(x);
+   const triResult=x.result||"-",exResult=x.result?x.result.split("-").slice(0,2).join("-"):"-";
+   const triOd=x.payout>0?(x.payout/100).toFixed(1)+"倍":"-";
+   const exOd=x.exactaPayout>0?(x.exactaPayout/100).toFixed(1)+"倍":"-";
    let pnl=f.profit==null?"未解析":signed(Math.round(f.profit));
    let cls=f.profit==null?"na":f.profit>=0?"plus":"minus";
    return `<div class="bhResultDashRow">
      <span>${x.race}R</span>
-     <span class="bhResultDashResult">${x.result||"-"}</span>
+     <span class="bhResultDashResult"><b>3連 ${triResult}</b><small>2連 ${exResult}</small></span>
      ${bhMiniJudge(x.th)}${bhMiniJudge(x.oh)}
-     <span class="bhResultDashOdds">${od}</span>
+     <span class="bhResultDashOdds"><b>3連 ${triOd}</b><small>2連 ${exOd}</small></span>
      <span class="bhResultDashPnL ${cls}" title="${f.analyzed?`投資 ${yen(f.used)} / 払戻 ${yen(Math.round(f.ret))}${f.hitType?` / ${f.hitType}`:""}`:"AI解析なし"}">${pnl}</span>
    </div>`;
  }
@@ -5758,11 +5777,11 @@ function bhToggleStartHistory(){
       <div class="bhResultDayStat profit ${profit>=0?"plus":"minus"}"><small>全買い収支 / ROI</small><b>${used?signed(Math.round(profit))+" / "+roi.toFixed(1)+"%":"-"}</b></div>
       <div class="bhResultDayStat profit ${buyProfit>=0?"plus":"minus"}"><small>見推奨を除外</small><b>${buyUsed?signed(Math.round(buyProfit))+" / "+(buyRet/buyUsed*100).toFixed(1)+"%":"-"}</b></div>
     </div>
-    <div class="bhResultDashFoot">各R：結果 / 買い目○× / 見通し○× / 3連単結果オッズ / 収支。投資は「1レース資金 × 買い目を出したレース数」で計算。見推奨を除外した場合の収支も別表示します。</div>`;
+    <div class="bhResultDashFoot">各R：3連単・2連単結果 / 買い目○× / 見通し○× / 3連単・2連単オッズ / 収支。投資は「1レース資金 × 買い目を出したレース数」で計算。見推奨を除外した場合の収支も別表示します。</div>`;
    $("bhResultDashGrid").innerHTML=venues.length?venues.map(v=>venueCard(v,venueMap.get(v))).join(""):`<div class="bhResultHistoryEmpty">この日の結果はまだ取得されていません。</div>`;
    // 前回の集計フォーマットをそのまま下段へ
    const store=bhLoadStatsStore(),s=store.days?.[day]||bhEmptyStat();
-   $("bhResultDashLegacyStats").innerHTML=`<div class="bhStatsSectionTitle">📊 前回フォーマット集計</div>${bhStatDetail(s)}${bhPayoutStatsHTML(day)}`;
+   $("bhResultDashLegacyStats").innerHTML=`<div class="bhStatsSectionTitle">📊 新規集計（2026/8/30 リセット後）</div>${bhStatDetail(s)}${bhPayoutStatsHTML(day)}`;
  };
  window.bhOpenResultDashboard=function(){
    const p=$("bhResultDashPanel");if(!p)return;
@@ -5874,7 +5893,7 @@ function bhV17PhysicalReverseHTML(list,outlook){
  const x=list[0],escape=num(outlook?.escape ?? window.bhLastOutlook?.escape);
  return `<div class="bhV17PhysicalReverse"><div class="bhV17PhysicalReverseTitle">⚡ 1M隊形優先・外頭保険 ${list.length}点</div>
  <div class="bhV17PhysicalReverseNote">イン逃げ ${escape.toFixed(1)}%でも、${x.head}号艇が1M先頭予測。1号艇より${x.edge.toFixed(2)}艇身前、予測ST ${x.stRank}位、AI ${x.aiRank}位のため、全体見通しを崩さず別枠で外頭を残します。本線10点の％・資金配分には含めません。</div>
- ${list.map((t,i)=>`<div class="bhV17PhysicalReverseRow"><b>${i+1}</b><span class="bhV17PhysicalReverseTicket">${t.key}</span><span class="bhV17PhysicalReverseOdds">${num(t.odds)>0?num(t.odds).toFixed(1)+'倍':'取得待ち'}</span><span class="bhV17PhysicalReverseMethod">1M先頭 ${t.head}号艇／${t.label}／決まり手候補 ${t.method}</span></div>`).join('')}</div>`;
+ ${list.map((t,i)=>`<div class="bhV17PhysicalReverseRow"><b>${i+1}</b><span class="bhV17PhysicalReverseTicket">${t.key}</span><span class="bhV17PhysicalReverseOdds">${num(t.odds)>0?num(t.odds).toFixed(1)+'倍':'取得待ち'}</span><span class="bhV17PhysicalReverseMethod"><span class="bhBetPatch bhPatchPhysical">⚡ 1M外頭</span> <span class="bhBetPatch bhPatchReverse">裏展開</span> <span class="bhBetPatch bhPatchMethod">決まり手：${t.method}</span>　${t.label}</span></div>`).join('')}</div>`;
 }
 
 // 現行の裏展開表示を残したまま、さらに物理的1M先頭の外頭保険を追加。

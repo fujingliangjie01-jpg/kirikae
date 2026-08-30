@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.42</div>
+<body><div class="bhVol">vol.44</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -1078,7 +1078,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <div>
 <label>本日の開催場</label>
 <select id="venue"></select>
-<div class="bhBudgetTop" style="padding:0;margin:10px 0 0;max-width:none"><div class="bhBudgetInner bhBudgetInnerV13"><div class="bhBudgetSide"><label for="bhRaceBudget">💴 1レース資金</label><div class="bhBudgetInputV13"><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span></div></div><div class="bhBudgetSide bhResultSide"><label>🏁 結果確認</label><button id="bhResultDashOpen" class="bhVerifyBtn" type="button">🏁 結果確認</button></div></div></div>
+<div class="bhBudgetTop" style="padding:0;margin:10px 0 0;max-width:none"><div class="bhBudgetInner bhBudgetInnerV13"><div class="bhBudgetSide"><label for="bhRaceBudget">💴 1レース資金</label><div class="bhBudgetInputV13"><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span></div></div></div></div>
 </div>
 <div>
 <label>レース</label>
@@ -1144,7 +1144,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 
 </div>
 
-<div id="bhNewBetCard" class="card"><h2>🎫 新・買い目 / 資金評価</h2><div class="bhFundSummary"><div class="bhFundBox"><small>1レース資金</small><b id="bhFundBudget">1,200円</b></div><div class="bhFundBox"><small>使用予定</small><b id="bhFundUsed">未算出</b></div><div class="bhFundBox"><small>期待回収倍率</small><b id="bhFundReturn">未算出</b></div></div><div id="bhNewBetRows" class="bhVerifyNote">新買い目ロジック作成後、最大12点を1点ずつ「買い目％・オッズ・投資額・的中時払戻」で表示します。○・全のまとめ買いは使用しません。</div><div id="bhWatchAlert" class="bhWatchAlert">⚠️ このレースは「見」を推奨</div></div>
+<div id="bhNewBetCard" class="card"><h2>🎫 新・買い目 / 資金評価</h2><div class="bhFundSummary"><div class="bhFundBox"><small>1レース資金</small><b id="bhFundBudget">1,200円</b></div><div class="bhFundBox"><small>使用予定</small><b id="bhFundUsed">未算出</b></div><div class="bhFundBox"><small>期待回収倍率</small><b id="bhFundReturn">未算出</b></div></div><div id="bhNewBetRows" class="bhVerifyNote">新買い目ロジック作成後、最大12点を1点ずつ「買い目％・オッズ・投資額・的中時払戻」で表示します。○・全のまとめ買いは使用しません。</div><div id="bhResultAfterBets" class="bhBudgetTop" style="padding:0;margin:14px 0 0;max-width:none"><div class="bhBudgetInner bhBudgetInnerV13"><div class="bhBudgetSide bhResultSide"><label>🏁 結果確認</label><button id="bhResultDashOpen" class="bhVerifyBtn" type="button">🏁 結果確認</button></div></div></div><div id="bhWatchAlert" class="bhWatchAlert">⚠️ このレースは「見」を推奨</div></div>
 
 <div id="bhResultDashPanel" class="card bhResultDashPanel">
   <div class="bhResultDashTop">
@@ -7366,7 +7366,7 @@ function bhV30ResistanceReverse(){
 
 <style id="bh-vol42-ui">
 /* 説明文は表示しない。数値・ラベル・グラフ・買い目・結果は維持。 */
-.bhV41LogicNote,
+.bhV41LogicNote,.bhV3DefenseNote,.bhVerifyNote,.bhV5ReverseNote,
 .hint,.help,.description,.explain,.explanation,.logic-description,
 [class*="logicNote"],[class*="explainText"]{display:none!important}
 #bhV42InOutGraph{margin:10px 0 14px}
@@ -7498,23 +7498,50 @@ function bhV30ResistanceReverse(){
  const obs=new MutationObserver(()=>{try{V42.renderGraph()}catch(e){}});
  document.addEventListener("DOMContentLoaded",()=>{V42.renderGraph();obs.observe(document.body,{childList:true,subtree:true})});
 
- // 結果更新/結果確認エリアを買い目の後ろへ移動（機能は変更しない）。
- V42.moveResults=function(){
-   const ticket=document.getElementById("tickets")||document.getElementById("ticketBox")||document.querySelector(".tickets");
-   if(!ticket)return;
-   const ids=["resultSection","resultBox","results","resultDashboard","resultControls"];
-   const nodes=ids.map(id=>document.getElementById(id)).filter(Boolean);
-   if(!nodes.length){
-     const cand=[...document.querySelectorAll("section,.card,div")].filter(x=>/結果更新|結果確認/.test((x.innerText||"").slice(0,100)));
-     if(cand[0])nodes.push(cand[0]);
-   }
-   let anchor=ticket;
-   for(const n of [...new Set(nodes)]){
-     if(n===ticket||ticket.contains(n))continue;
-     anchor.insertAdjacentElement("afterend",n); anchor=n;
-   }
- };
- document.addEventListener("DOMContentLoaded",()=>setTimeout(V42.moveResults,0));
+})();
+</script>
+
+
+<script id="bh-vol43-ticket-schema-fix">
+(function(){
+ function n(v,d=0){v=Number(v);return Number.isFinite(v)?v:d}
+ function normalizeTickets(tickets){
+   tickets=Array.isArray(tickets)?tickets.filter(t=>t&&Array.isArray(t.legs)&&t.legs.length>=2):[];
+   if(!tickets.length)return tickets;
+   // 新ロジックのscoreから従来UIが要求するprob/pctを必ず生成する。
+   const scores=tickets.map(t=>n(t.score,n(t.probability,0)));
+   const min=Math.min(...scores);
+   const weights=scores.map(s=>Math.max(1,s-min+20));
+   const total=weights.reduce((a,b)=>a+b,0)||1;
+   tickets.forEach((t,i)=>{
+     t.prob=weights[i]/total*100;
+     t.pct=t.prob;
+     if(t.odds==null||!Number.isFinite(Number(t.odds))){
+       try{t.odds=bhGetOdds((t.legs||[]).join("-"))}catch(e){t.odds=null}
+     }
+     if(!Number.isFinite(Number(t.amount)))t.amount=0;
+     if(!t.betType)t.betType=t.legs.length===2?"2連単":"3連単";
+     if(!t.method)t.method=t.legs[0]===1?"逃げ":"展開";
+   });
+   return tickets;
+ }
+ window.bhV43NormalizeTickets=normalizeTickets;
+
+ // vol42最終生成の戻り値を旧描画互換スキーマへ変換。
+ const gen=window.bhV3Generate;
+ if(typeof gen==="function"){
+   window.bhV3Generate=function(outlook){
+     return normalizeTickets(gen.call(this,outlook));
+   };
+ }
+
+ // 描画側にも二重安全策。undefined.toFixed を絶対に起こさない。
+ const render=window.bhV3Render;
+ if(typeof render==="function"){
+   window.bhV3Render=function(tickets,outlook){
+     return render.call(this,normalizeTickets(tickets),outlook);
+   };
+ }
 })();
 </script>
 

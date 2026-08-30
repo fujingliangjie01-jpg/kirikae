@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.24</div>
+<body><div class="bhVol">vol.25</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -1947,11 +1947,28 @@ let st=num(
  x?.start_time??x?.startTime??x?.start??x?.start_timing_time??
  x?.timing??x?.start_timing_value
 );
-return{raw:x,no,c,place,technique,st:(st>0&&st<1?st:null)}
+let exhibitionTime=num(
+ x?.exhibition_time??x?.exhibitionTime??x?.exhibition??
+ x?.tenji_time??x?.tenjiTime??x?.ex_time??x?.exTime
+);
+let exhibitionRank=num(
+ x?.exhibition_rank??x?.exhibitionRank??x?.tenji_rank??x?.tenjiRank??
+ x?.ex_rank??x?.exRank
+);
+return{raw:x,no,c,place,technique,st:(st>0&&st<1?st:null),
+ exhibitionTime:(exhibitionTime>0&&exhibitionTime<20?exhibitionTime:null),
+ exhibitionRank:(exhibitionRank>=1&&exhibitionRank<=6?exhibitionRank:null)}
 }).filter(x=>x.no>0&&x.c>=1&&x.c<=6&&x.place>=1&&x.place<=6);
 // vol.8: 各過去レース内のST順位を保存（同STは同順位）。絶対STだけでなく「その6艇の中で何番手だったか」を30走評価へ使う。
 let stOrder=normalized.filter(x=>Number.isFinite(x.st)).slice().sort((a,b)=>a.st-b.st);
 normalized.forEach(x=>{if(!Number.isFinite(x.st)){x.stRank=null;return;}x.stRank=1+stOrder.filter(y=>y.st<x.st-1e-9).length;});
+// vol.25: 過去レース内の展示順位も保存。明示順位が無ければ6艇の展示タイムから算出。
+let exOrder=normalized.filter(x=>Number.isFinite(x.exhibitionTime)).slice().sort((a,b)=>a.exhibitionTime-b.exhibitionTime);
+normalized.forEach(x=>{
+ if(Number.isFinite(x.exhibitionRank))return;
+ if(!Number.isFinite(x.exhibitionTime)){x.exhibitionRank=null;return;}
+ x.exhibitionRank=1+exOrder.filter(y=>y.exhibitionTime<x.exhibitionTime-1e-9).length;
+});
 let winner=normalized.find(x=>x.place===1);
 let winningDecision=winner?.technique||null;
 let winningBoat=num(winner?.raw?.entry_number||winner?.raw?.boat_number||winner?.raw?.boat||winner?.raw?.waku||winner?.raw?.frame_number||winner?.c);
@@ -1969,6 +1986,8 @@ course:c,
 decision:x.technique&&x.technique!=="-"?x.technique:null,
 st:x.st,
 stRank:x.stRank,
+exhibitionTime:x.exhibitionTime,
+exhibitionRank:x.exhibitionRank,
 againstDecision:null
 });
 return
@@ -1980,6 +1999,8 @@ course:c,
 decision:null,
 st:x.st,
 stRank:x.stRank,
+exhibitionTime:x.exhibitionTime,
+exhibitionRank:x.exhibitionRank,
 againstDecision:
 winningDecision&&winningDecision!=="-"?
 winningDecision:null,
@@ -2024,14 +2045,14 @@ if(arr.length>HISTORY_RACES)arr.splice(HISTORY_RACES)
 )
 }
 function historyCacheKey(){
-return "bh-history-course-v21-start-rank-"+
+return "bh-history-course-v25-exhibition-rank-"+
 today().ymd+"-"+
 $("venue").value+"-"+
 racers.map(r=>getRacerNumber(r)).join("-")+"-"+
 Object.values(manualCourses).join("")
 }
 function playerCourseCacheKey(no,c){
-return `bh-player-course-v21-start-rank-${today().ymd}-${no}-${c}`
+return `bh-player-course-v25-exhibition-rank-${today().ymd}-${no}-${c}`
 }
 function hydratePlayerCourseCache(targets){
 racers.forEach(r=>{
@@ -2742,7 +2763,7 @@ API：boatraceopenapi
 $("racers").innerHTML=racers.map(r=>{
 let b=num(r.entry_number),hasHistory=history(b).length>0;
 return`<div class="racer">
-<div class="racerTop"><div class="number n${b}">${b}</div><div class="racerName">${esc(r.name||r.racer_name||r.player_name||"-")}</div></div>
+<div class="racerTop"><div class="number n${b}">${b}</div><div class="racerName">${esc(r.name||r.racer_name||r.player_name||"-")}${typeof bhV23ExhibitPatchHTML==="function"?bhV23ExhibitPatchHTML(b):""}</div></div>
 <button type="button" class="detailToggleBtn" data-detail-target="racerDetail${b}" ${hasHistory?"":"disabled"}>${hasHistory?"📊 過去30走・決まり手を見る":"📊 過去30走・決まり手（AI解析後に表示）"}</button>
 <div id="racerDetail${b}" class="detailPanel" style="display:none">${hasHistory?decisionTrendHTML(b,decisions(r))+renderHistory(b):'<div class="noPick">AI解析を実行すると、今回と同コースの過去30走と決まり手率を表示します。</div>'}</div>
 </div>`
@@ -6060,16 +6081,15 @@ function bhV23Rank(values, idx, lowerBetter=true){
   return null
 }
 function bhV23HistArray(boat){
-  const f=(typeof stats!=="undefined" && Array.isArray(stats))?stats.find(x=>Number(x.boat)===Number(boat)):null;
-  const cands=[
-    f?.history,f?.hist,f?.past,f?.races,f?.last30,f?.recent,
-    f?.runner?.history,f?.entry?.history,
-    (typeof currentRace!=="undefined"?currentRace?.entries?.find?.(x=>Number(x.entry_number||x.boat||x.boat_number)===Number(boat))?.history:null)
-  ];
-  return cands.find(Array.isArray)||[];
+  // vol.25: BOAT HUNTER本体が取得済みの「今回と同じ進入コース・過去30走」を直接使用。
+  if(typeof history==="function"){
+    const rows=history(Number(boat));
+    if(Array.isArray(rows))return rows;
+  }
+  return [];
 }
 function bhV23ExTime(r){
-  for(const k of ["exhibition_time","exhibitionTime","tenji_time","tenjiTime","ex_time","exTime"]){
+  for(const k of ["exhibitionTime","exhibition_time","tenji_time","tenjiTime","ex_time","exTime"]){
     const v=bhV23Finite(r?.[k]); if(v!=null)return v;
   }
   return null;
@@ -6089,12 +6109,12 @@ function bhV23WinMethod(r){
 }
 function bhV23ExhibitReliability(boat){
   const hist=bhV23HistArray(boat).slice(0,30);
-  if(hist.length<6)return {score:70,level:"mid",label:"展示参考度 普通",sample:hist.length,mismatch:0,multiplier:.85};
+  if(hist.length<6)return {score:null,level:"none",label:"展示履歴不足",sample:hist.length,mismatch:0,multiplier:1.0};
 
   // When explicit exhibition rank exists, use it. Otherwise rank exhibition times inside race data if opponents are embedded.
   let usable=0,mismatchSum=0,strongMismatch=0,goodExPoorRace=0,badExGoodRace=0;
   for(const r of hist){
-    let exRank=Number(r?.exhibition_rank??r?.exhibitionRank??r?.tenji_rank??r?.tenjiRank);
+    let exRank=Number(r?.exhibitionRank??r?.exhibition_rank??r?.tenji_rank??r?.tenjiRank);
     if(!(exRank>=1&&exRank<=6)){
       const racers=r?.race_racers||r?.racers||r?.entries||r?.boats;
       if(Array.isArray(racers)){
@@ -6126,7 +6146,7 @@ function bhV23ExhibitReliability(boat){
 
   if(usable<6){
     const base=65 + Math.min(10,Math.round((stGood/Math.max(1,extraN))*10));
-    return {score:base,level:"mid",label:"展示参考度 普通",sample:usable,mismatch:0,multiplier:.85};
+    return {score:null,level:"none",label:"展示履歴不足",sample:usable,mismatch:0,multiplier:1.0};
   }
 
   const avgMismatch=mismatchSum/usable;
@@ -6154,11 +6174,12 @@ function bhV23ExhibitReliability(boat){
 }
 function bhV23ExhibitPatchHTML(boat){
   const r=bhV23ExhibitReliability(boat);
+  if(r.level==="none")return `<span class="bhExRelPatch bhExRelMid">展示履歴不足 ${r.sample}走</span>`;
   const cls=r.level==="high"?"bhExRelHi":r.level==="low"?"bhExRelLow":"bhExRelMid";
-  return `<span class="bhExRelPatch ${cls}">${r.label} ${r.score}</span>`;
+  return `<span class="bhExRelPatch ${cls}">${r.label} ${r.score}<small> / ${r.sample}走</small></span>`;
 }
 function bhV23ExhibitMultiplier(boat){
-  return bhV23ExhibitReliability(boat).multiplier;
+  return bhV23ExhibitReliability(boat).multiplier??1.0;
 }
 
 /*

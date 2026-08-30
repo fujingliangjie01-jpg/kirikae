@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.34</div>
+<body><div class="bhVol">vol.35</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -6918,6 +6918,221 @@ function bhV30ResistanceReverse(){
     }
     try{bhRefreshStatsDateOptions?.();bhRenderStats?.();window.bhRenderResultDashboard?.()}catch(e){}
   };
+})();
+</script>
+
+
+<script id="bh-vol35-reverse-second-ticket-count">
+/* vol.35
+   1) 裏展開は差し形を基本とし、2着は「1コース＋攻め手」を優先。
+      裏展開の1着艇自身が今回の主攻め艇なら「1コース＋その1個外」を2着優先。
+   2) 本線買い目はイン逃げ最大10点、イン以外は12点を基本出力。
+   3) vol.32の的中時払戻1,500円以下除外は維持し、非イン12点不足時は
+      1,500円超（オッズ未取得は保留）の高評価候補から補充。
+*/
+(function(){
+  function v35Key(t){return Array.isArray(t?.legs)?t.legs.join("-"):""}
+  function v35Odds(t){
+    const k=v35Key(t);
+    const o=Number(t?.odds)||Number(window.bhGetOdds?.(k))||0;
+    return Number.isFinite(o)?o:0;
+  }
+  function v35NonIn(outlook){
+    if(typeof window.bhV30IsNonIn==="function")return !!window.bhV30IsNonIn(outlook);
+    const p=Number(outlook?.escapeRate??outlook?.escape??outlook?.prob??outlook?.inEscape);
+    if(Number.isFinite(p))return p<45;
+    return /イン以外|非イン/.test(String(outlook?.status??outlook?.type??""));
+  }
+  function v35CourseBoat(c){
+    try{return [1,2,3,4,5,6].find(b=>Number(course(b))===Number(c))||null}catch(e){return Number(c)||null}
+  }
+  function v35OneOutside(b){
+    try{
+      const c=Number(course(b));
+      return Number.isFinite(c)?v35CourseBoat(c+1):null;
+    }catch(e){return null}
+  }
+  function v35MainAttacker(){
+    try{
+      const x=typeof bhV5MainAttacker==="function"?bhV5MainAttacker():null;
+      return Number(x?.boat)||null;
+    }catch(e){return null}
+  }
+  function v35SecondPriority(head,attacker){
+    const one=v35CourseBoat(1)||1;
+    const second=(Number(head)===Number(attacker))?v35OneOutside(head):Number(attacker);
+    return [...new Set([one,second].filter(b=>b&&b!==Number(head)))];
+  }
+  function v35Thirds(head){
+    return [1,2,3,4,5,6].filter(b=>b!==Number(head)).sort((a,b)=>{
+      let sa=0,sb=0;
+      try{sa=bhV3LegScore(a,3,head);sb=bhV3LegScore(b,3,head)}catch(e){}
+      return sb-sa;
+    });
+  }
+  function v35BuildReverseFromSeed(seed,limit=4){
+    if(!Array.isArray(seed)||!seed.length)return seed||[];
+    const first=seed[0]||{};
+    const head=Number(first.head??first.legs?.[0]);
+    if(!head)return seed.slice(0,limit);
+    const attacker=Number(first.attacker)||v35MainAttacker();
+    const seconds=v35SecondPriority(head,attacker);
+    if(!seconds.length)return seed.slice(0,limit);
+    const thirds=v35Thirds(head),out=[],seen=new Set();
+    const template=first;
+    for(const sec of seconds){
+      for(const th of thirds){
+        if(th===head||th===sec)continue;
+        const legs=[head,sec,th],key=legs.join("-");
+        if(seen.has(key))continue;
+        seen.add(key);
+        out.push({...template,legs,key,odds:bhGetOdds(key),method:"差し",
+          attacker:attacker||template.attacker,head,
+          label:Number(head)===Number(attacker)&&sec===v35OneOutside(head)
+            ?"自分が攻め手→1個後ろ2着"
+            :sec===(v35CourseBoat(1)||1)?"差し→1コース2着":"差し→攻め手2着"});
+        if(out.length>=limit)return out;
+      }
+    }
+    return out.length?out:seed.slice(0,limit);
+  }
+
+  // 従来の裏展開成立条件はそのまま使い、成立後の2着優先だけを変更。
+  if(typeof window.bhV5ReverseTickets==="function"&&!window.bhV5ReverseTickets.__bhV35Wrapped){
+    const base=window.bhV5ReverseTickets;
+    const wrap=function(){
+      const old=base.apply(this,arguments)||[];
+      return v35BuildReverseFromSeed(old,4);
+    };
+    wrap.__bhV35Wrapped=true;window.bhV5ReverseTickets=wrap;
+  }
+
+  // 1M外頭保険は、外頭自身が今レースの攻め手とみなし、
+  // 1コースに加えて「その1個外」を2着に優先。
+  if(typeof window.bhV17PhysicalReverseTickets==="function"&&!window.bhV17PhysicalReverseTickets.__bhV35Wrapped){
+    const base=window.bhV17PhysicalReverseTickets;
+    const wrap=function(){
+      const old=base.apply(this,arguments)||[];
+      if(!old.length)return old;
+      const head=Number(old[0]?.head??old[0]?.legs?.[0]);
+      if(!head)return old;
+      const one=v35CourseBoat(1)||1,behind=v35OneOutside(head);
+      const seconds=[...new Set([one,behind].filter(b=>b&&b!==head))];
+      const thirds=v35Thirds(head),out=[],seen=new Set(),tpl=old[0];
+      for(const sec of seconds){
+        for(const th of thirds){
+          if(th===head||th===sec)continue;
+          const legs=[head,sec,th],key=legs.join("-");
+          if(seen.has(key))continue;seen.add(key);
+          out.push({...tpl,legs,key,odds:bhGetOdds(key),method:"差し",
+            label:sec===behind?"自分が攻め手→1個後ろ2着":"差し→1コース2着"});
+          if(out.length>=4)return out;
+        }
+      }
+      return out.length?out:old.slice(0,4);
+    };
+    wrap.__bhV35Wrapped=true;window.bhV17PhysicalReverseTickets=wrap;
+  }
+
+  function v35CandidatePool(base,outlook){
+    const pool=[],seen=new Set();
+    const add=t=>{
+      const k=v35Key(t);if(!k||seen.has(k))return;
+      seen.add(k);t.odds=v35Odds(t);pool.push(t);
+    };
+    (base||[]).forEach(t=>add({...t,legs:[...(t.legs||[])]}));
+    if(typeof bhV3HeadScore!=="function"||typeof bhV3LegScore!=="function")return pool;
+
+    // イン以外は1号艇頭を補充対象にせず、外頭をAI/1M頭評価順に使う。
+    const heads=[2,3,4,5,6].sort((a,b)=>bhV3HeadScore(b,outlook)-bhV3HeadScore(a,outlook));
+    for(const h of heads){
+      const others=[1,2,3,4,5,6].filter(x=>x!==h);
+      for(const b of others)for(const c of others){
+        if(b===c)continue;
+        const score=bhV3HeadScore(h,outlook)+bhV3LegScore(b,2,h)+bhV3LegScore(c,3,h);
+        add({legs:[h,b,c],score,method:typeof bhV3MethodForHead==="function"?bhV3MethodForHead(h):"展開",
+             betType:"3連単",bhV35Fill:true});
+      }
+      for(const b of others){
+        const score=bhV3HeadScore(h,outlook)+bhV3LegScore(b,2,h);
+        add({legs:[h,b],score,method:typeof bhV3MethodForHead==="function"?bhV3MethodForHead(h):"展開",
+             betType:"2連単",bhV35Fill:true});
+      }
+    }
+    return pool;
+  }
+  function v35Normalize(list){
+    if(!list.length)return list;
+    const scores=list.map(t=>Number(t?.score)||0);
+    const min=Math.min(...scores);
+    const ws=scores.map(s=>Math.max(1,s-min+20)),tot=ws.reduce((a,b)=>a+b,0)||1;
+    list.forEach((t,i)=>{t.prob=ws[i]/tot*100;t.pct=t.prob;t.odds=v35Odds(t)});
+    if(typeof bhV3Allocate==="function")bhV3Allocate(list);
+    return list;
+  }
+  function v35EnsureCount(tickets,outlook){
+    if(!Array.isArray(tickets))return tickets;
+    if(!v35NonIn(outlook)){
+      // イン逃げは最大10点。
+      return v35Normalize(tickets.slice().sort((a,b)=>(Number(b?.prob)||0)-(Number(a?.prob)||0)).slice(0,10));
+    }
+
+    // イン以外は12点を基本出力。
+    const target=12,used=new Set(),out=[];
+    for(const t of tickets){
+      const k=v35Key(t);if(!k||used.has(k))continue;
+      const o=v35Odds(t);
+      // vol.32を維持：確定オッズ取得済みで100円払戻<=1500は戻さない。
+      if(o>0 && o*100<=1500)continue;
+      used.add(k);out.push({...t,legs:[...(t.legs||[])],odds:o});
+      if(out.length>=target)break;
+    }
+    if(out.length<target){
+      const pool=v35CandidatePool(tickets,outlook).filter(t=>{
+        const k=v35Key(t),o=v35Odds(t);
+        return !used.has(k) && (!o || o*100>1500);
+      }).sort((a,b)=>{
+        // AI/1Mスコアを軸にしつつ、同等なら高払戻を優先。
+        const sa=Number(a?.score)||0,sb=Number(b?.score)||0;
+        if(Math.abs(sb-sa)>8)return sb-sa;
+        return v35Odds(b)-v35Odds(a);
+      });
+      for(const t of pool){
+        const k=v35Key(t);if(used.has(k))continue;
+        used.add(k);out.push(t);
+        if(out.length>=target)break;
+      }
+    }
+    return v35Normalize(out.slice(0,target));
+  }
+
+  // vol.32までの生成・1,500円足切り後に最終点数を保証。
+  const baseGen=window.bhV3Generate;
+  if(typeof baseGen==="function"&&!baseGen.__bhV35Wrapped){
+    const wrap=function(){
+      const args=[...arguments],res=baseGen.apply(this,args);
+      if(!Array.isArray(res))return res;
+      const outlook=args.find(x=>x&&typeof x==="object")||window.bhLastOutlook||{};
+      return v35EnsureCount(res,outlook);
+    };
+    wrap.__bhV35Wrapped=true;window.bhV3Generate=wrap;
+  }
+
+  // 表示文言も現行ルールへ更新。
+  const baseRender=window.bhV3Render;
+  if(typeof baseRender==="function"&&!baseRender.__bhV35Wrapped){
+    const wrap=function(tickets,outlook){
+      const r=baseRender.apply(this,arguments);
+      const box=document.getElementById("bhNewBetRows");
+      if(box&&!box.querySelector(".bhV35RuleNote")){
+        const nonIn=v35NonIn(outlook);
+        box.insertAdjacentHTML("afterbegin",
+          `<div class="bhMinReturnNote bhV35RuleNote">🎯 買い目点数：${nonIn?"イン以外は基本12点":"イン逃げは最大10点"}。🔄 裏展開は差し形を基本に、2着は「1コース＋攻め手」、裏展開頭自身が攻め手なら「1コース＋1個後ろ」を優先。</div>`);
+      }
+      return r;
+    };
+    wrap.__bhV35Wrapped=true;window.bhV3Render=wrap;
+  }
 })();
 </script>
 

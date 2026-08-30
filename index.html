@@ -892,7 +892,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhBudgetTop{max-width:1000px;margin:10px auto 0;padding:0 14px}.bhBudgetInner{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #3b3521;border-radius:10px;background:#0d0d0d}.bhBudgetInner label{margin:0;white-space:nowrap;color:#c8ad58;font-weight:900}.bhBudgetInner input{max-width:150px;font-size:18px;font-weight:900;text-align:right}.bhBudgetUnit{font-size:12px;color:#aaa}.bhVerifyBtn{margin-left:auto;width:auto;padding:9px 14px;background:#202020;border:1px solid #66552b;color:#ffe07b}
 #bhNewBetCard{display:none}.bhFundSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.bhFundBox{padding:9px;border-radius:9px;background:#0d0d0d;border:1px solid #333;text-align:center}.bhFundBox small{display:block;color:#888}.bhFundBox b{display:block;margin-top:3px;font-size:17px;color:#ffe071}.bhWatchAlert{display:none;margin-top:12px;padding:14px;border:2px solid #ff5252;border-radius:11px;background:#2b1010;text-align:center;font-size:20px;font-weight:1000;color:#ff7777}.bhVerifyPanel{display:none}.bhVerifyPanel.open{display:block}.bhVerifyGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bhVerifyStat{background:#0e0e0e;border:1px solid #333;border-radius:8px;padding:9px;text-align:center}.bhVerifyStat small{display:block;color:#888}.bhVerifyStat b{font-size:17px;color:#ffd75a}.bhVerifyNote{font-size:11px;color:#aaa;line-height:1.7;margin-top:10px}@media(max-width:600px){.bhBudgetInner{flex-wrap:wrap}.bhVerifyBtn{width:100%;margin-left:0}.bhVerifyGrid,.bhFundSummary{grid-template-columns:1fr 1fr}}
 </style></head>
-<body><div class="bhVol">vol.1</div>
+<body><div class="bhVol">vol.2</div>
 <div class="bhBudgetTop"><div class="bhBudgetInner"><label for="bhRaceBudget">💴 1レース資金</label><input id="bhRaceBudget" type="number" min="100" step="100" inputmode="numeric" value="1200"><span class="bhBudgetUnit">円</span><button id="bhVerifyOpen" class="bhVerifyBtn" type="button">🧪 検証画面</button></div></div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
@@ -978,6 +978,16 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 <button class="subBtn" id="analysisBtn">🤖 AI解析開始</button>
 </div>
 <div id="message" class="message"></div>
+</div>
+<div id="bhBeforeInfoCard" class="card" style="display:none">
+<h2>⚡ 直前情報</h2>
+<div class="bhStartLead">展示タイムだけでなく、スタート展示ST・進入・直線/直前タイム・一周・まわり足・チルト・体重・調整重量・部品交換・気象を、取得できた項目だけ表示します。</div>
+<div id="bhBeforeInfoRows"></div>
+</div>
+<div id="bhResultCheckCard" class="card">
+<h2>🏁 結果確認</h2>
+<div class="primaryActionRow"><button class="mainBtn" type="button" onclick="bhAutoCheckResults(true)">🔄 最新結果を確認</button><button class="subBtn" type="button" onclick="bhToggleResultList(true)">📋 結果一覧</button></div>
+<div id="bhResultCheckStatus" class="message">レース終了後、着順・3連単払戻・買い目的中・収支をここで確認します。</div>
 </div>
 <div id="raceCard" class="card" style="display:none">
 
@@ -1303,6 +1313,7 @@ manualCourses[b]=c
 }
 await bhFetchLiveWind();
 renderRace();
+try{bhRenderBeforeInfo()}catch(e){}
 $("raceCard").style.display="block";
 $("message").innerHTML=
 '<span class="success">✅ 出走表取得成功<br>AI解析用の過去30走を先読みしています</span>';
@@ -4746,6 +4757,30 @@ function renderPatternBets(rankings,outlook){
 
 </script>
 
+<script id="bh-beforeinfo-vol2-js">
+function bhPickFirst(obj,keys){for(const k of keys){let v=obj?.[k];if(v!==undefined&&v!==null&&String(v).trim()!=="")return v}return null}
+function bhFmtBefore(v,d=2){let n=Number(v);return Number.isFinite(n)?n.toFixed(d):"－"}
+function bhBeforeRow(b){
+ let p=preview(b)||{},r=racer(b)||{};
+ let st=bhPickFirst(p,["start_timing","startTiming","st","exhibition_st","exhibitionStartTiming"]);
+ let ex=bhPickFirst(p,["exhibition_time","exhibition"]);
+ let straight=bhPickFirst(p,["straight_time","straightTime","pre_time","preTime","preliminary_time","before_time","chokuzen_time","direct_time","directTime"]);
+ let lap=bhPickFirst(p,["lap_time","lapTime","one_round_time","oneRoundTime","round_time"]);
+ let turn=bhPickFirst(p,["turn_time","turnTime","mawari_time","mawariTime","turning_time"]);
+ let tilt=bhPickFirst(p,["tilt","tilt_angle","tiltAngle"]);
+ let weight=bhPickFirst(p,["weight","racer_weight","body_weight"]); if(weight==null)weight=bhPickFirst(r,["weight","racer_weight","body_weight"]);
+ let adjust=bhPickFirst(p,["adjustment_weight","adjust_weight","adjustWeight"]);
+ let parts=bhPickFirst(p,["parts_exchange","partsExchange","parts","replacement_parts"]);
+ return {b,course:course(b),st,ex,straight,lap,turn,tilt,weight,adjust,parts};
+}
+function bhRenderBeforeInfo(){
+ let card=document.getElementById("bhBeforeInfoCard"),box=document.getElementById("bhBeforeInfoRows");if(!card||!box)return;
+ let rows=[1,2,3,4,5,6].map(bhBeforeRow),has=rows.some(x=>[x.st,x.ex,x.straight,x.lap,x.turn,x.tilt,x.weight,x.adjust,x.parts].some(v=>v!==null));
+ card.style.display="block";
+ let wind="";try{let w=weatherSource()||{};wind=`<div class="bhVerifyNote">🌬️ 気象：風速 ${bhPickFirst(w,["wind_speed","windSpeed"])??"－"}m / 風向 ${bhPickFirst(w,["wind_direction","windDirection","wind_name"])??"－"} / 波高 ${bhPickFirst(w,["wave_height","waveHeight"])??"－"}cm / 水温 ${bhPickFirst(w,["water_temperature","waterTemperature"])??"－"}℃</div>`}catch(e){}
+ box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${x.st==null?'－':bhFmtBefore(x.st)}</td><td>${x.straight==null?'－':bhFmtBefore(x.straight)}</td><td>${x.ex==null?'－':bhFmtBefore(x.ex)}</td><td>${x.lap==null?'－':bhFmtBefore(x.lap)}</td><td>${x.turn==null?'－':bhFmtBefore(x.turn)}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">現在の取得元に直前データがまだ入っていません。入った項目から自動表示します。</div>':''}`;
+}
+</script>
 <script id="bh-result-learning-js">
 function bhCurrentPct(){try{return num(window.bhLastOutlook?.escape??0)}catch(e){return 0}}
 function bhUncertaintyProfile(){
@@ -5109,7 +5144,7 @@ function bhExtractTrifectaPayout(race,top=null){
   for(const v of candidates){let a=Number(String(v??"").replace(/[^0-9.]/g,""))||0;if(a>0)return a}
   return 0
 }
-function bhAutoStatus(text){let e=document.getElementById("bhAutoResultStatus");if(e){let s=e.querySelector("span");if(s)s.textContent=text}}
+function bhAutoStatus(text){let e=document.getElementById("bhAutoResultStatus");if(e){let s=e.querySelector("span");if(s)s.textContent=text}let c=document.getElementById("bhResultCheckStatus");if(c)c.innerHTML=text}
 function bhDayParts(day){
   let m=String(day||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?{year:m[1],ymd:m[1]+m[2]+m[3]}:null
 }

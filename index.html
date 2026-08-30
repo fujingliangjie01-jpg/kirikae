@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.25</div>
+<body><div class="bhVol">vol.26</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -2313,25 +2313,16 @@ function bhOneMModel(stats){
  usable.forEach(x=>{
    x.startDelay=x.predict-startLead;
    x.startBoatBehind=x.startDelay/.15;
-   // vol.24: 展示信頼度をスタート→1Mの物理隊形へ直接連動。
-   // 予測STはそのまま。直前タイム=行き足、展示タイム=伸び足の影響だけを信頼度で減衰する。
-   const exRel=(typeof bhV23ExhibitReliability==="function")?bhV23ExhibitReliability(x.boat):null;
-   const exMul=exRel?.score<=45?.20:exRel?.score<=65?.50:exRel?.score<=82?.85:1.00;
-   const accelMul=exRel?.score<=45?.60:exRel?.score<=65?.75:exRel?.score<=82?.90:1.00;
-   x.exhibitReliability=exRel;
-   x.exhibitMultiplier=exMul;
-   x.accelMultiplier=accelMul;
-   x.rawAccelBody=x.accelBody;
-   x.rawStretchBody=x.stretchBody;
-   x.accelBodyAdjusted=x.accelBody*accelMul;
-   x.stretchBodyAdjusted=x.stretchBody*exMul;
+   // vol.26: スタート→1Mの伸び率は従来ロジックへ完全復帰。
+   // 展示信頼度は表示・分析用として保持するが、1M物理隊形の前後補正には使用しない。
+   x.exhibitReliability=(typeof bhV23ExhibitReliability==="function")?bhV23ExhibitReliability(x.boat):null;
 
    // 良いタイムは「前へ」なので、後方差から差し引く。
-   let moveForwardBody=bhClamp(x.accelBodyAdjusted+x.stretchBodyAdjusted,-MAX_MOVE_BODY,MAX_MOVE_BODY);
-   // 後退側のみ抑制。展示信頼度が低い艇を悪い展示時計だけで大きく後退させない。
+   let moveForwardBody=bhClamp(x.accelBody+x.stretchBody,-MAX_MOVE_BODY,MAX_MOVE_BODY);
+   // vol.13: 後退側のみ抑制。伸びる側は従来感度を維持。
    if(moveForwardBody<0){
      moveForwardBody*=0.55;
-     const severe=(x.accelBodyAdjusted<-.25&&x.stretchBodyAdjusted<-.45);
+     const severe=(x.accelBody<-.25&&x.stretchBody<-.45);
      moveForwardBody=Math.max(severe?-.95:-.65,moveForwardBody);
    }
    x.moveForwardBody=moveForwardBody;
@@ -2354,7 +2345,7 @@ function bhOneMSlipHTML(rows){
  let ordered=[...usable].sort((a,b)=>a.arrival-b.arrival||a.boat-b.boat),leader=ordered[0];
  let rankMap=new Map(ordered.map((x,i)=>[x.boat,i+1]));
  const ord=n=>n===1?"1st":n===2?"2nd":n===3?"3rd":`${n}th`;
- return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。展示信頼度が低い艇は、直前・展示タイムによる前後補正を自動で弱める。150mの距離蓄積型で行き足・伸び差を反映。位置変化は最大±1.60艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
+ return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。150mの距離蓄積型で行き足・伸び差を反映。位置変化は最大±1.60艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
   let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
   let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';

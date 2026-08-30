@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.29</div>
+<body><div class="bhVol">vol.31</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -5006,8 +5006,8 @@ function bhTicketHit(result,tickets){
 }
 function bhOutlookHit(first,pct){return pct>=50?first===1:first!==1}
 function bhBandName(p){return p>=90?"90以上":p>=80?"80台":p>=70?"70台":p>=60?"60台":p>=50?"50台":p>=40?"40台":"40未満"}
-const BH_RESULT_STATS_KEY_V1="BOAT_HUNTER_RESULT_STATS_RESET_20260830_V1";
-const BH_RESULT_STATS_KEY="BOAT_HUNTER_RESULT_STATS_RESET_20260830_V2";
+const BH_RESULT_STATS_KEY_V1="BOAT_HUNTER_RESULT_STATS_VOL30_FRESH_RESET_V1";
+const BH_RESULT_STATS_KEY="BOAT_HUNTER_RESULT_STATS_VOL30_FRESH_RESET_V2";
 const BH_SEED_20260827={"total":123,"ticketHit":72,"outlookHit":87,"alerts":{"展開不透明":{"n":12,"ticket":6,"outlook":8},"強力な壁":{"n":25,"ticket":15,"outlook":18},"アラートなし":{"n":57,"ticket":32,"outlook":38},"1コース まくり差され率高め":{"n":16,"ticket":10,"outlook":11},"1コース まくられ率高め":{"n":19,"ticket":10,"outlook":14},"壁崩壊警戒":{"n":2,"ticket":2,"outlook":2}},"bands":{"60台":{"n":9,"ticket":7,"outlook":6},"70台":{"n":25,"ticket":13,"outlook":16},"80台":{"n":44,"ticket":29,"outlook":33},"50台":{"n":10,"ticket":8,"outlook":4},"40未満":{"n":25,"ticket":11,"outlook":19},"40台":{"n":10,"ticket":4,"outlook":9}}};
 function bhTodayKey(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function bhDateLabel(k){if(k==="all")return"全期間";let p=k.split("-");return p.length===3?`${Number(p[1])}/${Number(p[2])}`:k}
@@ -5029,7 +5029,7 @@ function bhLoadStatsStoreCore(){
   return s
 }
 function bhSaveStatsStoreCore(s){try{localStorage.setItem(BH_RESULT_STATS_KEY,JSON.stringify(s))}catch(e){}}
-const BH_RESULT_STATS_BACKUP_KEY="BOAT_HUNTER_RESULT_STATS_RESET_20260830_BACKUP_V1";
+const BH_RESULT_STATS_BACKUP_KEY="BOAT_HUNTER_RESULT_STATS_VOL30_FRESH_RESET_BACKUP_V1";
 function bhLoadStatsStore(){
   let main=bhLoadStatsStoreCore(),backup=null;
   try{backup=JSON.parse(localStorage.getItem(BH_RESULT_STATS_BACKUP_KEY)||"null")}catch(e){}
@@ -5188,8 +5188,8 @@ function bhResultPanelHTML(){
   return `<div class="bhResultPanel"><button id="bhResultToggle" class="bhResultToggle" type="button" onclick="bhToggleResultPanel()">${toggleText}</button><div id="bhResultBody" class="bhResultBody${openClass}"><h3>📊 AI解析・累計成績</h3><div id="bhAutoResultStatus" class="bhAutoResultStatus"><span>🤖 全場結果自動取得：直近3日保持・待機中</span><button type="button" onclick="bhAutoCheckResults(true)">今すぐ確認</button></div><div id="bhResultMsg" class="bhResultMsg"></div><div class="bhStatsTools"><span>成績表示</span><select id="bhStatsDate" onchange="bhSetStatsDate(this.value)"></select></div><div id="bhStats" class="bhStats"></div><button id="bhResultListToggle" class="bhResultListToggle" type="button" onclick="bhToggleResultList()">🏁 全場レース結果を表示</button><div id="bhResultListWrap" class="bhResultListWrap"><div id="bhResultHistory" class="bhResultHistory"></div></div></div></div>`
 }
 
-const BH_PREDICTION_SNAPSHOT_KEY="BOAT_HUNTER_PREDICTION_SNAPSHOTS_RESET_20260830_V1";
-const BH_RESULT_RECORDED_KEY="BOAT_HUNTER_RECORDED_RACES_RESET_20260830_V1";
+const BH_PREDICTION_SNAPSHOT_KEY="BOAT_HUNTER_PREDICTION_SNAPSHOTS_VOL30_FRESH_RESET_V1";
+const BH_RESULT_RECORDED_KEY="BOAT_HUNTER_RECORDED_RACES_VOL30_FRESH_RESET_V1";
 const BH_ALL_RESULTS_KEY="BOAT_HUNTER_ALL_RESULTS_3D_V1";
 function bhAllResultStore(){try{let x=JSON.parse(localStorage.getItem(BH_ALL_RESULTS_KEY)||"null");return x&&typeof x==="object"?x:{}}catch(e){return{}}}
 function bhSaveAllResultStore(x){try{localStorage.setItem(BH_ALL_RESULTS_KEY,JSON.stringify(x))}catch(e){}}
@@ -5446,7 +5446,7 @@ function bhStartAutoResultCheck(){
 })();
 </script>
 \n<script id="bh-vol3-new-bet-engine">
-// vol.6 新買い目: 決まり手ランキング非依存 / 1M展開・防御重視 / 個別3連単のみ最大10点
+// vol.6 新買い目: 決まり手ランキング非依存 / 1M展開・防御重視 / 個別3連単のみ最大12点
 function bhV3Defense(b){
  let d=decisions(racer(b)||{});
  return {escape:num(d.escape),makare:num(d.makareRate),sasare:num(d.sasareRate),mss:num(d.makiSashiSareRate)};
@@ -5496,13 +5496,13 @@ function bhV3Generate(outlook){
  cand.sort((a,b)=>b.score-a.score);
  let chosen=[];
  for(let h of mandatory){if(!triHeads.includes(h))continue;let t=cand.find(x=>x.legs[0]===h&&!chosen.some(y=>y.legs.join('-')===x.legs.join('-')));if(t)chosen.push(t)}
- // 3連単は最大11点まで。3艇目頭の2連単を最低1点確保し、合計最大12点。
- for(let t of cand){if(chosen.length>=11)break;if(chosen.some(x=>x.legs.join('-')===t.legs.join('-')))continue;chosen.push(t)}
+ // 3連単は最大9点まで。3艇目頭の2連単を最低1点確保。
+ for(let t of cand){if(chosen.length>=9)break;if(chosen.some(x=>x.legs.join('-')===t.legs.join('-')))continue;chosen.push(t)}
  if(thirdHead){
    let secs=[1,2,3,4,5,6].filter(b=>b!==thirdHead).sort((a,b)=>bhV3LegScore(b,2,thirdHead)-bhV3LegScore(a,2,thirdHead));
    if(secs[0])chosen.push({legs:[thirdHead,secs[0]],score:bhV3HeadScore(thirdHead,outlook)+bhV3LegScore(secs[0],2,thirdHead),mandatoryHead:mandatory.has(thirdHead),method:bhV3MethodForHead(thirdHead),betType:'2連単',thirdHead:true});
  }
- chosen=chosen.slice(0,12);
+ chosen=chosen.slice(0,10);
  let min=Math.min(...chosen.map(x=>x.score)),weights=chosen.map(x=>Math.max(1,x.score-min+20)),tot=weights.reduce((a,b)=>a+b,0)||1;
  chosen.forEach((t,i)=>{t.prob=weights[i]/tot*100;t.pct=t.prob;t.odds=bhGetOdds(t.legs.join('-'));});
  return chosen;
@@ -5526,7 +5526,7 @@ function bhV3Render(tickets,outlook){
 </span></div>`}).join('');
  window.bhV3Tickets=tickets;window.bhFinanceEvaluate?.(tickets);
 }
-// 旧買い目表示は使わず、新12点を描画
+// 旧買い目表示は使わず、新10点を描画
 const bhV3OldRenderPatternBets=window.renderPatternBets;
 window.renderPatternBets=function(rankings,outlook){window.bhLastOutlook=outlook;let tickets=bhV3Generate(outlook);window.bhLastTickets=tickets;currentBets=tickets;bhV3Render(tickets,outlook);try{bhSavePredictionSnapshot(tickets,outlook)}catch(e){}};
 </script>\n
@@ -5816,9 +5816,9 @@ function bhToggleStartHistory(){
    const used=fin.reduce((s,f)=>s+f.used,0),ret=fin.reduce((s,f)=>s+f.ret,0),profit=ret-used,roi=used?ret/used*100:0;
    const analyzed=completed.filter(x=>x.analyzed),hits=analyzed.filter(x=>x.th===true).length,outHits=analyzed.filter(x=>x.oh===true).length;
    const pcls=profit>=0?"plus":"minus";
-   return `<div class="bhResultDashVenue">
+   return `<div class="bhResultDashVenue" data-bh-venue="${venue}">
      <div class="bhResultDashVenueHead">
-       <div class="bhResultDashVenueTitle"><span>${bhVenueLabel(venue)}</span><span class="bhVenueProfit ${pcls}">${fin.length?signed(Math.round(profit)):"収支待ち"}</span></div>
+       <div class="bhResultDashVenueTitle"><span>${bhVenueLabel(venue)}</span><span class="bhVenueProfit ${pcls}">${fin.length?signed(Math.round(profit)):"収支待ち"}</span><button class="bhVenueResetBtn" type="button" onclick="bhResetVenueResults('${venue}')">この場をリセット</button></div>
        <div class="bhResultDashVenueMeta">
          <span>買い目的中 <b>${analyzed.length?(hits/analyzed.length*100).toFixed(1)+"%":"-"}</b></span>
          <span>見通し <b>${analyzed.length?(outHits/analyzed.length*100).toFixed(1)+"%":"-"}</b></span>
@@ -5826,7 +5826,7 @@ function bhToggleStartHistory(){
          <span>回収率 <b>${used?roi.toFixed(1)+"%":"-"}</b></span>
        </div>
      </div>
-     <div class="bhResultDashHeader"><span>R</span><span>結果</span><span>買</span><span>見</span><span>オッズ</span><span>収支</span></div>
+     <div class="bhResultDashHeader"><span>R</span><span>結果</span><span>買</span><span>見</span><span>確定オッズ</span><span>収支</span></div>
      ${list.map((x,i)=>x?rowHTML(x):`<div class="bhResultDashRow pending"><span>${i+1}R</span><span>-</span><span>－</span><span>－</span><span>-</span><span class="bhResultDashPnL na">-</span></div>`).join("")}
    </div>`;
  }
@@ -6216,123 +6216,664 @@ const bhV23Obs=new MutationObserver(()=>{clearTimeout(window.__bhV23t);window.__
 document.addEventListener("DOMContentLoaded",()=>bhV23Obs.observe(document.body,{childList:true,subtree:true}));
 </script>
 
-<style id="bh-vol27-oni-css">
-#bhOniModes{display:none;margin:10px 0 0;padding:10px;border:1px solid #4b4f55;border-radius:13px;background:#101216}
-#bhOniModes.show{display:block}
-.bhOniHead{font-size:12px;font-weight:1000;margin-bottom:8px;color:#ffd96a}
-.bhOniBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bhOniBtn{min-height:52px;border:1px solid #59616a;border-radius:11px;background:#1a1d22;color:#fff;font-size:13px;font-weight:1000}
-.bhOniBtn.active{outline:2px solid #ffd96a;background:#292414}
-.bhOniDesc{margin-top:7px;font-size:10px;line-height:1.5;color:#aeb7c0}
-</style>
-<script id="bh-vol27-oni-js">
-const BH_ONI27_KEY="boat_hunter_oni_mode_vol27";
-function bhOni27Mode(){try{return localStorage.getItem(BH_ONI27_KEY)==="return"?"return":"solid"}catch(e){return "solid"}}
-function bhOni27Set(v){
-  try{localStorage.setItem(BH_ONI27_KEY,v==="return"?"return":"solid")}catch(e){}
-  bhOni27Refresh();
-  if(window.bhLastOutlook){
-    let t=bhV3Generate(window.bhLastOutlook);
-    window.bhLastTickets=t;currentBets=t;bhV3Render(t,window.bhLastOutlook);
-    try{bhSavePredictionSnapshot(t,window.bhLastOutlook)}catch(e){}
+<script id="bh-vol27-result-dashboard-repair">
+/* vol.27 結果確認復旧
+   各場1R〜12Rを常時枠として描画し、確定結果・確定オッズ・買い目判定・見通し判定・収支を
+   recorded/snapshot/all-result のどこに存在しても統合して表示する。 */
+(function(){
+  if(typeof bhRecordedRows!=="function")return;
+  const base=bhRecordedRows;
+  window.bhRecordedRows=function(dayKey){
+    let rows=base(dayKey)||[], map=new Map(rows.map(x=>[x.key,x]));
+    let day=dayKey==="all"?null:dayKey;
+    let sources=[];
+    try{sources.push(bhRecordedMap?.()||{})}catch(e){}
+    try{sources.push(bhSnapshotStore?.()||{})}catch(e){}
+    try{sources.push(bhAllResultStore?.()||{})}catch(e){}
+    for(const src of sources){
+      if(Array.isArray(src)){
+        for(const x of src){
+          const key=x?.key||x?.raceKey;
+          if(!key)continue;
+          const p=String(key).split("|");
+          if(day&&p[0]!==day)continue;
+          if(!map.has(key))map.set(key,{
+            key,day:p[0],venue:Number(p[1]),race:Number(p[2]),
+            result:x.result||"",th:x.ticketHit??null,oh:x.outlookHit??null,
+            payout:Number(x.payout||0),exactaPayout:Number(x.exactaPayout||0),
+            odds:Number(x.payout||0)/100,exactaOdds:Number(x.exactaPayout||0)/100,
+            analyzed:false,source:"repair",time:Number(x.time||0)
+          });
+        }
+      }else if(src&&typeof src==="object"){
+        for(const [key,x0] of Object.entries(src)){
+          const x=x0||{},p=String(key).split("|");
+          if(p.length<3||(day&&p[0]!==day))continue;
+          if(!map.has(key))map.set(key,{
+            key,day:p[0],venue:Number(p[1]),race:Number(p[2]),
+            result:x.result||"",th:x.ticketHit??null,oh:x.outlookHit??null,
+            payout:Number(x.payout||0),exactaPayout:Number(x.exactaPayout||0),
+            odds:Number(x.payout||0)/100,exactaOdds:Number(x.exactaPayout||0)/100,
+            analyzed:false,source:"repair",time:Number(x.time||0)
+          });
+        }
+      }
+    }
+    return [...map.values()].sort((a,b)=>String(a.day).localeCompare(String(b.day))||a.venue-b.venue||a.race-b.race);
+  };
+
+  // Make the 6 columns explicit again on iPhone: R / 結果 / 買 / 見 / 確定オッズ / 収支.
+  const st=document.createElement("style");
+  st.id="bh-vol27-result-grid";
+  st.textContent=`
+    .bhResultDashHeader,.bhResultDashRow{
+      grid-template-columns:42px minmax(132px,1.55fr) 46px 46px minmax(82px,.86fr) minmax(92px,1fr)!important;
+      column-gap:6px!important
+    }
+    .bhResultDashOdds{display:block!important;visibility:visible!important}
+    .bhResultDashPnL{display:block!important;visibility:visible!important}
+    @media(min-width:521px){
+      .bhResultDashHeader,.bhResultDashRow{
+        grid-template-columns:48px minmax(150px,1.65fr) 58px 58px minmax(90px,.9fr) minmax(100px,1fr)!important;
+        column-gap:8px!important
+      }
+    }`;
+  document.head.appendChild(st);
+})();
+</script>
+
+
+<script id="bh-vol28-non-in-12-coverage">
+/* vol.28 イン以外買い目
+   - メイン最大12点
+   - イン以外頭は決まり手1本固定を避け、上位決まり手を分散
+   - 既存買い目と重複しない組み合わせだけ補完
+*/
+function bhV28MethodRates(boat){
+  const er=(typeof bhEntryRates==="function"?bhEntryRates(boat):null)||{};
+  const get=(...ks)=>{for(const k of ks){const v=Number(er?.[k]);if(Number.isFinite(v))return v}return 0};
+  return [
+    {method:"まくり",rate:get("makuri","makuriRate","まくり率")},
+    {method:"まくり差し",rate:get("makuriSashi","makuriSashiRate","makiSashi","makiSashiRate","まくり差し率")},
+    {method:"差し",rate:get("sashi","sashiRate","差し率")}
+  ].sort((a,b)=>b.rate-a.rate);
+}
+function bhV28BoatAtCourse(c){
+  if(typeof course!=="function")return null;
+  return [1,2,3,4,5,6].find(b=>Number(course(b))===Number(c))||null;
+}
+function bhV28RemainForMethod(head,method){
+  const c=typeof course==="function"?Number(course(head)):head;
+  const one=bhV28BoatAtCourse(1)||1;
+  if(method==="まくり"){
+    if(c===6)return [one,bhV28BoatAtCourse(5)].filter(Boolean);
+    return [one,bhV28BoatAtCourse(c+1)].filter(Boolean);
   }
+  if(method==="まくり差し"){
+    return [one].filter(Boolean);
+  }
+  if(method==="差し"){
+    return [one].filter(Boolean);
+  }
+  return [one].filter(Boolean);
 }
-function bhOni27Refresh(){
-  const box=document.getElementById("bhOniModes"),inp=document.getElementById("bhRaceBudget");
-  if(!box||!inp)return;
-  const b=Math.floor((Number(inp.value)||1200)/100)*100,m=bhOni27Mode();
-  box.classList.toggle("show",b<=1000);
-  box.innerHTML=b<=1000?`<div class="bhOniHead">👹 ${b.toLocaleString()}円・${Math.max(1,Math.floor(b/100))}点に鬼絞り</div>
-  <div class="bhOniBtns">
-   <button type="button" class="bhOniBtn ${m==="solid"?"active":""}" onclick="bhOni27Set('solid')">🎯 ガチガチ鬼絞り</button>
-   <button type="button" class="bhOniBtn ${m==="return"?"active":""}" onclick="bhOni27Set('return')">💰 回収期待鬼絞り</button>
-  </div>
-  <div class="bhOniDesc">${m==="solid"?"買い目％が高い順から選抜":"買い目％が低い順から選抜"}。元の最大12候補から資金分だけ表示・購入。</div>`:"";
+function bhV28ExpandNonInCoverage(tickets,outlook){
+  if(!Array.isArray(tickets))return tickets;
+  const max=12, out=tickets.slice(0,max);
+  const key=t=>Array.isArray(t?.legs)?t.legs.join("-"):"";
+  const used=new Set(out.map(key).filter(Boolean));
+
+  // Only expand heads outside course 1.
+  const heads=[...new Set(out.filter(t=>Array.isArray(t?.legs)&&t.legs.length===3)
+    .map(t=>Number(t.legs[0])).filter(b=>b>=1&&b<=6 && (typeof course!=="function"||Number(course(b))!==1)))];
+
+  for(const head of heads){
+    if(out.length>=max)break;
+    const rates=bhV28MethodRates(head);
+    if(!rates.length)continue;
+    const top=rates[0], second=rates[1];
+    // 65%+ is allowed to stay single-method; otherwise ensure the second method has coverage.
+    const sum=rates.reduce((a,x)=>a+Math.max(0,x.rate),0);
+    const share=sum>0?top.rate/sum*100:0;
+    const methods=share>=65?[top]:rates.slice(0,2);
+    for(const mr of methods){
+      if(out.length>=max)break;
+      if(out.some(t=>Number(t?.legs?.[0])===head && String(t?.method||"").includes(mr.method)))continue;
+      const remain=bhV28RemainForMethod(head,mr.method);
+      let seconds=[...remain,1,2,3,4,5,6].filter((b,i,a)=>b!==head&&a.indexOf(b)===i);
+      let added=false;
+      for(const s of seconds){
+        if(added||out.length>=max)break;
+        let thirds=[...remain,1,2,3,4,5,6].filter((b,i,a)=>b!==head&&b!==s&&a.indexOf(b)===i);
+        for(const third of thirds){
+          const k=`${head}-${s}-${third}`;
+          if(used.has(k))continue;
+          const base=out.find(t=>Number(t?.legs?.[0])===head)||{};
+          out.push({...base,legs:[head,s,third],method:mr.method,
+            prob:Math.max(1,Number(base.prob||1)*Math.max(.35,(mr.rate||1)/Math.max(1,top.rate||1))),
+            bhV28Coverage:true});
+          used.add(k);added=true;break;
+        }
+      }
+    }
+  }
+
+  // Fill any remaining slots from existing head logic to reduce omissions, never duplicate.
+  if(out.length<max){
+    const nonInHeads=heads.length?heads:
+      [1,2,3,4,5,6].filter(b=>typeof course!=="function"||Number(course(b))!==1).slice(0,2);
+    for(const head of nonInHeads){
+      if(out.length>=max)break;
+      const methods=bhV28MethodRates(head).slice(0,2);
+      for(const mr of methods){
+        if(out.length>=max)break;
+        const remain=bhV28RemainForMethod(head,mr.method);
+        for(const s of [...remain,1,2,3,4,5,6]){
+          if(out.length>=max)break;
+          if(s===head)continue;
+          for(const third of [...remain,1,2,3,4,5,6]){
+            if(third===head||third===s)continue;
+            const k=`${head}-${s}-${third}`;
+            if(used.has(k))continue;
+            out.push({legs:[head,s,third],method:mr.method,prob:1,bhV28Coverage:true,label:"展開補完"});
+            used.add(k);break;
+          }
+        }
+      }
+    }
+  }
+  return out.slice(0,max);
 }
-document.addEventListener("DOMContentLoaded",()=>{
- const budget=document.getElementById("bhRaceBudget");
- if(budget){
-   budget.insertAdjacentHTML("afterend",'<div id="bhOniModes"></div>');
-   budget.addEventListener("change",bhOni27Refresh);
-   budget.addEventListener("input",bhOni27Refresh);
-   setTimeout(bhOni27Refresh,50);
- }
-});
-</script>
 
-
-<script id="bh-vol27-12point-selector">
+// Wrap the main generator: preserve its scoring/heads, expand only after it has generated candidates.
 (function(){
- const base=window.bhV3Generate;
- if(typeof base!=="function"||base.__bh27)return;
- const wrap=function(){
-   let full=base.apply(this,arguments);
-   if(!Array.isArray(full))return full;
-   full=full.slice(0,12);
-   window.__bhV27Full12=full.map(t=>({...t,legs:Array.isArray(t.legs)?[...t.legs]:t.legs}));
-   const B=window.bhRaceBudget?window.bhRaceBudget():1200;
-   const n=Math.max(1,Math.min(12,Math.floor(B/100)));
-   if(B>=1200)return full;
-   // 1100円はモードを出さず、確率上位11点。1000円以下だけ2モード。
-   const mode=B<=1000?bhOni27Mode():"solid";
-   return full.map((t,i)=>({t,i,p:Number(t.prob)||0}))
-     .sort((a,b)=>mode==="return"?(a.p-b.p||a.i-b.i):(b.p-a.p||a.i-b.i))
-     .slice(0,n).map(x=>x.t);
- };
- wrap.__bh27=true;window.bhV3Generate=wrap;
+  const base=window.bhV3Generate;
+  if(typeof base!=="function"||base.__bhV28Wrapped)return;
+  const wrap=function(){
+    const args=[...arguments],res=base.apply(this,args);
+    if(!Array.isArray(res))return res;
+    return bhV28ExpandNonInCoverage(res,args[0]);
+  };
+  wrap.__bhV28Wrapped=true;
+  window.bhV3Generate=wrap;
 })();
 </script>
 
 
-<script id="bh-vol28-90plus-eight">
-/* vol.28: イン逃げ率90%以上はイン逃げ頭(1号艇)だけを8点に絞り、予算を厚く配分 */
-(function(){
- const base=window.bhV3Generate;
- if(typeof base!=="function"||base.__bh28)return;
- const wrap=function(){
-   const args=[...arguments];
-   let tickets=base.apply(this,args);
-   if(!Array.isArray(tickets))return tickets;
-   const outlook=args.find(x=>x&&typeof x==="object"&&(
-     "escapeRate" in x||"escape" in x||"inEscape" in x||"prob" in x
-   ))||{};
-   const esc=Number(outlook.escapeRate??outlook.escape??outlook.inEscape??outlook.prob);
-   if(!Number.isFinite(esc)||esc<90)return tickets;
+<style id="bh-vol29-onishibori-css">
+.bhOniBox{margin:10px 0;padding:10px;border:1px solid #394754;border-radius:14px;background:rgba(8,15,21,.82)}
+.bhOniTitle{font-size:12px;font-weight:1000;margin-bottom:7px}
+.bhOniBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bhOniBtn{min-height:48px;border-radius:12px;border:1px solid #5d6b76;background:#18232c;color:#fff;font-weight:1000;font-size:13px}
+.bhOniBtn.active{outline:2px solid #fff;transform:translateY(-1px)}
+.bhOniInfo{margin-top:7px;font-size:10px;line-height:1.45;opacity:.82}
+.bhOniFull{font-weight:900}
+</style>
+<script id="bh-vol29-onishibori">
+const BH_ONI_MODE_KEY="boat_hunter_oni_mode_vol29";
+function bhOniMode(){return localStorage.getItem(BH_ONI_MODE_KEY)||"safe"}
+function bhSetOniMode(v){localStorage.setItem(BH_ONI_MODE_KEY,v==="return"?"return":"safe");try{renderAll?.()}catch(e){}}
+function bhOniBudget(){
+  try{return Math.max(100,Number(window.bhRaceBudget?.())||1200)}catch(e){return 1200}
+}
+function bhOniTicketCount(){return Math.max(1,Math.min(12,Math.floor(bhOniBudget()/100)))}
+function bhOniSelect(fullTickets){
+  if(!Array.isArray(fullTickets))return fullTickets;
+  const full=fullTickets.slice(0,12);
+  const budget=bhOniBudget();
+  if(budget>=1200)return full;
+  const n=bhOniTicketCount(),mode=bhOniMode();
+  const indexed=full.map((t,i)=>({t,i,p:Number(t?.prob??t?.percent??t?.pct??0)||0}));
+  indexed.sort((a,b)=>mode==="return"?(a.p-b.p||a.i-b.i):(b.p-a.p||a.i-b.i));
+  return indexed.slice(0,n).map(x=>({...x.t,bhOniSelected:true,bhOniMode:mode,bhFull12Index:x.i}));
+}
+function bhOniHTML(){
+  const b=bhOniBudget();
+  if(b>=1200)return `<div class="bhOniBox"><div class="bhOniTitle">🔥 基本12点フル買い</div><div class="bhOniInfo">1,200円基準。最大12点を使用。</div></div>`;
+  const n=bhOniTicketCount(),m=bhOniMode();
+  return `<div class="bhOniBox"><div class="bhOniTitle">🔥 鬼絞り　${b.toLocaleString()}円＝${n}点</div>
+    <div class="bhOniBtns">
+      <button class="bhOniBtn ${m==="safe"?"active":""}" onclick="bhSetOniMode('safe')">🎯 ガチガチ鬼絞り</button>
+      <button class="bhOniBtn ${m==="return"?"active":""}" onclick="bhSetOniMode('return')">💰 回収鬼絞り</button>
+    </div>
+    <div class="bhOniInfo">${m==="safe"?"買い目％が高い順":"買い目％が低い順"}から${n}点を選抜。元の12候補は内部保存。</div>
+  </div>`;
+}
 
-   // 90%以上は1号艇頭の3連単のみ。確率上位8点。
-   const map=new Map();
-   for(const t of tickets){
-     if(!Array.isArray(t?.legs)||t.legs.length!==3||Number(t.legs[0])!==1)continue;
-     const k=t.legs.join("-");
-     const p=Number(t.prob??t.percent??t.pct??0)||0;
-     const old=map.get(k);
-     const op=Number(old?.prob??old?.percent??old?.pct??0)||0;
-     if(!old||p>op)map.set(k,t);
-   }
-   return [...map.values()]
-     .sort((a,b)=>(Number(b.prob??b.percent??b.pct??0)||0)-(Number(a.prob??a.percent??a.pct??0)||0))
-     .slice(0,8)
-     .map(t=>({...t,bhV28NinetyPlus:true,label:t.label||"イン逃げ・厚張り"}));
- };
- wrap.__bh28=true;
- window.bhV3Generate=wrap;
+// Preserve the complete 12 candidate set for later hit-comparison, but return only purchased tickets below 1200.
+(function(){
+  const base=window.bhV3Generate;
+  if(typeof base!=="function"||base.__bhV29Wrapped)return;
+  const wrap=function(){
+    const res=base.apply(this,arguments);
+    if(!Array.isArray(res))return res;
+    const full=res.slice(0,12).map(x=>({...x}));
+    window.__bhFull12Tickets=full;
+    const selected=bhOniSelect(full);
+    selected.forEach(t=>{t.bhFull12=full.map(x=>({legs:x.legs,method:x.method,prob:x.prob}))});
+    return selected;
+  };
+  wrap.__bhV29Wrapped=true;window.bhV3Generate=wrap;
+})();
+
+// Inject selector immediately above the rendered betting section without changing the existing ticket markup.
+function bhV29MountOni(){
+  const budget=bhOniBudget();
+  const candidates=[...document.querySelectorAll(".bhV3Wrap,.bhV3Panel,.betSection,.bets,.bhBetWrap")];
+  const host=candidates[0];
+  if(!host)return;
+  let box=document.getElementById("bhOniMount");
+  if(!box){box=document.createElement("div");box.id="bhOniMount";host.parentNode.insertBefore(box,host)}
+  box.innerHTML=bhOniHTML();
+}
+document.addEventListener("DOMContentLoaded",()=>setTimeout(bhV29MountOni,500));
+new MutationObserver(()=>{clearTimeout(window.__bhOniT);window.__bhOniT=setTimeout(bhV29MountOni,120)})
+ .observe(document.documentElement,{childList:true,subtree:true});
+</script>
+
+
+<script id="bh-vol30-ticket-structure-resistance-reverse">
+/* vol.30
+   イン逃げ: 通常最大10点
+   イン以外: 主頭1艇の3連単最大10点 + 頭違い次点2艇の2連単各1点
+   裏展開: 従来条件を維持し別枠最大4点。1C抵抗型を候補追加。
+*/
+function bhV30IsNonIn(outlook){
+  const p=Number(outlook?.escapeRate??outlook?.escape??outlook?.prob??outlook?.inEscape);
+  if(Number.isFinite(p)) return p<45;
+  const s=String(outlook?.status??outlook?.type??"");
+  return /イン以外|非イン/.test(s);
+}
+function bhV30Head(t){return Array.isArray(t?.legs)?Number(t.legs[0]):null}
+function bhV30Pct(t){return Number(t?.prob??t?.percent??t?.pct??0)||0}
+function bhV30CourseBoat(c){
+  try{return [1,2,3,4,5,6].find(b=>Number(course(b))===Number(c))||null}catch(e){return c}
+}
+function bhV30Method(t){return String(t?.method??t?.kimarite??"")}
+function bhV30MainStructure(tickets,outlook){
+  if(!Array.isArray(tickets))return tickets;
+  const src=tickets.slice();
+  if(!bhV30IsNonIn(outlook)){
+    // イン逃げ側は通常買い目を最大10点。
+    return src.slice().sort((a,b)=>bhV30Pct(b)-bhV30Pct(a)).slice(0,10);
+  }
+
+  // イン以外: 最上位の主頭1艇を確定。決まり手は固定せず、その頭の複数展開を最大10点残す。
+  const heads=[...new Set(src.map(bhV30Head).filter(x=>x&&x!==1))];
+  heads.sort((a,b)=>{
+    const ap=Math.max(0,...src.filter(t=>bhV30Head(t)===a).map(bhV30Pct));
+    const bp=Math.max(0,...src.filter(t=>bhV30Head(t)===b).map(bhV30Pct));
+    return bp-ap;
+  });
+  const mainHead=heads[0];
+  if(!mainHead)return src.slice(0,10);
+
+  let tri=src.filter(t=>bhV30Head(t)===mainHead && Array.isArray(t.legs) && t.legs.length===3);
+  // Method-round-robin: avoid one-method lock when several methods exist.
+  const groups={};
+  tri.forEach(t=>{const m=bhV30Method(t)||"other";(groups[m]||(groups[m]=[])).push(t)});
+  Object.values(groups).forEach(g=>g.sort((a,b)=>bhV30Pct(b)-bhV30Pct(a)));
+  const methods=Object.keys(groups).sort((a,b)=>(groups[b][0]?bhV30Pct(groups[b][0]):0)-(groups[a][0]?bhV30Pct(groups[a][0]):0));
+  const chosen=[];
+  while(chosen.length<10){
+    let added=false;
+    for(const m of methods){
+      const t=groups[m]?.shift();
+      if(t){chosen.push(t);added=true;if(chosen.length>=10)break}
+    }
+    if(!added)break;
+  }
+
+  // 次点2艇は頭違い。2連単で各1点。
+  const altHeads=heads.filter(x=>x!==mainHead).slice(0,2);
+  for(const ah of altHeads){
+    let ex=src.filter(t=>bhV30Head(t)===ah).sort((a,b)=>bhV30Pct(b)-bhV30Pct(a))[0];
+    if(!ex)continue;
+    let second=Array.isArray(ex.legs)?Number(ex.legs[1]):null;
+    if(!second || second===ah) second=bhV30CourseBoat(1)===ah?bhV30CourseBoat(2):bhV30CourseBoat(1);
+    if(second && second!==ah) chosen.push({...ex,legs:[ah,second],bhV30NextHead:true,label:"次点2連単"});
+  }
+  return chosen.slice(0,12);
+}
+
+// Wrap after vol.28/29: structure the full candidate pool before the budget oni-shibori selector is applied.
+(function(){
+  const base=window.bhV3Generate;
+  if(typeof base!=="function"||base.__bhV30Wrapped)return;
+  const wrap=function(){
+    const args=[...arguments],res=base.apply(this,args);
+    if(!Array.isArray(res))return res;
+    let outlook=args.find(x=>x&&typeof x==="object"&&("escapeRate" in x||"status" in x||"inEscape" in x))||{};
+    return bhV30MainStructure(res,outlook);
+  };
+  wrap.__bhV30Wrapped=true;window.bhV3Generate=wrap;
+})();
+
+/* 1C抵抗型・裏展開
+   外艇がまくり攻めになりそう / 1CのSTが大敗ではない / 1Cまくられ率が低い
+   → 1Cが抵抗して攻め艇の一つ外が展開を拾う候補。
+   既存裏展開と統合し、総数は最大4点のまま。
+*/
+function bhV30ResistanceReverse(){
+  try{
+    if(typeof bhOneMOutlookSignal!=="function")return [];
+    const sig=bhOneMOutlookSignal();
+    const rows=sig?.rows||sig?.model||window.__bhOneMRows||[];
+    if(!Array.isArray(rows)||!rows.length)return [];
+    const one=rows.find(x=>Number(x.boat)===bhV30CourseBoat(1));
+    const attackers=rows.filter(x=>Number(x.boat)!==Number(one?.boat))
+      .filter(x=>{
+        const c=Number(course(x.boat));
+        if(c<=1)return false;
+        const m=String(x.method||x.bestMethod||"");
+        return /まくり/.test(m) || Number(x.makuriRate||0)>0;
+      })
+      .sort((a,b)=>(Number(b.moveForwardBody||0)-Number(a.moveForwardBody||0)));
+    const atk=attackers[0]; if(!atk||!one)return [];
+    const gap=Number(atk.boatBehind??0)-Number(one.boatBehind??0);
+    const st1=Number(one.startPredict);
+    // "そこまで悪くない": predicted ST <= .16 and attacker lead is only slight/moderate (<.60 body)
+    if(!Number.isFinite(st1)||st1>.16||Math.abs(gap)>=.60)return [];
+    const d1=(typeof data==="function"?data(one.boat):null)||{};
+    const makare=Number(d1.makareRate??d1.makare??0);
+    // Low makurare rate = defensive resistance evidence.
+    if(!Number.isFinite(makare)||makare>20)return [];
+    const ac=Number(course(atk.boat)),outer=bhV30CourseBoat(ac+1);
+    if(!outer||outer===atk.boat||outer===one.boat)return [];
+    const candidates=[
+      {legs:[outer,one.boat,atk.boat],method:"抵抗型・裏展開",bhResistanceReverse:true},
+      {legs:[outer,atk.boat,one.boat],method:"抵抗型・裏展開",bhResistanceReverse:true},
+      {legs:[one.boat,outer,atk.boat],method:"抵抗型・裏展開",bhResistanceReverse:true},
+      {legs:[outer,one.boat],method:"抵抗型・裏展開",bhResistanceReverse:true}
+    ];
+    return candidates;
+  }catch(e){return []}
+}
+(function(){
+  const names=["bhV5ReverseTickets","bhV17PhysicalReverseTickets"];
+  for(const name of names){
+    const base=window[name]; if(typeof base!=="function"||base.__bhV30ResistanceWrapped)continue;
+    const wrap=function(){
+      const old=base.apply(this,arguments)||[];
+      const add=bhV30ResistanceReverse();
+      const seen=new Set(),out=[];
+      for(const t of [...old,...add]){
+        const k=Array.isArray(t?.legs)?t.legs.join("-"):"";
+        if(!k||seen.has(k))continue;seen.add(k);out.push(t);
+        if(out.length>=4)break;
+      }
+      return out;
+    };
+    wrap.__bhV30ResistanceWrapped=true;window[name]=wrap;
+  }
 })();
 </script>
 
 
-<script id="bh-vol29-hit-result-reset">
-/* vol.29: 的中結果・結果集計のみ新規開始。設定/予算/買い目ロジックは維持。 */
+<script id="bh-vol31-result-odds-pnl-hardfix">
+/* vol.31:
+   vol.27 は同じrace keyが既に存在すると、別store側の payout / exactaPayout / result を
+   上書き統合しなかった。そのため結果○×だけある行で確定オッズと収支が "-" になるケースを修正。
+*/
 (function(){
- const flag="boat_hunter_result_reset_done_vol29";
- try{
-   if(localStorage.getItem(flag)==="1")return;
-   const exact=[
-    "boat_hunter_result_records","boat_hunter_results","boat_hunter_result_store",
-    "boat_hunter_all_results","boat_hunter_recorded","boat_hunter_stats","boat_hunter_cumulative"
-   ];
-   exact.forEach(k=>localStorage.removeItem(k));
-   localStorage.setItem(flag,"1");
- }catch(e){}
+  if(typeof window.bhRecordedRows!=="function")return;
+  const base=window.bhRecordedRows;
+
+  function mergeDefined(dst,src){
+    if(!src||typeof src!=="object")return dst;
+    const result=String(src.result||src.trifecta||src.result3||"");
+    const payout=Number(src.payout??src.trifectaPayout??src.pay3??0);
+    const exactaPayout=Number(src.exactaPayout??src.pay2??0);
+    if(result)dst.result=result;
+    if(payout>0){dst.payout=payout;dst.odds=payout/100}
+    if(exactaPayout>0){dst.exactaPayout=exactaPayout;dst.exactaOdds=exactaPayout/100}
+    if(src.ticketHit!=null)dst.th=src.ticketHit;
+    if(src.outlookHit!=null)dst.oh=src.outlookHit;
+    if(src.th!=null)dst.th=src.th;
+    if(src.oh!=null)dst.oh=src.oh;
+    if(src.analyzed!=null)dst.analyzed=!!src.analyzed;
+    return dst;
+  }
+
+  window.bhRecordedRows=function(dayKey){
+    const rows=base(dayKey)||[];
+    const map=new Map(rows.map(x=>[x.key,{...x}]));
+    const day=dayKey==="all"?null:dayKey;
+    const stores=[];
+    try{stores.push(window.bhRecordedMap?.()||{})}catch(e){}
+    try{stores.push(window.bhSnapshotStore?.()||{})}catch(e){}
+    try{stores.push(window.bhAllResultStore?.()||{})}catch(e){}
+
+    function absorb(key,x){
+      if(!key)return;
+      const p=String(key).split("|");
+      if(p.length<3||(day&&p[0]!==day))return;
+      let row=map.get(key)||{
+        key,day:p[0],venue:Number(p[1]),race:Number(p[2]),
+        result:"",th:null,oh:null,payout:0,exactaPayout:0,
+        odds:0,exactaOdds:0,analyzed:false,time:0
+      };
+      mergeDefined(row,x);
+      map.set(key,row);
+    }
+
+    for(const store of stores){
+      if(Array.isArray(store)){
+        for(const x of store)absorb(x?.key||x?.raceKey,x);
+      }else if(store&&typeof store==="object"){
+        for(const [key,x] of Object.entries(store))absorb(key,x);
+      }
+    }
+    return [...map.values()].sort((a,b)=>
+      String(a.day).localeCompare(String(b.day))||Number(a.venue)-Number(b.venue)||Number(a.race)-Number(b.race)
+    );
+  };
+
+  // Dashboard is defined in a closure, so force a fresh render after result acquisition / opening.
+  const oldOpen=window.bhOpenResultDashboard;
+  if(typeof oldOpen==="function"){
+    window.bhOpenResultDashboard=function(){
+      const r=oldOpen.apply(this,arguments);
+      setTimeout(()=>window.bhRenderResultDashboard?.(),50);
+      return r;
+    };
+  }
+  const oldAuto=window.bhAutoCheckResults;
+  if(typeof oldAuto==="function"){
+    window.bhAutoCheckResults=async function(){
+      const r=await oldAuto.apply(this,arguments);
+      setTimeout(()=>window.bhRenderResultDashboard?.(),50);
+      return r;
+    };
+  }
+})();
+</script>
+
+
+<style id="bh-vol32-min-return-reset-css">
+.bhVenueResetBtn{width:auto!important;min-width:104px;padding:7px 10px!important;margin:0 0 0 8px!important;border:1px solid #7d3f3f!important;border-radius:8px!important;background:#2a1111!important;color:#ff9b9b!important;font-size:10px!important;font-weight:1000!important;white-space:nowrap}
+.bhVenueResetBtn:active{transform:scale(.98)}
+.bhMinReturnNote{margin:8px 0;padding:8px 10px;border:1px solid #7c6320;border-radius:10px;background:#201a08;color:#ffd86b;font-size:11px;line-height:1.5;font-weight:800}
+@media(max-width:520px){.bhResultDashVenueTitle{gap:6px;flex-wrap:wrap}.bhVenueResetBtn{min-width:94px;font-size:9px;padding:6px 8px!important}}
+</style>
+<script id="bh-vol32-min-return-reset-js">
+/* vol.32
+   1) 的中時払戻が1,500円以下になる買い目を外し、AIスコア最低ライン以上の候補から高払戻側へ差替え。
+   2) 結果確認の各Rに「確定オッズ」「収支」を明示。
+   3) 日付×各場単位で、解析結果・記録結果・当該場の結果キャッシュをリセット。
+*/
+(function(){
+  const BH_MIN_TICKET_RETURN=1500;
+
+  function keyOf(t){return Array.isArray(t?.legs)?t.legs.join('-'):''}
+  function rawScore(t){return Number(t?.score)||0}
+  function getOddsFor(t){
+    const k=keyOf(t); if(!k)return 0;
+    const o=Number(t?.odds)||Number(window.bhGetOdds?.(k))||0;
+    return Number.isFinite(o)?o:0;
+  }
+  function candidatePool(base,outlook){
+    const pool=[],seen=new Set();
+    const add=t=>{const k=keyOf(t);if(!k||seen.has(k))return;seen.add(k);t.odds=getOddsFor(t);pool.push(t)};
+    (base||[]).forEach(t=>add({...t,legs:[...(t.legs||[])]}));
+    if(typeof bhV3HeadScore!=="function"||typeof bhV3LegScore!=="function")return pool;
+    const existingHeads=[...new Set((base||[]).map(t=>Number(t?.legs?.[0])).filter(x=>x>=1&&x<=6))];
+    let heads=existingHeads.slice();
+    // 現行頭候補を優先しつつ、差替え不足時だけAI頭評価上位まで拡張。
+    const ranked=[1,2,3,4,5,6].sort((a,b)=>bhV3HeadScore(b,outlook)-bhV3HeadScore(a,outlook));
+    for(const h of ranked){if(!heads.includes(h))heads.push(h);if(heads.length>=Math.max(3,existingHeads.length))break}
+    for(const h of heads){
+      const others=[1,2,3,4,5,6].filter(x=>x!==h);
+      for(const b of others)for(const c of others){
+        if(b===c)continue;
+        const score=bhV3HeadScore(h,outlook)+bhV3LegScore(b,2,h)+bhV3LegScore(c,3,h);
+        add({legs:[h,b,c],score,method:typeof bhV3MethodForHead==="function"?bhV3MethodForHead(h):"展開",betType:"3連単",bhV32Replacement:true});
+      }
+      // 2連単が元買い目にある頭だけ、同頭の高払戻2連単候補も準備。
+      if((base||[]).some(t=>Number(t?.legs?.[0])===h&&t?.legs?.length===2)){
+        for(const b of others){
+          const score=bhV3HeadScore(h,outlook)+bhV3LegScore(b,2,h);
+          add({legs:[h,b],score,method:typeof bhV3MethodForHead==="function"?bhV3MethodForHead(h):"展開",betType:"2連単",bhV32Replacement:true});
+        }
+      }
+    }
+    return pool;
+  }
+  function renormalize(list){
+    if(!list.length)return list;
+    const min=Math.min(...list.map(rawScore));
+    const ws=list.map(t=>Math.max(1,rawScore(t)-min+20));
+    const total=ws.reduce((a,b)=>a+b,0)||1;
+    list.forEach((t,i)=>{t.prob=ws[i]/total*100;t.pct=t.prob;t.odds=getOddsFor(t)});
+    return list;
+  }
+  function applyMinReturn(tickets,outlook){
+    if(!Array.isArray(tickets)||!tickets.length)return tickets;
+    // オッズ未取得なら推測で削らない。
+    const known=tickets.filter(t=>getOddsFor(t)>0).length;
+    if(!known)return tickets;
+    const target=tickets.length;
+    let working=tickets.map(t=>({...t,legs:[...(t.legs||[])],odds:getOddsFor(t)}));
+    const pool=candidatePool(working,outlook);
+    const scoreFloor=Math.min(...working.map(rawScore));
+    const used=new Set();
+    const keep=[];
+
+    // 最低100円時点で1,500円超なら必ず残せる。オッズ未取得も保留扱いで残す。
+    for(const t of working){
+      const o=getOddsFor(t);
+      if(!o || o*100>BH_MIN_TICKET_RETURN){keep.push(t);used.add(keyOf(t))}
+    }
+    const need=Math.max(0,target-keep.length);
+    const alts=pool.filter(t=>!used.has(keyOf(t)) && rawScore(t)>=scoreFloor && getOddsFor(t)>0 && getOddsFor(t)*100>BH_MIN_TICKET_RETURN)
+      .sort((a,b)=>getOddsFor(b)-getOddsFor(a)||rawScore(b)-rawScore(a));
+    for(let i=0;i<need&&i<alts.length;i++){keep.push(alts[i]);used.add(keyOf(alts[i]))}
+    // 代替候補が足りない場合は、1,500円以下を無理に戻さず点数を減らす。
+    renormalize(keep);
+    if(typeof bhV3Allocate==="function")bhV3Allocate(keep);
+
+    // 金額配分後にも最終判定。1500円「以下」は除外。
+    let final=keep.filter(t=>{
+      const o=getOddsFor(t),a=Number(t.amount)||0;
+      return !o || !a || o*a>BH_MIN_TICKET_RETURN;
+    });
+    if(final.length!==keep.length){renormalize(final);if(typeof bhV3Allocate==="function")bhV3Allocate(final)}
+    final.forEach(t=>t.bhV32MinReturnApplied=true);
+    window.__bhV32RemovedCount=Math.max(0,target-final.length);
+    return final;
+  }
+
+  const baseGen=window.bhV3Generate;
+  if(typeof baseGen==="function"&&!baseGen.__bhV32Wrapped){
+    const wrap=function(){
+      const args=[...arguments],res=baseGen.apply(this,args);
+      if(!Array.isArray(res))return res;
+      const outlook=args.find(x=>x&&typeof x==="object")||window.bhLastOutlook||{};
+      return applyMinReturn(res,outlook);
+    };
+    wrap.__bhV32Wrapped=true;window.bhV3Generate=wrap;
+  }
+
+  // 説明を買い目上部へ追加。既存描画は変更しない。
+  const baseRender=window.bhV3Render;
+  if(typeof baseRender==="function"&&!baseRender.__bhV32Wrapped){
+    const wrap=function(tickets,outlook){
+      const r=baseRender.apply(this,arguments);
+      const box=document.getElementById('bhNewBetRows');
+      if(box&&!box.querySelector('.bhMinReturnNote')){
+        box.insertAdjacentHTML('afterbegin',`<div class="bhMinReturnNote">💰 的中時払戻 1,500円以下は買い目から除外。AI評価ラインを満たす候補から、より高い払戻側へ自動差し替え。</div>`);
+      }
+      return r;
+    };
+    wrap.__bhV32Wrapped=true;window.bhV3Render=wrap;
+  }
+
+  function subtractStat(dst,src){
+    if(!dst||!src)return dst;
+    dst.total=Math.max(0,(Number(dst.total)||0)-(Number(src.total)||0));
+    dst.ticketHit=Math.max(0,(Number(dst.ticketHit)||0)-(Number(src.ticketHit)||0));
+    dst.outlookHit=Math.max(0,(Number(dst.outlookHit)||0)-(Number(src.outlookHit)||0));
+    for(const g of ['alerts','bands','payoutBands'])for(const [k,v] of Object.entries(src[g]||{})){
+      const d=dst[g]?.[k];if(!d)continue;
+      d.n=Math.max(0,(Number(d.n)||0)-(Number(v.n)||0));
+      d.ticket=Math.max(0,(Number(d.ticket)||0)-(Number(v.ticket)||0));
+      d.outlook=Math.max(0,(Number(d.outlook)||0)-(Number(v.outlook)||0));
+      if(!d.n)delete dst[g][k];
+    }
+    return dst;
+  }
+  function rebuildDay(day){
+    const stat=typeof bhEmptyStat==="function"?bhEmptyStat():{total:0,ticketHit:0,outlookHit:0,alerts:{},bands:{},payoutBands:{}};
+    const rec=typeof bhRecordedMap==="function"?bhRecordedMap():{};
+    const snaps=typeof bhSnapshotStore==="function"?bhSnapshotStore():{};
+    for(const [k,r0] of Object.entries(rec||{})){
+      const p=String(k).split('|');if(p[0]!==day)continue;
+      const r=r0||{},s=snaps[k]||{};
+      if(!r.result&&!s.result)continue;
+      const th=r.ticketHit??s.ticketHit??false,oh=r.outlookHit??s.outlookHit??false;
+      const alerts=Array.isArray(s.alerts)&&s.alerts.length?s.alerts:['アラートなし'];
+      const pct=Number(s.pct??r.pct??0),band=s.band||(typeof bhBandName==="function"?bhBandName(pct):'');
+      if(typeof bhAddResultStat==="function")bhAddResultStat(stat,!!th,!!oh,alerts,band);
+      const pay=Number(r.payout??s.payout??0);
+      if(pay>0&&typeof bhAddPayoutBandStat==="function")bhAddPayoutBandStat(stat,pay,!!th);
+    }
+    return stat;
+  }
+
+  window.bhResetVenueResults=function(venueArg){
+    const venue=Number(venueArg),day=document.getElementById('bhResultDashDate')?.value||bhTodayKey?.();
+    if(!(venue>=1&&venue<=24)||!day)return;
+    const label=typeof bhVenueLabel==="function"?bhVenueLabel(venue):`${venue}場`;
+    if(!confirm(`${label} ${typeof bhDateLabel==="function"?bhDateLabel(day):day} の結果・収支をリセットします。よろしいですか？`))return;
+    const prefix=`${day}|${venue}|`;
+    const snaps=typeof bhSnapshotStore==="function"?bhSnapshotStore():{};
+    for(const k of Object.keys(snaps||{}))if(k.startsWith(prefix))delete snaps[k];
+    if(typeof bhSaveSnapshotStore==="function")bhSaveSnapshotStore(snaps);
+
+    const rec=typeof bhRecordedMap==="function"?bhRecordedMap():{};
+    for(const k of Object.keys(rec||{}))if(k.startsWith(prefix))delete rec[k];
+    try{localStorage.setItem(BH_RESULT_RECORDED_KEY,JSON.stringify(rec))}catch(e){}
+
+    const all=typeof bhAllResultStore==="function"?bhAllResultStore():{};
+    if(all?.[day]){
+      const block=all[day];
+      if(Array.isArray(block?.rows))block.rows=block.rows.filter(x=>Number(x?.venue)!==venue);
+      else if(Array.isArray(block))all[day]=block.filter(x=>Number(x?.venue)!==venue);
+      if((Array.isArray(all[day]?.rows)&&!all[day].rows.length)||(Array.isArray(all[day])&&!all[day].length))delete all[day];
+      if(typeof bhSaveAllResultStore==="function")bhSaveAllResultStore(all);
+    }
+
+    // 日別集計を残存レースから再構築し、全期間集計も差分補正。
+    if(typeof bhLoadStatsStore==="function"&&typeof bhSaveStatsStore==="function"){
+      const store=bhLoadStatsStore(),oldDay=store.days?.[day]||bhEmptyStat(),newDay=rebuildDay(day);
+      subtractStat(store.all,oldDay);
+      if(typeof bhMergeStatInto==="function")bhMergeStatInto(store.all,newDay);
+      store.days=store.days||{};
+      if(newDay.total>0)store.days[day]=newDay;else delete store.days[day];
+      bhSaveStatsStore(store);
+    }
+    try{bhRefreshStatsDateOptions?.();bhRenderStats?.();window.bhRenderResultDashboard?.()}catch(e){}
+  };
 })();
 </script>
 

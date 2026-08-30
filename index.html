@@ -1019,8 +1019,15 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
  .bhResultMiniJudge{width:38px!important;min-width:38px!important;height:38px!important;font-size:22px!important}
 }
 </style>
+<style id="bh-vol23-exhibit-reliability-css">
+.bhExRelPatch{display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900;line-height:1.2;vertical-align:middle;border:1px solid rgba(255,255,255,.18)}
+.bhExRelHi{background:rgba(42,158,94,.18);border-color:rgba(80,220,140,.55);color:#caffdf}
+.bhExRelMid{background:rgba(180,136,35,.18);border-color:rgba(244,196,80,.55);color:#ffe9a9}
+.bhExRelLow{background:rgba(196,67,67,.20);border-color:rgba(255,105,105,.62);color:#ffd0d0}
+.bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
+</style>
 </head>
-<body><div class="bhVol">vol.22</div>
+<body><div class="bhVol">vol.24</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -2285,12 +2292,25 @@ function bhOneMModel(stats){
  usable.forEach(x=>{
    x.startDelay=x.predict-startLead;
    x.startBoatBehind=x.startDelay/.15;
+   // vol.24: 展示信頼度をスタート→1Mの物理隊形へ直接連動。
+   // 予測STはそのまま。直前タイム=行き足、展示タイム=伸び足の影響だけを信頼度で減衰する。
+   const exRel=(typeof bhV23ExhibitReliability==="function")?bhV23ExhibitReliability(x.boat):null;
+   const exMul=exRel?.score<=45?.20:exRel?.score<=65?.50:exRel?.score<=82?.85:1.00;
+   const accelMul=exRel?.score<=45?.60:exRel?.score<=65?.75:exRel?.score<=82?.90:1.00;
+   x.exhibitReliability=exRel;
+   x.exhibitMultiplier=exMul;
+   x.accelMultiplier=accelMul;
+   x.rawAccelBody=x.accelBody;
+   x.rawStretchBody=x.stretchBody;
+   x.accelBodyAdjusted=x.accelBody*accelMul;
+   x.stretchBodyAdjusted=x.stretchBody*exMul;
+
    // 良いタイムは「前へ」なので、後方差から差し引く。
-   let moveForwardBody=bhClamp(x.accelBody+x.stretchBody,-MAX_MOVE_BODY,MAX_MOVE_BODY);
-   // vol.13: 後退側のみ抑制。伸びる側は従来感度を維持。
+   let moveForwardBody=bhClamp(x.accelBodyAdjusted+x.stretchBodyAdjusted,-MAX_MOVE_BODY,MAX_MOVE_BODY);
+   // 後退側のみ抑制。展示信頼度が低い艇を悪い展示時計だけで大きく後退させない。
    if(moveForwardBody<0){
      moveForwardBody*=0.55;
-     const severe=(x.accelBody<-.25&&x.stretchBody<-.45);
+     const severe=(x.accelBodyAdjusted<-.25&&x.stretchBodyAdjusted<-.45);
      moveForwardBody=Math.max(severe?-.95:-.65,moveForwardBody);
    }
    x.moveForwardBody=moveForwardBody;
@@ -2313,7 +2333,7 @@ function bhOneMSlipHTML(rows){
  let ordered=[...usable].sort((a,b)=>a.arrival-b.arrival||a.boat-b.boat),leader=ordered[0];
  let rankMap=new Map(ordered.map((x,i)=>[x.boat,i+1]));
  const ord=n=>n===1?"1st":n===2?"2nd":n===3?"3rd":`${n}th`;
- return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。150mの距離蓄積型で行き足・伸び差を反映。位置変化は最大±1.60艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
+ return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。展示信頼度が低い艇は、直前・展示タイムによる前後補正を自動で弱める。150mの距離蓄積型で行き足・伸び差を反映。位置変化は最大±1.60艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
   let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
   let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';
@@ -5898,7 +5918,8 @@ function bhV17OneMPhysicalLeader(){
   const stats=[1,2,3,4,5,6].map(bhStartStats).filter(x=>Number.isFinite(x.predict))
     .sort((a,b)=>a.predict-b.predict||a.boat-b.boat);
   const stRank=stats.findIndex(x=>x.boat===lead.boat)+1;
-  const moved=Number.isFinite(lead.moveBody)?lead.moveBody:0;
+  const moved=Number.isFinite(lead.moveForwardBody)?lead.moveForwardBody:
+              (Number.isFinite(lead.startBoatBehind)&&Number.isFinite(lead.boatBehind)?lead.startBoatBehind-lead.boatBehind:0);
   if(stRank>3 && moved<0.20)return null;
 
   // AIが極端な最下位なら保険乱発を避ける。6艇中5位以内なら許可。
@@ -6019,6 +6040,168 @@ bhOneMOutlookSignal=function(){
  }catch(e){}
  return sig;
 };
+</script>
+<script id="bh-vol23-exhibit-reliability-js">
+/*
+ vol.23 展示信頼度
+ 選手名固定ではなく、過去走の「展示順位 ↔ 実戦内容」の継続乖離から自動判定。
+ 信頼度が低い選手は展示タイムの加点/減点を弱める。
+*/
+function bhV23Finite(v){v=Number(v);return Number.isFinite(v)?v:null}
+function bhV23Rank(values, idx, lowerBetter=true){
+  const rows=values.map((v,i)=>({i,v:bhV23Finite(v)})).filter(x=>x.v!=null);
+  rows.sort((a,b)=>lowerBetter?a.v-b.v:b.v-a.v);
+  let rank=1,last=null,lastRank=1;
+  for(let k=0;k<rows.length;k++){
+    if(last!=null && rows[k].v!==last)rank=k+1;
+    if(rows[k].i===idx)return rank;
+    last=rows[k].v;lastRank=rank;
+  }
+  return null
+}
+function bhV23HistArray(boat){
+  const f=(typeof stats!=="undefined" && Array.isArray(stats))?stats.find(x=>Number(x.boat)===Number(boat)):null;
+  const cands=[
+    f?.history,f?.hist,f?.past,f?.races,f?.last30,f?.recent,
+    f?.runner?.history,f?.entry?.history,
+    (typeof currentRace!=="undefined"?currentRace?.entries?.find?.(x=>Number(x.entry_number||x.boat||x.boat_number)===Number(boat))?.history:null)
+  ];
+  return cands.find(Array.isArray)||[];
+}
+function bhV23ExTime(r){
+  for(const k of ["exhibition_time","exhibitionTime","tenji_time","tenjiTime","ex_time","exTime"]){
+    const v=bhV23Finite(r?.[k]); if(v!=null)return v;
+  }
+  return null;
+}
+function bhV23Place(r){
+  for(const k of ["place","finish","rank","arrival","arrival_order","finish_order"]){
+    const v=Number(r?.[k]); if(v>=1&&v<=6)return v;
+  }
+  return null;
+}
+function bhV23ST(r){
+  for(const k of ["st","start_time","startTime","start"]){const v=bhV23Finite(r?.[k]);if(v!=null)return v}
+  return null;
+}
+function bhV23WinMethod(r){
+  return String(r?.winning_method??r?.kimarite??r?.decision??r?.method??"");
+}
+function bhV23ExhibitReliability(boat){
+  const hist=bhV23HistArray(boat).slice(0,30);
+  if(hist.length<6)return {score:70,level:"mid",label:"展示参考度 普通",sample:hist.length,mismatch:0,multiplier:.85};
+
+  // When explicit exhibition rank exists, use it. Otherwise rank exhibition times inside race data if opponents are embedded.
+  let usable=0,mismatchSum=0,strongMismatch=0,goodExPoorRace=0,badExGoodRace=0;
+  for(const r of hist){
+    let exRank=Number(r?.exhibition_rank??r?.exhibitionRank??r?.tenji_rank??r?.tenjiRank);
+    if(!(exRank>=1&&exRank<=6)){
+      const racers=r?.race_racers||r?.racers||r?.entries||r?.boats;
+      if(Array.isArray(racers)){
+        const selfIdx=racers.findIndex(x=>{
+          const reg=String(x?.registration_number??x?.racer_number??x?.reg_no??"");
+          const me=String(r?.registration_number??r?.racer_number??r?.reg_no??"");
+          return me && reg===me;
+        });
+        if(selfIdx>=0)exRank=bhV23Rank(racers.map(b=>bhV23ExTime(b)),selfIdx,true);
+      }
+    }
+    const place=bhV23Place(r);
+    if(!(exRank>=1&&exRank<=6) || !(place>=1&&place<=6))continue;
+    usable++;
+    const diff=exRank-place; // + = 展示より本番が良い
+    mismatchSum+=Math.abs(diff);
+    if(exRank>=5 && place<=2){badExGoodRace++;strongMismatch++}
+    if(exRank<=2 && place>=5){goodExPoorRace++;strongMismatch++}
+    if(Math.abs(diff)>=3)strongMismatch++;
+  }
+
+  // Add ST / winning-method clues: bad exhibition but actual starts/attack are competent.
+  let stGood=0,attackWins=0,extraN=0;
+  for(const r of hist){
+    const st=bhV23ST(r),place=bhV23Place(r),method=bhV23WinMethod(r);
+    if(st!=null){extraN++;if(st<=.15)stGood++}
+    if(place===1 && /まくり|まくり差し|差し/.test(method))attackWins++;
+  }
+
+  if(usable<6){
+    const base=65 + Math.min(10,Math.round((stGood/Math.max(1,extraN))*10));
+    return {score:base,level:"mid",label:"展示参考度 普通",sample:usable,mismatch:0,multiplier:.85};
+  }
+
+  const avgMismatch=mismatchSum/usable;
+  const badGoodRate=badExGoodRace/usable;
+  const strongRate=strongMismatch/usable;
+  // Reliability falls when exhibition order chronically fails to predict real performance.
+  let score=100;
+  score-=avgMismatch*13;
+  score-=badGoodRate*42;
+  score-=strongRate*16;
+
+  // Especially detect "展示を出さない" style: exhibition low rank but actual performance still good.
+  if(badGoodRate>=.18)score-=10;
+  if(badGoodRate>=.28)score-=10;
+  if(stGood/Math.max(1,extraN)>=.70 && badGoodRate>=.15)score-=5;
+  if(attackWins>=2 && badGoodRate>=.12)score-=5;
+
+  score=Math.max(15,Math.min(100,Math.round(score)));
+  let level,label,multiplier;
+  if(score<=45){level="low";label="🔥 展示で時計を出さない傾向";multiplier=.20}
+  else if(score<=65){level="low";label="⚠️ 展示タイム参考度 低";multiplier=.50}
+  else if(score<=82){level="mid";label="展示参考度 普通";multiplier=.85}
+  else{level="high";label="展示参考度 高";multiplier=1.0}
+  return {score,level,label,sample:usable,mismatch:+avgMismatch.toFixed(2),badGoodRate:+(badGoodRate*100).toFixed(1),multiplier};
+}
+function bhV23ExhibitPatchHTML(boat){
+  const r=bhV23ExhibitReliability(boat);
+  const cls=r.level==="high"?"bhExRelHi":r.level==="low"?"bhExRelLow":"bhExRelMid";
+  return `<span class="bhExRelPatch ${cls}">${r.label} ${r.score}</span>`;
+}
+function bhV23ExhibitMultiplier(boat){
+  return bhV23ExhibitReliability(boat).multiplier;
+}
+
+/*
+ Hook for existing AI calculations:
+ If there is a common exhibition adjustment function, attenuate its output.
+ This keeps current scoring architecture intact and only weakens exhibition influence.
+*/
+(function(){
+  const names=[
+    "bhExhibitionAdjustment","bhExhibitAdjustment","bhExhibitionScore",
+    "exhibitionAdjustment","exhibitionScore"
+  ];
+  for(const n of names){
+    const base=window[n];
+    if(typeof base!=="function" || base.__bhV23Wrapped)continue;
+    const wrap=function(){
+      const args=[...arguments];
+      const boat=Number(args[0]?.boat??args[0]?.entry_number??args[0]??0);
+      const raw=Number(base.apply(this,args));
+      if(!Number.isFinite(raw))return raw;
+      return raw*bhV23ExhibitMultiplier(boat);
+    };
+    wrap.__bhV23Wrapped=true;window[n]=wrap;
+  }
+})();
+
+/* Display patch beside racer rows/cards when a boat number can be inferred. */
+function bhV23ApplyExhibitPatches(){
+  const roots=[...document.querySelectorAll("[data-boat],.boatRow,.racerRow,.entryRow,.statsRow,.bhBoatCard")];
+  for(const el of roots){
+    if(el.querySelector(".bhExRelPatch"))continue;
+    let boat=Number(el.dataset?.boat||el.getAttribute("data-entry")||0);
+    if(!(boat>=1&&boat<=6)){
+      const m=(el.textContent||"").match(/([1-6])号艇/); if(m)boat=Number(m[1]);
+    }
+    if(!(boat>=1&&boat<=6))continue;
+    const host=el.querySelector(".name,.racerName,.boatName,.title,strong,b")||el;
+    try{host.insertAdjacentHTML("beforeend",bhV23ExhibitPatchHTML(boat))}catch(e){}
+  }
+}
+document.addEventListener("DOMContentLoaded",()=>setTimeout(bhV23ApplyExhibitPatches,500));
+const bhV23Obs=new MutationObserver(()=>{clearTimeout(window.__bhV23t);window.__bhV23t=setTimeout(bhV23ApplyExhibitPatches,120)});
+document.addEventListener("DOMContentLoaded",()=>bhV23Obs.observe(document.body,{childList:true,subtree:true}));
 </script>
 </body>
 </html>

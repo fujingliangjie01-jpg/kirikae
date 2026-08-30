@@ -2230,9 +2230,43 @@ function bhOneMTheory(rows){
  return {match:m,id,title:m.best.title,inside:m.best.inside,main,sub,bad,methods};
 }
 function bhOneMTheoryHTML(rows){
- let t=bhOneMTheory(rows),top=t.methods.slice(0,6);let badge=t.inside?'イン逃げ寄り':'イン以外警戒';
+ let t=bhOneMTheory(rows);
+ let sig=bhOneMOutlookSignal();
  let rank=t.match.ranks.map(x=>`${x.id}型 ${x.pct.toFixed(0)}%`).join(' / ');
- return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開理論：${t.id}型 ${t.title}</b><span class="bhTenkaiBadge${t.inside?'':' out'}">${badge}</span></div><div class="bhTenkaiMain"><strong>${t.main}</strong>${t.sub?`<div class="bhTenkaiSub">${t.sub}</div>`:''}${t.bad.length?`<div class="bhTenkaiSub bhDisadv">不利判定：${t.bad.join('・')}号艇</div>`:''}<div class="bhTenkaiMethods">${top.map((x,i)=>`<span class="bhMethod${x.hole?' hole':i<2?' hot':''}">${x.boat}号艇 ${x.type} ${x.rate.toFixed(1)}%${x.note?'｜'+x.note:''}</span>`).join('')||'<span class="bhMethod">隊形優先・AI総合評価で相手選定</span>'}</div><div class="bhPatternRanks">12型類似度：${rank}<br>攻め艇＝1M隊形で先に決定。決まり手確率＝1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力。得意率だけでは攻め艇にしません。旧固定決まり手ルールは使用しません。</div></div></div>`;
+ let spread=sig?.spread;
+ let zone=sig?.zone||'none';
+ let title='',badge='',badgeOut=false,main='',sub='',methodsHTML='';
+
+ // 12型は「形の類似度」。本判定は必ず艇身差ゾーンを先に通す。
+ // 0.00〜0.29艇身：明確な攻めなし → イン初期優位
+ // 0.30〜0.59艇身：攻め気配 → 総合判断
+ // 0.60〜0.99艇身：明確な攻め → 本線60〜89%
+ // 1.00艇身以上：強攻め → 本線90%級
+ if(zone==='none'){
+   title='明確な攻めなし・イン優位';
+   badge='イン優位';
+   main=`最大艇身差 ${Number.isFinite(spread)?spread.toFixed(2):'--'}艇身。攻め成立基準0.30艇身未満のため、外艇の「先頭表示」だけでは攻め成立にしません。1号艇を基準優位として最終判断します。`;
+   sub='1号艇の逃げ性能・差され率・まくられ率・まくり差され率、AI評価、内側の壁性能を重ねて、逃げ切れない可能性も残します。';
+   methodsHTML='<span class="bhMethod">決まり手率は攻め艇の発生条件には使用しません</span>';
+ }else if(zone==='hint'){
+   title='攻め気配・総合判断';
+   badge='攻め気配';
+   main=`最大艇身差 ${spread.toFixed(2)}艇身。0.30〜0.59艇身は攻めの気配はあるものの、まだ本線確定にはしません。`;
+   sub='1M隊形を優先し、AI評価・1〜3コースの負け方・攻め候補艇の得意決まり手を重ねて本線/イン逃げ/裏展開を振り分けます。';
+   let probs=(sig?.methodProbs||[]).filter(x=>!x.hole).slice(0,4);
+   methodsHTML=probs.map((x,i)=>`<span class="bhMethod${i<2?' hot':''}">${x.boat}号艇 ${x.type} ${num(x.raceProb).toFixed(1)}%</span>`).join('')||'<span class="bhMethod">攻め候補を総合判定中</span>';
+ }else{
+   let strong=zone==='strong';
+   title=strong?'強攻め成立':'明確な攻め成立';
+   badgeOut=!t.inside;
+   badge=t.inside?'イン側本線':'イン以外警戒';
+   main=`最大艇身差 ${spread.toFixed(2)}艇身。1M隊形から本線展開 ${num(sig?.main).toFixed(0)}% を基礎確率として採用します。`;
+   sub=t.main+(t.sub?` ${t.sub}`:'');
+   let probs=(sig?.methodProbs||[]).slice(0,6);
+   methodsHTML=probs.map((x,i)=>`<span class="bhMethod${x.hole?' hole':i<2?' hot':''}">${x.boat}号艇 ${x.type} ${num(x.raceProb).toFixed(1)}%${x.hole?'｜裏展開':''}</span>`).join('')||'<span class="bhMethod">隊形優先・AI総合評価で成功力を補正</span>';
+ }
+
+ return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開見通し：${title}</b><span class="bhTenkaiBadge${badgeOut?' out':''}">${badge}</span></div><div class="bhTenkaiMain"><strong>${main}</strong><div class="bhTenkaiSub">${sub}</div><div class="bhTenkaiMethods">${methodsHTML}</div><div class="bhPatternRanks">12型類似度（参考）：${rank}<br>12型は形の参考値で、本判定ではありません。まず艇身差で攻め成立度を判定し、その後に「1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力」で決まり手確率を求めます。旧固定決まり手ルールは使用しません。</div></div></div>`;
 }
 function renderStartPrediction(){
  let card=$("startPredictionCard"),box=$("startPrediction");if(!card||!box||racers.length!==6)return;
@@ -2242,7 +2276,7 @@ function renderStartPrediction(){
  let fastest=[...usable].sort((a,b)=>a.predict-b.predict)[0],stable=[...usable].filter(x=>x.count>=3).sort((a,b)=>a.sd-b.sd)[0]||fastest;
  let spread=Math.max(...usable.map(x=>x.predict))-Math.min(...usable.map(x=>x.predict)),body=spread/.15;
  let oneM=bhOneMModel(stats);
- box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、1Mを主軸65%で最終統合。0.60艇身=本線60%、1.00艇身=本線90%を基準にします。</div>`;
+ box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div><div class="bhStartNote">※予測STは「今回と同じコース」の最大15走を使用。15走平均70%＋直近5走平均30%を基本とし、STが安定している選手は中央値を10%反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、1Mの攻め成立度を基礎にAI評価・1号艇の負け方・水面条件を補正します。0.30艇身未満は明確な攻めなし、0.60艇身=本線60%、1.00艇身=本線90%を基準にします。</div>`;
 }
 
 

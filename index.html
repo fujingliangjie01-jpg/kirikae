@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.65</div>
+<div class="bhVol">vol.66</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8151,6 +8151,121 @@ V46.generate=function(outlook){
 
 window.bhV3Generate=o=>V46.generate(o);
 window.BH_VOL65={version:65,basicOnlyPrimaryHead:true};
+})();
+</script>
+
+
+<style id="bh-vol66-primary-head-patch-style">
+.bhV66PrimaryPatch{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-left:6px;padding:3px 8px;border-radius:999px;
+  font-weight:900;font-size:11px;line-height:1.1;
+  background:linear-gradient(135deg,#ffd54f,#ff9f1a);
+  color:#161616;border:1px solid rgba(255,255,255,.65);
+  box-shadow:0 0 10px rgba(255,193,7,.35);
+}
+</style>
+<script id="bh-vol66-nonin-12-primary-patch">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function escRate(o){
+  try{return Number(window.BH_VOL42?.escape?.(o)??50)}catch(e){return 50}
+}
+function primaryHead(outlook){
+  const a=[];
+  for(let c=1;c<=6;c++){
+    const b=V46.boatAtCourse(c);
+    if(!b||V46.cls(b)==='cut')continue;
+    let sc=0;
+    try{sc=N(window.BH_VOL41?.scenarioScore?.(b,outlook,false))}catch(e){}
+    sc+=N(V46.ev(b))*.35;
+    if(V46.cls(b)==='third')sc-=120;
+    a.push({b,c,sc,ev:N(V46.ev(b))});
+  }
+  a.sort((x,y)=>y.sc-x.sc||y.ev-x.ev||x.c-y.c||x.b-y.b);
+  return a[0]?.b||null;
+}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  let raw=prevGen(o)||[];
+  const esc=escRate(o);
+
+  // イン以外（49.9%以下）は必ず12点。
+  if(esc<50 && raw.length<12){
+    const used=new Set(raw.map(K));
+    const heads=new Set(raw.map(t=>t?.legs?.[0]).filter(Boolean));
+    const pool=[],seen=new Set();
+
+    try{V46.buildNonIn(pool,o,seen)}catch(e){}
+    try{V46.buildIn(pool,o,seen)}catch(e){}
+    try{V46.ensureSixThird(pool,seen,o)}catch(e){}
+
+    const first=primaryHead(o);
+    const allowedBasicHead=first;
+
+    function isBasic(t){
+      const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.source||'')).toLowerCase();
+      return !!t?.mandatory || z.includes('基本') || z.includes('買い目確定') || z.includes('必須');
+    }
+    function reverseBet(t){
+      const z=((t?.label||'')+' '+(t?.note||'')).toLowerCase();
+      return z.includes('裏展開')||z.includes('reverse');
+    }
+
+    const cand=pool
+      .filter(t=>Array.isArray(t?.legs)&&t.legs.length===3)
+      .filter(t=>!used.has(K(t)))
+      .filter(t=>!isBasic(t) || t.legs[0]===allowedBasicHead)
+      .sort((a,b)=>N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja'));
+
+    let reverseHead=null;
+    for(const t of cand){
+      if(raw.length>=12)break;
+      const h=t.legs[0];
+      if(!heads.has(h)){
+        if(heads.size<3)heads.add(h);
+        else if(reverseBet(t)&&(reverseHead===null||reverseHead===h)){
+          reverseHead=h;heads.add(h);
+        }else continue;
+      }
+      used.add(K(t));raw.push(t);
+    }
+  }
+
+  raw=V46.normalize(raw);
+  raw.forEach(t=>{t.bhPrimaryHead=(t?.legs?.[0]===primaryHead(o));});
+  return raw.slice(0,esc<50?12:raw.length);
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 既存表示を崩さず、AI頭評価1位の買い目だけ目立つパッチを付ける。
+const prevRender=window.bhV3Render;
+window.bhV3Render=function(tickets,outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const first=primaryHead(o);
+  (tickets||[]).forEach(t=>t.bhPrimaryHead=(t?.legs?.[0]===first));
+  const r=prevRender?.apply(this,arguments);
+
+  setTimeout(()=>{
+    const rows=[...document.querySelectorAll('#bhNewBetRows .bhV3Bet')];
+    rows.forEach((row,i)=>{
+      row.querySelector('.bhV66PrimaryPatch')?.remove();
+      const t=(tickets||[])[i];
+      if(!t?.bhPrimaryHead)return;
+      const ticket=row.querySelector('.bhV3Ticket');
+      if(ticket)ticket.insertAdjacentHTML('beforeend','<span class="bhV66PrimaryPatch">⭐ AI頭評価1位</span>');
+    });
+  },0);
+  return r;
+};
+
+window.BH_VOL66={version:66,nonInAlways12:true,primaryHeadPatch:true};
 })();
 </script>
 

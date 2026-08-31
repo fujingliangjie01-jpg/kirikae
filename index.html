@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.64</div>
+<div class="bhVol">vol.65</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8106,6 +8106,51 @@ window.bhV3Allocate=function(tickets){
 };
 
 window.BH_VOL64={version:64,useFullPlannedBudget:true};
+})();
+</script>
+
+
+<script id="bh-vol65-basic-only-primary-head">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+
+function primaryHead(outlook){
+  const a=[];
+  for(let c=1;c<=6;c++){
+    const b=V46.boatAtCourse(c);
+    if(!b||V46.cls(b)==='cut')continue;
+    let sc=0;
+    try{sc=N(window.BH_VOL41?.scenarioScore?.(b,outlook,false))}catch(e){}
+    sc+=N(V46.ev(b))*.35;
+    if(V46.cls(b)==='third')sc-=120;
+    a.push({b,c,sc,ev:N(V46.ev(b))});
+  }
+  a.sort((x,y)=>y.sc-x.sc||y.ev-x.ev||x.c-y.c||x.b-y.b);
+  return a[0]?.b||null;
+}
+function isBasic(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.source||'')).toLowerCase();
+  return !!t?.mandatory || z.includes('基本') || z.includes('買い目確定') || z.includes('必須');
+}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const first=primaryHead(o);
+  const raw=prevGen(o)||[];
+
+  // 基本買い目はAI頭評価1位の艇のシナリオだけ。
+  // 2位・3位の頭は通常AI買い目として残せるが、基本買い目保護は発動させない。
+  return V46.normalize(raw.filter(t=>{
+    if(!isBasic(t))return true;
+    return t?.legs?.[0]===first;
+  }));
+};
+
+window.bhV3Generate=o=>V46.generate(o);
+window.BH_VOL65={version:65,basicOnlyPrimaryHead:true};
 })();
 </script>
 

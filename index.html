@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.69</div>
+<div class="bhVol">vol.70</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8744,6 +8744,95 @@ window.BH_VOL69={
   basicPrimaryOnly:true,
   maxHeads:3
 };
+})();
+</script>
+
+
+<script id="bh-vol70-stable-bet-selection">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const CACHE_KEY='BOAT_HUNTER_BET_SELECTION_VOL70_V1';
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function raceKey(){
+  try{
+    if(typeof window.bhRaceKey==='function')return window.bhRaceKey();
+  }catch(e){}
+  const d=(typeof window.bhTodayKey==='function'?window.bhTodayKey():new Date().toISOString().slice(0,10));
+  const v=Number(document.getElementById('venue')?.value||0);
+  const r=Number(document.getElementById('race')?.value||0);
+  return d&&v&&r?`${d}|${v}|${r}`:'';
+}
+function load(){
+  try{const x=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}');return x&&typeof x==='object'?x:{}}catch(e){return{}}
+}
+function save(x){try{localStorage.setItem(CACHE_KEY,JSON.stringify(x))}catch(e){}}
+function cloneTickets(a){
+  return (a||[]).map(t=>({
+    ...t,
+    legs:Array.isArray(t.legs)?t.legs.map(Number):[],
+    amount:N(t.amount),
+    prob:N(t.prob??t.pct),
+    pct:N(t.pct??t.prob),
+    score:N(t.score)
+  }));
+}
+function selectionSignature(outlook){
+  // オッズや時刻を含めない。AI評価・進入・現在の解析値だけで安定判定する。
+  const parts=[];
+  parts.push('esc:'+N(outlook?.escape).toFixed(2));
+  for(let c=1;c<=6;c++){
+    const b=V46.boatAtCourse(c);
+    if(!b)continue;
+    let sc=0,ev=0,cls='';
+    try{sc=N(window.BH_VOL41?.scenarioScore?.(b,outlook,false))}catch(e){}
+    try{ev=N(V46.ev(b))}catch(e){}
+    try{cls=String(V46.cls(b)||'')}catch(e){}
+    parts.push([c,b,sc.toFixed(3),ev.toFixed(3),cls].join(':'));
+  }
+  return parts.join('|');
+}
+
+const baseGenerate=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const rk=raceKey();
+  if(!rk)return baseGenerate(o);
+
+  const sig=selectionSignature(o);
+  const store=load();
+  const old=store[rk];
+
+  // 同一レース・同一AI評価なら買い目の組合せと順位を固定。
+  // リアルタイムオッズの取得タイミングでは買い目自体を変更しない。
+  if(old&&old.signature===sig&&Array.isArray(old.tickets)&&old.tickets.length){
+    const frozen=cloneTickets(old.tickets);
+    frozen.forEach(t=>{
+      const od=Number(window.bhGetOdds?.(K(t)));
+      t.odds=Number.isFinite(od)&&od>0?od:(Number(t.odds)||null);
+    });
+    return V46.normalize(frozen);
+  }
+
+  const made=baseGenerate(o)||[];
+  store[rk]={
+    signature:sig,
+    tickets:cloneTickets(made).map(t=>({
+      legs:t.legs,betType:t.betType,type:t.type,method:t.method,label:t.label,note:t.note,
+      score:t.score,mandatory:!!t.mandatory,bhPrimaryHead:!!t.bhPrimaryHead,
+      prob:t.prob,pct:t.pct,amount:t.amount,odds:t.odds
+    }))
+  };
+  save(store);
+  return made;
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 同じレースの再描画では「オッズだけ更新」、買い目は固定。
+// 場またはレースが変われば別キーなので別買い目として生成される。
+window.BH_VOL70={version:70,stableSameRaceSelection:true,oddsExcludedFromSelectionSignature:true};
 })();
 </script>
 

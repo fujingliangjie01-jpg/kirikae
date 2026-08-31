@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.54</div>
+<div class="bhVol">vol.55</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -5157,7 +5157,7 @@ function bhToggleStartHistory(){
    const used=fin.reduce((s,f)=>s+f.used,0),ret=fin.reduce((s,f)=>s+f.ret,0),profit=ret-used,roi=used?ret/used*100:0;
    const analyzed=completed.filter(x=>x.analyzed),hits=analyzed.filter(x=>x.th===true).length,outHits=analyzed.filter(x=>x.oh===true).length;
    const pcls=profit>=0?"plus":"minus";
-   return `<div class="bhResultDashVenue" data-bh-venue="${venue}"><div class="bhResultDashVenueHead"><div class="bhResultDashVenueTitle"><span>${bhVenueLabel(venue)}</span><span class="bhVenueProfit ${pcls}">${fin.length?signed(Math.round(profit)):"収支待ち"}</span><button class="bhVenueResetBtn" type="button" onclick="bhResetVenueResults('${venue}')">この場をリセット</button></div><div class="bhResultDashVenueMeta"><span>買い目的中 <b>${analyzed.length?(hits/analyzed.length*100).toFixed(1)+"%":"-"}</b></span><span>見通し <b>${analyzed.length?(outHits/analyzed.length*100).toFixed(1)+"%":"-"}</b></span><span>投資 <b>${fin.length?yen(used):"-"}</b></span><span>回収率 <b>${used?roi.toFixed(1)+"%":"-"}</b></span></div></div><div class="bhResultDashHeader"><span>R</span><span>結果</span><span>買</span><span>見</span><span>確定オッズ</span><span>収支</span></div>
+   return `<div class="bhResultDashVenue" data-bh-venue="${venue}"><div class="bhResultDashVenueHead"><div class="bhResultDashVenueTitle"><span>${bhVenueLabel(venue)}</span><span class="bhVenueProfit ${pcls}">${fin.length?signed(Math.round(profit)):"収支待ち"}</span><button class="bhVenueResetBtn" type="button" data-bh-reset-venue="${venue}">この場をリセット</button></div><div class="bhResultDashVenueMeta"><span>買い目的中 <b>${analyzed.length?(hits/analyzed.length*100).toFixed(1)+"%":"-"}</b></span><span>見通し <b>${analyzed.length?(outHits/analyzed.length*100).toFixed(1)+"%":"-"}</b></span><span>投資 <b>${fin.length?yen(used):"-"}</b></span><span>回収率 <b>${used?roi.toFixed(1)+"%":"-"}</b></span></div></div><div class="bhResultDashHeader"><span>R</span><span>結果</span><span>買</span><span>見</span><span>確定オッズ</span><span>収支</span></div>
      ${list.map((x,i)=>x?rowHTML(x):`<div class="bhResultDashRow pending"><span>${i+1}R</span><span>-</span><span>－</span><span>－</span><span>-</span><span class="bhResultDashPnL na">-</span></div>`).join("")}
    </div>`;
  }
@@ -7042,6 +7042,85 @@ window.bhResetVenueResults=async function(venue){
 };
 
 window.BH_VOL54={version:54,resultResetFixed:true};
+})();
+</script>
+
+
+<style id="bh-vol55-reset-button-touch-fix">
+.bhVenueResetBtn{
+  position:relative!important;
+  z-index:20!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  -webkit-user-select:none!important;
+  user-select:none!important;
+}
+.bhResultDashVenueHead,.bhResultDashVenueTitle{position:relative}
+</style>
+<script id="bh-vol55-reset-button-touch-fix-js">
+(()=>{
+'use strict';
+
+async function runVenueReset(btn){
+  if(!btn || btn.dataset.bhResetBusy==='1')return;
+  const venue=Number(btn.dataset.bhResetVenue||0);
+  if(!venue)return;
+
+  btn.dataset.bhResetBusy='1';
+  const old=btn.textContent;
+  btn.textContent='🔄 リセット中…';
+  btn.disabled=true;
+
+  try{
+    if(typeof window.bhResetVenueResults!=='function'){
+      throw new Error('bhResetVenueResults is not available');
+    }
+    await window.bhResetVenueResults(venue);
+  }catch(e){
+    console.error('venue reset failed',e);
+    btn.textContent='⚠️ 再試行';
+    setTimeout(()=>{
+      btn.disabled=false;
+      btn.dataset.bhResetBusy='0';
+      btn.textContent=old;
+    },1200);
+    return;
+  }
+
+  // 再描画でボタン自体が差し替わる場合があるため、
+  // DOMに残っている時だけ状態を戻す。
+  if(document.body.contains(btn)){
+    btn.disabled=false;
+    btn.dataset.bhResetBusy='0';
+    btn.textContent='✅ 再確認済み';
+    setTimeout(()=>{ if(document.body.contains(btn))btn.textContent=old; },900);
+  }
+}
+
+function resetTarget(e){
+  const t=e.target;
+  return t?.closest?.('.bhVenueResetBtn[data-bh-reset-venue]')||null;
+}
+
+// iPhone/Safariでも親の開閉処理や横スクロールより先に拾う。
+document.addEventListener('pointerup',e=>{
+  const btn=resetTarget(e);
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
+  runVenueReset(btn);
+},true);
+
+// PointerEvent非対応環境の保険。pointerup直後のclickはbusyで二重実行されない。
+document.addEventListener('click',e=>{
+  const btn=resetTarget(e);
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
+  runVenueReset(btn);
+},true);
+
+window.BH_VOL55={version:55,resultResetTouchFixed:true};
 })();
 </script>
 

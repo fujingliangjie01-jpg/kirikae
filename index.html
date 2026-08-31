@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.67</div>
+<div class="bhVol">vol.68</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8400,6 +8400,168 @@ V46.generate=function(outlook){
 
 window.bhV3Generate=o=>V46.generate(o);
 window.BH_VOL67={version:67,outlookTicketBalance:true};
+})();
+</script>
+
+
+<script id="bh-vol68-nonin-12-and-primary-basic-lock">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function escRate(o){
+  try{return Number(window.BH_VOL42?.escape?.(o)??50)}catch(e){return 50}
+}
+function aiHeadRank(outlook){
+  const a=[];
+  for(let c=1;c<=6;c++){
+    const b=V46.boatAtCourse(c);
+    if(!b||V46.cls(b)==='cut')continue;
+    let sc=0;
+    try{sc=N(window.BH_VOL41?.scenarioScore?.(b,outlook,false))}catch(e){}
+    sc+=N(V46.ev(b))*.35;
+    if(V46.cls(b)==='third')sc-=120;
+    a.push({b,c,sc,ev:N(V46.ev(b))});
+  }
+  a.sort((x,y)=>y.sc-x.sc||y.ev-x.ev||x.c-y.c||x.b-y.b);
+  return a;
+}
+function isBasic(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.source||'')).toLowerCase();
+  return !!t?.mandatory || z.includes('基本') || z.includes('買い目確定') || z.includes('必須');
+}
+function reverseBet(t){
+  const z=((t?.label||'')+' '+(t?.note||'')).toLowerCase();
+  return z.includes('裏展開')||z.includes('reverse');
+}
+function oddsOK(t){
+  const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+  return !o || Math.floor(o*100)>800;
+}
+function scoreTicket(t,first){
+  let s=N(t?.score);
+  if(t?.legs?.[0]===first)s+=80;
+  if(isBasic(t)&&t?.legs?.[0]===first)s+=250;
+  return s;
+}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const esc=escRate(o);
+  let raw=prevGen(o)||[];
+  if(esc>=50)return raw;
+
+  const ranked=aiHeadRank(o);
+  const first=ranked[0]?.b||null;
+  const headSet=new Set(ranked.slice(0,3).map(x=>x.b));
+
+  // 全候補を再収集
+  const pool=[...raw],seen=new Set(raw.map(K));
+  try{V46.buildNonIn(pool,o,seen)}catch(e){}
+  try{V46.buildIn(pool,o,seen)}catch(e){}
+  try{V46.ensureSixThird(pool,seen,o)}catch(e){}
+
+  // 基本買い目は「AI頭評価1位」だけに限定して必ず優先確保
+  const basics=[];
+  const normals=[];
+  const used=new Set();
+
+  for(const t of pool){
+    if(!Array.isArray(t?.legs)||t.legs.length!==3)continue;
+    const k=K(t); if(used.has(k)||!oddsOK(t))continue;
+    used.add(k);
+
+    if(isBasic(t)){
+      if(t.legs[0]===first)basics.push(t);
+      continue;
+    }
+    if(headSet.has(t.legs[0]))normals.push(t);
+    else if(reverseBet(t))normals.push(t);
+  }
+
+  basics.sort((a,b)=>scoreTicket(b,first)-scoreTicket(a,first)||K(a).localeCompare(K(b),'ja'));
+  normals.sort((a,b)=>scoreTicket(b,first)-scoreTicket(a,first)||K(a).localeCompare(K(b),'ja'));
+
+  const picked=[],pk=new Set(),heads=new Set();
+  let reverseHead=null;
+
+  function canUse(t){
+    const h=t.legs[0];
+    if(headSet.has(h))return true;
+    if(reverseBet(t)&&(reverseHead===null||reverseHead===h)){
+      reverseHead=h;return true;
+    }
+    return false;
+  }
+  function add(t){
+    const k=K(t);
+    if(pk.has(k)||!oddsOK(t)||!canUse(t))return false;
+    pk.add(k);picked.push(t);heads.add(t.legs[0]);return true;
+  }
+
+  // まず評価1位の基本買い目を確保
+  for(const t of basics){
+    if(picked.length>=12)break;
+    add(t);
+  }
+
+  // 次に通常AI候補
+  for(const t of normals){
+    if(picked.length>=12)break;
+    add(t);
+  }
+
+  // まだ12点未満なら、AI頭候補3艇だけで3連単候補を自動補充
+  // 既存ロジックの評価値を壊さず、補充点のみ低い初期scoreにする。
+  if(picked.length<12){
+    const boats=[1,2,3,4,5,6];
+    const fallback=[];
+    for(const h of headSet){
+      for(const s of boats){
+        if(s===h)continue;
+        for(const th of boats){
+          if(th===h||th===s)continue;
+          const t={
+            legs:[h,s,th],
+            type:'3連単',
+            score:-999,
+            label:'AI補充',
+            note:'12点固定補充',
+            method:'AI補充',
+            mandatory:false
+          };
+          if(pk.has(K(t))||!oddsOK(t))continue;
+          // 6C期待値100以上ルールを補充側でも優先
+          if(N(V46.ev(6))>=100 && th===6)t.score+=60;
+          // 評価1位頭をやや優先
+          if(h===first)t.score+=30;
+          fallback.push(t);
+        }
+      }
+    }
+    fallback.sort((a,b)=>N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja'));
+    for(const t of fallback){
+      if(picked.length>=12)break;
+      add(t);
+    }
+  }
+
+  // 12点固定
+  picked.length=Math.min(picked.length,12);
+  picked.forEach(t=>t.bhPrimaryHead=(t?.legs?.[0]===first));
+
+  return V46.normalize(picked);
+};
+
+window.bhV3Generate=o=>V46.generate(o);
+window.BH_VOL68={
+  version:68,
+  nonInFixed12:true,
+  primaryBasicGuaranteed:true
+};
 })();
 </script>
 

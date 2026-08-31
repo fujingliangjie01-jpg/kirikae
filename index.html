@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.53</div>
+<div class="bhVol">vol.54</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -6956,6 +6956,92 @@ V46.generate=function(outlook){
 
 window.bhV3Generate=function(outlook){return V46.generate(outlook)};
 window.BH_VOL53={version:53,primaryHeadFirst:true};
+})();
+</script>
+
+
+<script id="bh-vol54-result-reset-fix">
+(()=>{
+'use strict';
+function clamp0(n){return Math.max(0,Number(n)||0)}
+function decBucket(obj,key,th,oh){
+  const x=obj?.[key]; if(!x)return;
+  x.n=clamp0((x.n||0)-1);
+  if(th===true)x.ticket=clamp0((x.ticket||0)-1);
+  if(oh===true)x.outlook=clamp0((x.outlook||0)-1);
+}
+function decMainStat(stat,th,oh,alerts,band){
+  if(!stat)return;
+  stat.total=clamp0((stat.total||0)-1);
+  if(th===true)stat.ticketHit=clamp0((stat.ticketHit||0)-1);
+  if(oh===true)stat.outlookHit=clamp0((stat.outlookHit||0)-1);
+  (alerts?.length?alerts:['アラートなし']).forEach(k=>decBucket(stat.alerts,k,th,oh));
+  if(band)decBucket(stat.bands,band,th,oh);
+}
+function decPayout(stat,amount,hit){
+  if(!stat||!(Number(amount)>0)||typeof bhPayoutBand!=='function')return;
+  const k=bhPayoutBand(amount),x=stat.payoutBands?.[k]; if(!x)return;
+  x.n=clamp0((x.n||0)-1);
+  if(hit===true)x.ticket=clamp0((x.ticket||0)-1);
+}
+
+window.bhResetVenueResults=async function(venue){
+  venue=Number(venue||0); if(!venue)return;
+  const day=document.getElementById('bhResultDashDate')?.value||bhTodayKey();
+  const snaps=bhSnapshotStore(), rec=bhRecordedMap();
+  const targets=Object.entries(snaps).filter(([k,x])=>x&&x.day===day&&Number(x.venue)===venue);
+
+  try{
+    const stats=bhLoadStatsStore();
+    for(const [key,snap] of targets){
+      const old=rec[key]||{};
+      const scored=(typeof old.ticketHit==='boolean')||snap.scored===true;
+      if(!scored)continue;
+      const th=typeof old.ticketHit==='boolean'?old.ticketHit:snap.ticketHit;
+      const oh=typeof old.outlookHit==='boolean'?old.outlookHit:snap.outlookHit;
+      const alerts=snap.alerts||[];
+      const band=snap.band||bhBandName(Number(snap.pct||0));
+      decMainStat(stats.all,th,oh,alerts,band);
+      if(stats.days?.[day])decMainStat(stats.days[day],th,oh,alerts,band);
+      const payout=Number(old.payout||snap.payout||0);
+      if(old.payoutStatAdded||payout>0){
+        decPayout(stats.all,payout,th);
+        if(stats.days?.[day])decPayout(stats.days[day],payout,th);
+      }
+    }
+    bhSaveStatsStore(stats);
+  }catch(e){console.warn('result reset stats',e)}
+
+  for(const [key,snap] of targets){
+    delete rec[key];
+    delete snap.result;
+    delete snap.ticketHit;
+    delete snap.outlookHit;
+    delete snap.payout;
+    delete snap.exactaPayout;
+    delete snap.scoredAt;
+    snap.scored=false;
+    snap.updatedAt=Date.now();
+  }
+  try{localStorage.setItem(BH_RESULT_RECORDED_KEY,JSON.stringify(rec))}catch(e){}
+  bhSaveSnapshotStore(snaps);
+
+  try{window.bhRenderResultDashboard?.()}catch(e){}
+  try{
+    const st=document.getElementById('bhAutoResultStatus');
+    const span=st?.querySelector('span');
+    if(span)span.textContent=`🔄 ${bhVenueLabel(venue)} をリセット → 再確認中…`;
+  }catch(e){}
+
+  try{await window.bhAutoCheckResults?.(true)}catch(e){console.warn('result reset recheck',e)}
+  try{
+    window.bhRenderResultDashboard?.();
+    bhRefreshStatsDateOptions?.();
+    bhRenderStats?.();
+  }catch(e){}
+};
+
+window.BH_VOL54={version:54,resultResetFixed:true};
 })();
 </script>
 

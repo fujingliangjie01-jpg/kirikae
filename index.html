@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.71</div>
+<div class="bhVol">vol.72</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8990,6 +8990,121 @@ window.BH_VOL71={
   minTwoHeadsBelow80:true,
   resultBackup:true
 };
+})();
+</script>
+
+
+<script id="bh-vol72-head-balance-exacta-funded">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+function escRate(o){try{return Number(window.BH_VOL42?.escape?.(o)??50)}catch(e){return 50}}
+function rankHeads(o){
+ const a=[];
+ for(let c=1;c<=6;c++){
+  const b=V46.boatAtCourse(c);if(!b||V46.cls(b)==='cut')continue;
+  let sc=0;try{sc=N(window.BH_VOL41?.scenarioScore?.(b,o,false))}catch(e){}
+  sc+=N(V46.ev(b))*.35;if(V46.cls(b)==='third')sc-=120;
+  a.push({b,c,sc,ev:N(V46.ev(b))});
+ }
+ return a.sort((x,y)=>y.sc-x.sc||y.ev-x.ev||x.c-y.c);
+}
+function oddsOK(t){
+ const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+ return !o||Math.floor(o*100)>800;
+}
+function isBasic(t){
+ const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.source||'')).toLowerCase();
+ return !!t?.mandatory||z.includes('基本')||z.includes('買い目確定')||z.includes('必須');
+}
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+ const o=outlook||window.BH_VOL41?.outlook?.()||{}, esc=escRate(o);
+ let raw=prevGen(o)||[];
+ if(esc>=80)return raw;
+
+ const rank=rankHeads(o), h1=rank[0]?.b, h2=rank[1]?.b, h3=rank[2]?.b;
+ if(!h1||!h2)return raw;
+
+ // 2番評価の頭は「最低4件」を確保する。
+ const pool=[],seen=new Set(raw.map(K));
+ try{V46.buildNonIn(pool,o,seen)}catch(e){}
+ try{V46.buildIn(pool,o,seen)}catch(e){}
+ try{V46.ensureSixThird(pool,seen,o)}catch(e){}
+
+ const used=new Set(raw.map(K));
+ let h2count=raw.filter(t=>t?.legs?.[0]===h2).length;
+ const h2cand=pool.filter(t=>Array.isArray(t?.legs)&&t.legs.length===3&&t.legs[0]===h2&&!isBasic(t)&&oddsOK(t))
+   .sort((a,b)=>N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja'));
+
+ for(const t of h2cand){
+   if(h2count>=4)break;
+   const k=K(t);if(used.has(k))continue;
+   // 12点枠を維持。評価1位の基本買い目は交換対象にしない。
+   let ix=-1;
+   for(let i=raw.length-1;i>=0;i--){
+     if(raw[i]?.legs?.[0]!==h2 && !(isBasic(raw[i])&&raw[i]?.legs?.[0]===h1)){ix=i;break}
+   }
+   if(ix>=0){used.delete(K(raw[ix]));raw.splice(ix,1,t);used.add(k);h2count++}
+ }
+
+ // 候補不足時は2番評価頭の3連単を補充して4件まで確保。
+ if(h2count<4){
+   const boats=[1,2,3,4,5,6].filter(x=>x!==h2);
+   outer:
+   for(const s of boats)for(const th of boats){
+     if(th===s)continue;
+     const t={legs:[h2,s,th],betType:'3連単',type:'3連単',method:'AI補充',label:'',note:'2番評価・最低4件',score:-1150,mandatory:false};
+     const k=K(t);if(used.has(k)||!oddsOK(t))continue;
+     let ix=-1;
+     for(let i=raw.length-1;i>=0;i--){
+       if(raw[i]?.legs?.[0]!==h2 && !(isBasic(raw[i])&&raw[i]?.legs?.[0]===h1)){ix=i;break}
+     }
+     if(ix<0)break outer;
+     used.delete(K(raw[ix]));raw.splice(ix,1,t);used.add(k);h2count++;
+     if(h2count>=4)break outer;
+   }
+ }
+
+ // 3番評価が買い目に入る場合は、3連単を無理に増やさず2連単1点で可。
+ if(h3 && !raw.some(t=>t?.legs?.[0]===h3)){
+   const second=[1,2,3,4,5,6].find(x=>x!==h3);
+   if(second){
+     const ex={legs:[h3,second],betType:'2連単',type:'2連単',method:'AI評価3位',label:'AI評価3位・2連単',note:'3艇目頭',score:-1180,mandatory:false};
+     if(oddsOK(ex)){
+       let ix=-1;
+       for(let i=raw.length-1;i>=0;i--){
+         if(raw[i]?.legs?.[0]!==h2 && !(isBasic(raw[i])&&raw[i]?.legs?.[0]===h1)){ix=i;break}
+       }
+       if(ix>=0)raw.splice(ix,1,ex);
+     }
+   }
+ }
+ return V46.normalize(raw);
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 表示する買い目は必ず投資対象。0円買い目は表示しない。
+// 810～1500円は200円、それ以外の採用買い目は100円。総額1200円以内。
+const oldAlloc=window.bhV3Allocate;
+window.bhV3Allocate=function(tickets){
+ const budget=Math.min(1200,Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1200)/100)*100));
+ let total=0,kept=[];
+ for(const t of tickets||[]){
+   const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+   const p=o>0?Math.floor(o*100):0;
+   if(o>0&&p<=800)continue;
+   const amount=(o>0&&p>=810&&p<=1500)?200:100;
+   if(total+amount>budget)continue;
+   t.amount=amount;total+=amount;kept.push(t);
+ }
+ // 元配列を置換し、画面上に0円買い目を残さない。
+ if(Array.isArray(tickets)){tickets.splice(0,tickets.length,...kept);return tickets}
+ return kept;
+};
+window.BH_VOL72={version:72,secondHeadMin4:true,thirdHeadExactaAllowed:true,noZeroInvestmentTickets:true};
 })();
 </script>
 

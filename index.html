@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.55</div>
+<div class="bhVol">vol.56</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -7121,6 +7121,113 @@ document.addEventListener('click',e=>{
 },true);
 
 window.BH_VOL55={version:55,resultResetTouchFixed:true};
+})();
+</script>
+
+
+<script id="bh-vol56-result-reset-clear-only">
+(()=>{
+'use strict';
+const clamp0=n=>Math.max(0,Number(n)||0);
+function decBucket(obj,key,th,oh){
+  const x=obj?.[key]; if(!x)return;
+  x.n=clamp0((x.n||0)-1);
+  if(th===true)x.ticket=clamp0((x.ticket||0)-1);
+  if(oh===true)x.outlook=clamp0((x.outlook||0)-1);
+}
+function decMain(stat,th,oh,alerts,band){
+  if(!stat)return;
+  stat.total=clamp0((stat.total||0)-1);
+  if(th===true)stat.ticketHit=clamp0((stat.ticketHit||0)-1);
+  if(oh===true)stat.outlookHit=clamp0((stat.outlookHit||0)-1);
+  (alerts?.length?alerts:['アラートなし']).forEach(k=>decBucket(stat.alerts,k,th,oh));
+  if(band)decBucket(stat.bands,band,th,oh);
+}
+function decPayout(stat,amount,hit){
+  if(!stat||!(Number(amount)>0)||typeof bhPayoutBand!=='function')return;
+  const x=stat.payoutBands?.[bhPayoutBand(amount)]; if(!x)return;
+  x.n=clamp0((x.n||0)-1);
+  if(hit===true)x.ticket=clamp0((x.ticket||0)-1);
+}
+
+window.bhResetVenueResults=async function(venue){
+  venue=Number(venue||0); if(!venue)return false;
+  const day=document.getElementById('bhResultDashDate')?.value||bhTodayKey();
+  const snaps=bhSnapshotStore();
+  const rec=bhRecordedMap();
+  const targets=Object.entries(snaps).filter(([k,x])=>x&&x.day===day&&Number(x.venue)===venue);
+
+  // 集計済み分だけ差し戻す
+  try{
+    const stats=bhLoadStatsStore();
+    for(const [key,snap] of targets){
+      const old=rec[key]||{};
+      const scored=(typeof old.ticketHit==='boolean')||snap.scored===true;
+      if(!scored)continue;
+      const th=typeof old.ticketHit==='boolean'?old.ticketHit:snap.ticketHit;
+      const oh=typeof old.outlookHit==='boolean'?old.outlookHit:snap.outlookHit;
+      const alerts=snap.alerts||[];
+      const band=snap.band||bhBandName(Number(snap.pct||0));
+      decMain(stats.all,th,oh,alerts,band);
+      if(stats.days?.[day])decMain(stats.days[day],th,oh,alerts,band);
+      const payout=Number(old.payout||snap.payout||0);
+      if(old.payoutStatAdded||payout>0){
+        decPayout(stats.all,payout,th);
+        if(stats.days?.[day])decPayout(stats.days[day],payout,th);
+      }
+    }
+    bhSaveStatsStore(stats);
+  }catch(e){console.warn('reset stats',e)}
+
+  // 判定結果だけ完全に消す。予測スナップショットは残す。
+  for(const [key,snap] of targets){
+    delete rec[key];
+    for(const p of ['result','ticketHit','outlookHit','payout','exactaPayout','scoredAt','payoutStatAdded']){
+      delete snap[p];
+    }
+    snap.scored=false;
+    snap.updatedAt=Date.now();
+  }
+
+  try{localStorage.setItem(BH_RESULT_RECORDED_KEY,JSON.stringify(rec))}catch(e){}
+  try{bhSaveSnapshotStore(snaps)}catch(e){}
+
+  // ここでは再取得しない。リセット直後に同じ結果が戻って見える問題を防止。
+  try{
+    window.bhRenderResultDashboard?.();
+    bhRefreshStatsDateOptions?.();
+    bhRenderStats?.();
+  }catch(e){}
+
+  const msg=document.getElementById('bhAutoResultStatus');
+  const span=msg?.querySelector('span');
+  if(span)span.textContent=`✅ ${bhVenueLabel(venue)} の結果をリセットしました`;
+  return true;
+};
+
+// capture段階で確実に押下を拾う。vol55のハンドラより先に処理完了済みにする。
+document.addEventListener('click',async e=>{
+  const btn=e.target?.closest?.('.bhVenueResetBtn[data-bh-reset-venue]');
+  if(!btn)return;
+  e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();
+  if(btn.dataset.v56busy==='1')return;
+  btn.dataset.v56busy='1';
+  const venue=Number(btn.dataset.bhResetVenue||0);
+  btn.textContent='🔄 リセット中…';
+  try{
+    await window.bhResetVenueResults(venue);
+    if(document.body.contains(btn)){
+      btn.textContent='✅ リセット完了';
+      btn.disabled=true;
+    }
+  }catch(err){
+    console.error(err);
+    btn.dataset.v56busy='0';
+    btn.textContent='⚠️ 再試行';
+  }
+},true);
+
+window.BH_VOL56={version:56,resultResetClearOnly:true};
 })();
 </script>
 

@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.46</div>
+<body><div class="bhVol">vol.47</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -7933,7 +7933,15 @@ function bhV30ResistanceReverse(){
       const base=160+V46.ev(h)+N(BH_VOL41?.scenarioScore?.(h,outlook,false));
       for(const m of methods){
         if(c===2){
-          if(m==='sashi'){const one=V46.boatAtCourse(1);if(one)V46.addCircle(out,seen,h,one,'差し',base,false,3)}
+          if(m==='sashi'){
+            const one=V46.boatAtCourse(1);
+            if(one){
+              // 2コース差し基本：2-1-○ に加えて 1-2-○ / 1-○-2 を必ず候補生成。
+              V46.addCircle(out,seen,h,one,'差し',base,false,3);
+              V46.addCircle(out,seen,one,h,'逃げ・2差し残し',base+42,false,2);
+              for(const s of V46.circleSecond(one,h,2))V46.add(out,seen,V46.ticket([one,s,h],'逃げ・2差し残し',base+40+V46.legScore(s,2,one)));
+            }
+          }
           if(m==='makuri'&&V46.twoMakuriOK()){const b3=V46.boatAtCourse(3);if(b3)V46.addCircle(out,seen,h,b3,'まくり',base+35,false,3)}
         }
         if(c===3){
@@ -8013,7 +8021,8 @@ function bhV30ResistanceReverse(){
     // 旧「払戻1,500円以下」「200円で1,200円未満」フィルターは一切使わない。
     filtered.sort((a,b)=>(b.mandatory?1:0)-(a.mandatory?1:0)||N(b.score)-N(a.score));
     const mandatory=filtered.filter(t=>t.mandatory),normal=filtered.filter(t=>!t.mandatory);
-    const target=12,maxNormal=Math.max(0,target-mandatory.length);
+    // 基本12点。イン逃げ率が高い時（60%以上）は従来どおり最大10点。
+    const target=esc>=60?10:12,maxNormal=Math.max(0,target-mandatory.length);
     let picked=[...mandatory,...normal.slice(0,maxNormal)];
     if(!picked.length){try{picked=(BH_VOL41.generate(o)||[]).slice(0,12)}catch(e){}}
     return V46.normalize(picked);

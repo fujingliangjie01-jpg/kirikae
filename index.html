@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.60</div>
+<div class="bhVol">vol.62</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -7682,6 +7682,260 @@ V46.buildNonIn=function(out,outlook,seen){
 };
 
 window.BH_VOL60={version:60,basicBetTableUpdated:true};
+})();
+</script>
+
+
+<script id="bh-vol61-basic-update-head-cap">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function lit(out,seen,courses,method,score,confirmed=false,label='基本買い目'){
+  const legs=courses.map(V46.boatAtCourse);
+  if(!legs.every(Boolean))return;
+  V46.add(out,seen,V46.ticket(legs,method,score,true,confirmed?'買い目確定':label));
+}
+function c3(out,seen,hc,sc,method,score,count=3,label='基本買い目'){
+  const h=V46.boatAtCourse(hc),sec=V46.boatAtCourse(sc); if(!h||!sec)return;
+  V46.circle(h,sec,count).forEach((x,i)=>V46.add(out,seen,V46.ticket(
+    [h,sec,x],method,score+V46.legScore(x,3,h),i===0,i===0?label:''
+  )));
+}
+function c2(out,seen,hc,tc,method,score,count=3,label='基本買い目'){
+  const h=V46.boatAtCourse(hc),third=V46.boatAtCourse(tc); if(!h||!third)return;
+  V46.circleSecond(h,third,count).forEach((x,i)=>V46.add(out,seen,V46.ticket(
+    [h,x,third],method,score+V46.legScore(x,2,h),i===0,i===0?label:''
+  )));
+}
+function methods(h){
+  const a=V46.methodOrder(h)||[]; if(!a.length)return [];
+  const r=[a[0][0]];
+  if(a[1]&&N(a[1][1])>0&&N(a[0][1])-N(a[1][1])<=5)r.push(a[1][0]);
+  return r;
+}
+
+V46.buildNonIn=function(out,outlook,seen){
+  const wall=window.BH_VOL45?.wall?.()||{};
+  for(let c=2;c<=6;c++){
+    const h=V46.boatAtCourse(c); if(!h||V46.cls(h)!=='normal')continue;
+    const base=160+V46.ev(h)+N(window.BH_VOL41?.scenarioScore?.(h,outlook,false));
+    for(const m of methods(h)){
+      if(c===2){
+        if(m==='sashi'){
+          const one=V46.boatAtCourse(1);
+          [3,4,5,6].map(course=>({course,boat:V46.boatAtCourse(course)}))
+            .filter(x=>x.boat&&x.boat!==h&&x.boat!==one)
+            .sort((a,b)=>V46.legScore(b.boat,3,h)-V46.legScore(a.boat,3,h)||a.course-b.course)
+            .slice(0,2).forEach((x,i)=>lit(out,seen,[2,1,x.course],'差し',base+60-i));
+        }
+        if(m==='makuri'&&V46.twoMakuriOK()){
+          lit(out,seen,[2,3,4],'まくり',base+70);
+          lit(out,seen,[2,3,6],'まくり',base+68);
+          c2(out,seen,2,3,'まくり',base+62,3,'基本買い目 2-○-3');
+        }
+      }
+      if(c===3){
+        if(m==='makuri'){
+          if(wall.weak2){
+            c3(out,seen,3,4,'まくり',base+65,3,'基本買い目 3-4-○');
+            lit(out,seen,[3,4,6],'まくり',base+64);
+            [[1,3,4],[1,3,5],[1,3,6],[4,3,1],[4,3,2]]
+              .forEach(x=>lit(out,seen,x,'まくり',base+110,true));
+          }
+          if(V46.oneStartGood()){
+            c3(out,seen,3,1,'まくり',base+60,3,'基本買い目 3-1-○');
+            c3(out,seen,3,4,'まくり',base+58,3,'基本買い目 3-4-○');
+            lit(out,seen,[3,4,6],'まくり',base+57);
+          }
+        }
+        if(m==='makurizashi'){
+          [[3,1,2],[3,2,1]].forEach(x=>lit(out,seen,x,'まくり差し',base+65));
+          c3(out,seen,3,1,'まくり差し',base+62,3,'基本買い目 3-1-○');
+          [[1,3,4],[1,3,5]].forEach(x=>lit(out,seen,x,'まくり差し',base+60));
+        }
+      }
+      if(c===4){
+        if(m==='sashi'){
+          [[4,1,5],[4,1,2],[1,4,3]].forEach(x=>lit(out,seen,x,'差し',base+60));
+          c3(out,seen,1,4,'差し',base+55,3,'基本買い目 1-4-○');
+        }
+        if(m==='makuri'){
+          c3(out,seen,4,5,'まくり',base+70,3,'基本買い目 4-5-○');
+          lit(out,seen,[4,5,6],'まくり',base+68);
+          [[1,4,5],[5,1,4],[5,4,1]].forEach(x=>lit(out,seen,x,'まくり',base+115,true));
+        }
+        if(m==='makurizashi'){
+          [[4,1,5],[4,3,1],[4,1,2],[4,2,1]].forEach(x=>lit(out,seen,x,'まくり差し',base+65));
+          [[1,4,2],[1,4,3]].forEach(x=>lit(out,seen,x,'まくり差し',base+115,true));
+        }
+      }
+      if(c===5){
+        if(m==='makuri'&&V46.fiveMakuriOK()){
+          c2(out,seen,5,6,'まくり',base+75,3,'基本買い目 5-○-6');
+          [[5,6,2],[5,6,4]].forEach(x=>lit(out,seen,x,'まくり',base+72));
+        }
+        if(m==='makurizashi'){
+          [[5,3,1],[5,1,3],[5,4,1],[5,1,4]].forEach(x=>lit(out,seen,x,'まくり差し',base+62));
+        }
+      }
+      if(c===6){
+        if(m==='sashi')c3(out,seen,6,1,'差し',base+60,3,'基本買い目 6-1-○');
+        if(m==='makuri'&&V46.sixMakuriSpecial()){
+          c2(out,seen,6,1,'まくり',base+125,3,'6コースまくり条件 6-○-1');
+          c2(out,seen,6,2,'まくり',base+120,3,'6コースまくり条件 6-○-2');
+        }
+        if(m==='makurizashi'){
+          c3(out,seen,6,1,'まくり差し',base+38,2,'基本買い目 6-1-○');
+          c3(out,seen,1,6,'まくり差し',base+34,2,'基本買い目 1-6-○');
+        }
+      }
+    }
+  }
+};
+
+// 頭は通常最大3艇。4艇目は「裏展開」と明示された候補だけ許可。
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const raw=prevGen(outlook)||[];
+  const result=[],heads=[],seen=new Set();
+
+  function isReverse(t){
+    const txt=((t?.note||'')+' '+(t?.label||'')+' '+(t?.method||'')).toLowerCase();
+    return txt.includes('裏展開')||txt.includes('reverse');
+  }
+  for(const t of raw){
+    if(!t?.legs?.length)continue;
+    const k=K(t); if(seen.has(k))continue;
+    const h=t.legs[0];
+    const known=heads.includes(h);
+    if(!known){
+      if(heads.length<3)heads.push(h);
+      else if(heads.length===3&&isReverse(t))heads.push(h);
+      else continue;
+    }
+    if(heads.indexOf(h)>=4)continue;
+    seen.add(k);result.push(t);
+  }
+  return V46.normalize(result);
+};
+window.bhV3Generate=o=>V46.generate(o);
+window.BH_VOL61={version:61,basicUpdated:true,maxHeads:3,reverseFourth:true};
+})();
+</script>
+
+
+<style id="bh-vol62-before-rank-highlight">
+.bhBeforeRank1{background:#5b1111!important;color:#ff6b6b!important;font-weight:1000!important;box-shadow:inset 0 0 0 1px #ff3b30}
+.bhBeforeRank2{background:#51440b!important;color:#ffe45c!important;font-weight:1000!important;box-shadow:inset 0 0 0 1px #d4af37}
+</style>
+<script id="bh-vol62-odds-budget-before-highlight">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;
+if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const key=t=>(t?.legs||[]).join('-');
+
+function liveOdds(t){
+  const o=Number(window.bhGetOdds?.(key(t)))||Number(t?.odds)||0;
+  return Number.isFinite(o)&&o>0?o:0;
+}
+
+// オッズ取得済み時だけ適用：800円以下を切り、810〜1500円以下は200円。
+// オッズは倍率なので、100円払戻に換算して判定する。
+function applyOddsRule(list){
+  const src=(list||[]).map(t=>({...t,odds:liveOdds(t)||t.odds||null}));
+  const known=src.filter(t=>liveOdds(t)>0);
+  if(!known.length)return src; // 未取得時は勝手に切らない
+  const kept=src.filter(t=>{
+    const o=liveOdds(t);
+    if(!o)return true;
+    return Math.floor(o*100)>800;
+  });
+  return kept;
+}
+
+// vol61の生成後に低払戻を除外。足りない分は既存候補を評価順で補う。
+// 同じルールを通すので800円以下は補充にも使わない。
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  let chosen=prevGen(outlook)||[];
+  const target=chosen.length;
+  chosen=applyOddsRule(chosen);
+
+  // vol61で落ちた低オッズ分は、現行基本ロジックから別候補を作って補充
+  if(chosen.length<target){
+    const o=outlook||window.BH_VOL41?.outlook?.()||{};
+    const pool=[],seen=new Set();
+    try{V46.buildIn(pool,o,seen)}catch(e){}
+    try{V46.buildNonIn(pool,o,seen)}catch(e){}
+    try{V46.ensureSixThird(pool,seen,o)}catch(e){}
+    const used=new Set(chosen.map(key));
+    applyOddsRule(pool)
+      .filter(t=>!used.has(key(t)))
+      .sort((a,b)=>(b.mandatory?1:0)-(a.mandatory?1:0)||N(b.score)-N(a.score)||key(a).localeCompare(key(b),'ja'))
+      .forEach(t=>{
+        if(chosen.length>=target)return;
+        used.add(key(t));chosen.push(t);
+      });
+  }
+  return V46.normalize(chosen);
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 1R投資上限1200円。
+// 810〜1500円払戻帯（8.1〜15.0倍）は必ず200円、他は100円から。
+// 200円必須点が多くても合計1200円を超えない。
+window.bhV3Allocate=function(tickets){
+  const cap=Math.min(1200,Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1200)/100)*100));
+  tickets.forEach(t=>t.amount=0);
+  if(!tickets.length)return tickets;
+
+  const valid=tickets.filter(t=>liveOdds(t)<=0 || Math.floor(liveOdds(t)*100)>800);
+  const mid=valid.filter(t=>{const p=Math.floor(liveOdds(t)*100);return p>=810&&p<=1500});
+  const other=valid.filter(t=>!mid.includes(t));
+
+  let left=cap;
+  // 中間帯は2枚を最優先
+  for(const t of mid){
+    if(left<200)break;
+    t.amount=200;left-=200;
+  }
+  // その他は最低1枚
+  for(const t of other){
+    if(left<100)break;
+    t.amount=100;left-=100;
+  }
+  // 残額は評価%順。ただし総額1200円以内
+  const order=[...valid].sort((a,b)=>N(b.prob)-N(a.prob)||key(a).localeCompare(key(b),'ja'));
+  let i=0;
+  while(left>=100&&order.length){
+    order[i%order.length].amount+=100;left-=100;i++;
+  }
+  return tickets;
+};
+
+// 直前情報：展示・直線・まわり足・一周の1位=赤、2位=黄。
+// タイム項目なので小さい値を上位とする。
+function ranks(rows,field){
+  return rows.filter(x=>Number.isFinite(Number(x[field]))&&Number(x[field])>0)
+    .slice().sort((a,b)=>Number(a[field])-Number(b[field])||a.b-b.b)
+    .reduce((m,x,i)=>(m[x.b]=i+1,m),{});
+}
+function cls(rank){return rank===1?'bhBeforeRank1':rank===2?'bhBeforeRank2':''}
+window.bhRenderBeforeInfo=function(){
+  const card=document.getElementById("bhBeforeInfoCard"),box=document.getElementById("bhBeforeInfoRows");if(!card||!box)return;
+  const rows=[1,2,3,4,5,6].map(bhBeforeRow),has=rows.some(x=>[x.st,x.ex,x.straight,x.lap,x.turn,x.tilt,x.weight,x.adjust,x.parts].some(v=>v!==null));
+  card.style.display="block";
+  const rx=ranks(rows,'ex'),rs=ranks(rows,'straight'),rl=ranks(rows,'lap'),rt=ranks(rows,'turn');
+  let wind="";try{let w=weatherSource()||{};wind=`<div class="bhVerifyNote">🌬️ 気象：風速 ${bhPickFirst(w,["wind_speed","windSpeed"])??"－"}m / 風向 ${bhPickFirst(w,["wind_direction","windDirection","wind_name"])??"－"} / 波高 ${bhPickFirst(w,["wave_height","waveHeight"])??"－"}cm / 水温 ${bhPickFirst(w,["water_temperature","waterTemperature"])??"－"}℃</div>`}catch(e){}
+  box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${x.st==null?'－':bhFmtBefore(x.st)}</td><td class="${cls(rs[x.b])}">${x.straight==null?'－':bhFmtBefore(x.straight)}</td><td class="${cls(rx[x.b])}">${x.ex==null?'－':bhFmtBefore(x.ex)}</td><td class="${cls(rl[x.b])}">${x.lap==null?'－':bhFmtBefore(x.lap)}</td><td class="${cls(rt[x.b])}">${x.turn==null?'－':bhFmtBefore(x.turn)}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">直前情報スナップショットは締切1〜10分前（通常約5分前）に公開されます。公開後に再取得してください。</div>':''}`;
+};
+
+window.BH_VOL62={version:62,oddsCut800:true,midOddsTwoUnits:true,budgetCap1200:true,beforeRankHighlight:true};
 })();
 </script>
 

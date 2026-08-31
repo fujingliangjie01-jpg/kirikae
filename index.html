@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.47</div>
+<body><div class="bhVol">vol.48</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -8066,5 +8066,92 @@ function bhV30ResistanceReverse(){
   window.BH_VOL46=V46;
 })();
 </script>
+
+<script id="bh-vol48-bet-composition-fix">
+(()=>{
+  'use strict';
+  const V46=window.BH_VOL46;if(!V46)return;
+  const N=v=>Number.isFinite(Number(v))?Number(v):0;
+
+  // vol48:
+  // ・イン以外優勢は必ず12点
+  // ・通常イン逃げ(50.0～59.9%)もイン以外頭を必ず含める
+  // ・高イン逃げ(60%以上)は従来の10点ルールを継続
+  // ・基本買い目/買い目確定は通常候補より優先して残す
+  V46.generate=function(outlook){
+    const o=outlook||window.BH_VOL41?.outlook?.()||{};
+    let esc=50;try{esc=window.BH_VOL42?.escape?.(o)??50}catch(e){}
+    const all=[],seen=new Set();
+
+    if(esc>=50)V46.buildIn(all,o,seen);
+
+    // イン以外優勢、通常イン逃げの両方でイン以外基本形を生成。
+    if(esc<60)V46.buildNonIn(all,o,seen);
+
+    // 高イン逃げでも「買い目確定」だけは必ず拾う。
+    if(esc>=60){
+      const tmp=[],tmpSeen=new Set();
+      V46.buildNonIn(tmp,o,tmpSeen);
+      for(const t of tmp.filter(x=>x.mandatory))V46.add(all,seen,t);
+    }
+
+    V46.ensureSixThird(all,seen,o);
+
+    const b6=V46.boatAtCourse(6),sixSpecial=V46.sixMakuriSpecial();
+    let filtered=all.filter(t=>{
+      if(!Array.isArray(t.legs)||t.legs.length!==3)return false;
+      if(sixSpecial&&b6&&t.legs.includes(b6)&&t.legs[0]!==b6)return false;
+      if(V46.cls(t.legs[0])!=='normal'&&!t.mandatory)return false;
+      return true;
+    });
+
+    filtered.sort((a,b)=>(b.mandatory?1:0)-(a.mandatory?1:0)||N(b.score)-N(a.score));
+
+    const one=V46.boatAtCourse(1);
+    const mandatory=filtered.filter(t=>t.mandatory);
+    const normal=filtered.filter(t=>!t.mandatory);
+
+    // 高イン逃げだけ10点。それ以外は12点。
+    const target=esc>=60?10:12;
+    const picked=[],used=new Set();
+    const add=t=>{
+      if(!t||picked.length>=target)return;
+      const k=(t.legs||[]).join('-');
+      if(used.has(k))return;
+      used.add(k);picked.push(t);
+    };
+
+    // 1) 買い目確定を最優先。
+    mandatory.forEach(add);
+
+    // 2) 通常イン逃げ(50～59.9)ではイン以外頭を最低1点必ず確保。
+    if(esc>=50&&esc<60){
+      const nonIn=normal.find(t=>t.legs?.[0]!==one);
+      add(nonIn);
+    }
+
+    // 3) イン以外優勢では12点の中心をイン以外頭にする。
+    if(esc<50){
+      normal.filter(t=>t.legs?.[0]!==one).forEach(add);
+    }
+
+    // 4) 残り枠を総合スコア順で補充。
+    normal.forEach(add);
+
+    // 念のため既存候補で不足分を補う。
+    if(picked.length<target){
+      try{
+        for(const t of (window.BH_VOL41?.generate?.(o)||[]))add(t);
+      }catch(e){}
+    }
+
+    return V46.normalize(picked.slice(0,target));
+  };
+
+  window.bhV3Generate=function(outlook){return V46.generate(outlook)};
+  window.BH_VOL48={version:48};
+})();
+</script>
+
 </body>
 </html>

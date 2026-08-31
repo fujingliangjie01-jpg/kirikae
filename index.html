@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.70</div>
+<div class="bhVol">vol.71</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8833,6 +8833,163 @@ window.bhV3Generate=o=>V46.generate(o);
 // 同じレースの再描画では「オッズだけ更新」、買い目は固定。
 // 場またはレースが変われば別キーなので別買い目として生成される。
 window.BH_VOL70={version:70,stableSameRaceSelection:true,oddsExcludedFromSelectionSignature:true};
+})();
+</script>
+
+
+<script id="bh-vol71-min-two-heads-result-persist">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function escRate(o){
+  try{return Number(window.BH_VOL42?.escape?.(o)??50)}catch(e){return 50}
+}
+function headRanking(outlook){
+  const a=[];
+  for(let c=1;c<=6;c++){
+    const b=V46.boatAtCourse(c);
+    if(!b||V46.cls(b)==='cut')continue;
+    let sc=0;
+    try{sc=N(window.BH_VOL41?.scenarioScore?.(b,outlook,false))}catch(e){}
+    sc+=N(V46.ev(b))*.35;
+    if(V46.cls(b)==='third')sc-=120;
+    a.push({b,c,sc,ev:N(V46.ev(b))});
+  }
+  a.sort((x,y)=>y.sc-x.sc||y.ev-x.ev||x.c-y.c||x.b-y.b);
+  return a;
+}
+function isBasic(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.source||'')).toLowerCase();
+  return !!t?.mandatory||z.includes('基本')||z.includes('買い目確定')||z.includes('必須');
+}
+function oddsOK(t){
+  const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+  return !o||Math.floor(o*100)>800;
+}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  let raw=prevGen(o)||[];
+  const esc=escRate(o);
+
+  // 高確率イン逃げ帯(80%以上)以外は、1着候補を最低2艇用意する。
+  if(esc<80 && raw.length){
+    const heads=[...new Set(raw.map(t=>t?.legs?.[0]).filter(Boolean))];
+    if(heads.length<2){
+      const ranking=headRanking(o);
+      const first=heads[0]||ranking[0]?.b;
+      const second=ranking.find(x=>x.b!==first)?.b;
+
+      if(second){
+        const pool=[],seen=new Set(raw.map(K));
+        try{V46.buildNonIn(pool,o,seen)}catch(e){}
+        try{V46.buildIn(pool,o,seen)}catch(e){}
+        try{V46.ensureSixThird(pool,seen,o)}catch(e){}
+
+        let cand=pool
+          .filter(t=>Array.isArray(t?.legs)&&t.legs.length===3)
+          .filter(t=>t.legs[0]===second)
+          .filter(t=>!isBasic(t)) // 基本買い目は評価1位だけ、ここでは通常AI買い目だけ
+          .filter(oddsOK)
+          .sort((a,b)=>N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja'))[0];
+
+        if(!cand){
+          // 通常候補が足りない時だけ、第二頭のAI補充を1点作る。
+          const boats=[1,2,3,4,5,6].filter(x=>x!==second);
+          outer:
+          for(const s of boats){
+            for(const th of boats){
+              if(th===s)continue;
+              const t={legs:[second,s,th],betType:'3連単',method:'AI補充',label:'',note:'最低2頭補充',score:-1200,mandatory:false};
+              if(!raw.some(x=>K(x)===K(t))&&oddsOK(t)){cand=t;break outer}
+            }
+          }
+        }
+
+        if(cand){
+          // 点数は増やさず、評価1位の基本買い目以外の最後尾1点と入れ替える。
+          let replace=-1;
+          for(let i=raw.length-1;i>=0;i--){
+            if(!isBasic(raw[i])){replace=i;break}
+          }
+          if(replace>=0)raw.splice(replace,1,cand);
+          else if(raw.length<12)raw.push(cand);
+        }
+      }
+    }
+  }
+  return V46.normalize(raw);
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// ---------- 結果確認の保存を二重化 ----------
+const BACKUP_KEY='BOAT_HUNTER_RESULT_BACKUP_VOL71_V1';
+function safeJSON(key){
+  try{
+    const v=localStorage.getItem(key);
+    if(!v)return null;
+    const x=JSON.parse(v);
+    return x&&typeof x==='object'?x:null;
+  }catch(e){return null}
+}
+function persistResultBackup(){
+  try{
+    const payload={
+      savedAt:Date.now(),
+      recorded:safeJSON(window.BH_RESULT_RECORDED_KEY||'BOAT_HUNTER_RECORDED_RACES_VOL30_FRESH_RESET_V1')||safeJSON('BOAT_HUNTER_RECORDED_RACES_VOL30_FRESH_RESET_V1')||{},
+      allResults:safeJSON(window.BH_ALL_RESULTS_KEY||'BOAT_HUNTER_ALL_RESULTS_3D_V1')||safeJSON('BOAT_HUNTER_ALL_RESULTS_3D_V1')||{},
+      snapshots:safeJSON(window.BH_PREDICTION_SNAPSHOT_KEY||'BOAT_HUNTER_PREDICTION_SNAPSHOTS_VOL30_FRESH_RESET_V1')||safeJSON('BOAT_HUNTER_PREDICTION_SNAPSHOTS_VOL30_FRESH_RESET_V1')||{}
+    };
+    localStorage.setItem(BACKUP_KEY,JSON.stringify(payload));
+  }catch(e){}
+}
+function restoreResultBackup(){
+  try{
+    const b=safeJSON(BACKUP_KEY);if(!b)return;
+    const keys=[
+      ['BOAT_HUNTER_RECORDED_RACES_VOL30_FRESH_RESET_V1',b.recorded],
+      ['BOAT_HUNTER_ALL_RESULTS_3D_V1',b.allResults],
+      ['BOAT_HUNTER_PREDICTION_SNAPSHOTS_VOL30_FRESH_RESET_V1',b.snapshots]
+    ];
+    for(const [k,v] of keys){
+      const cur=safeJSON(k);
+      const curEmpty=!cur||Object.keys(cur).length===0;
+      if(curEmpty&&v&&Object.keys(v).length)localStorage.setItem(k,JSON.stringify(v));
+    }
+  }catch(e){}
+}
+restoreResultBackup();
+
+const prevAuto=window.bhAutoCheckResults;
+if(typeof prevAuto==='function'){
+  window.bhAutoCheckResults=async function(){
+    const r=await prevAuto.apply(this,arguments);
+    persistResultBackup();
+    return r;
+  };
+}
+const prevDash=window.bhRenderResultDashboard;
+if(typeof prevDash==='function'){
+  window.bhRenderResultDashboard=function(){
+    restoreResultBackup();
+    const r=prevDash.apply(this,arguments);
+    persistResultBackup();
+    return r;
+  };
+}
+window.addEventListener('pagehide',persistResultBackup);
+window.addEventListener('beforeunload',persistResultBackup);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persistResultBackup()});
+
+window.BH_VOL71={
+  version:71,
+  minTwoHeadsBelow80:true,
+  resultBackup:true
+};
 })();
 </script>
 

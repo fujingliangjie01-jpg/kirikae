@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.45</div>
+<body><div class="bhVol">vol.46</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -7826,5 +7826,236 @@ function bhV30ResistanceReverse(){
 })();
 </script>
 
+
+
+<style id="bh-vol46-buy-result-ui">
+/* 旧「3着まで / 切り候補」表示は消し、vol45以降の新判定パッチだけを表示。 */
+#exclusions{display:none!important}
+.betPatch.third,.betPatch.cut{display:none!important}
+#ranking td>span{display:none!important}
+.bhV46Mandatory{box-shadow:inset 4px 0 0 #ffb020!important;background:rgba(255,176,32,.08)!important}
+.bhV46MandatoryTag{display:inline-block;margin-left:5px;padding:2px 6px;border-radius:6px;border:1px solid #ffb020;color:#ffd36a;background:#2a1d06;font-size:9px;font-weight:1000}
+.bhV46OddsLabel{font-size:9px;display:block;color:#7fceff;font-weight:900;line-height:1.1;margin-bottom:2px}
+.bhV46VenueBody{display:none}
+.bhResultDashVenue.bhV46Open .bhV46VenueBody{display:block}
+.bhResultDashVenueHead{cursor:pointer;user-select:none}
+.bhV46FoldMark{margin-left:auto;font-size:10px;color:#9aa;font-weight:900}
+.bhResultDashVenue.bhV46Open .bhV46FoldMark::after{content:"▲ 開く→閉じる"}
+.bhResultDashVenue:not(.bhV46Open) .bhV46FoldMark::after{content:"▼ タップで開く"}
+</style>
+<script id="bh-vol46-buy-result-engine">
+(function(){
+  const V46={};
+  const N=v=>{v=Number(v);return Number.isFinite(v)?v:0};
+  const boats=[1,2,3,4,5,6];
+  const key=t=>Array.isArray(t?.legs)?t.legs.join('-'):'';
+  V46.boatAtCourse=function(c){return boats.find(b=>Number(course(b))===Number(c))||null};
+  V46.ev=function(b){try{return N((ranking()||[]).find(x=>Number(x.boat)===Number(b))?.score)}catch(e){return 0}};
+  V46.cls=function(b){try{return classification(b,ranking())?.type||'normal'}catch(e){return 'normal'}};
+  V46.startRows=function(){
+    return boats.map(b=>{let s={};try{s=bhStartStats(b)||{}}catch(e){};return{b,p:N(s.predict)||null,avg:N(s.avg)||null}})
+      .sort((a,b)=>(a.p??9)-(b.p??9));
+  };
+  V46.startRank=function(b){const a=V46.startRows(),i=a.findIndex(x=>x.b===Number(b));return i<0?99:i+1};
+  V46.startPredict=function(b){try{const n=Number(bhStartStats(b)?.predict);return Number.isFinite(n)?n:null}catch(e){return null}};
+  V46.oneStartVeryBad=function(){
+    const b=V46.boatAtCourse(1)||1,p=V46.startPredict(b),rows=V46.startRows(),fast=rows[0]?.p;
+    return Number.isFinite(p)&&(p>=.19 || (V46.startRank(b)===6&&Number.isFinite(fast)&&p-fast>=.05));
+  };
+  V46.oneStartGood=function(){const b=V46.boatAtCourse(1)||1,p=V46.startPredict(b);return Number.isFinite(p)&&(p<=.15||V46.startRank(b)<=2)};
+  V46.fourStartLate=function(){const b=V46.boatAtCourse(4);if(!b)return false;const p=V46.startPredict(b);return Number.isFinite(p)&&(p>=.18||V46.startRank(b)>=5)};
+  V46.oneMRows=function(){try{return bhOneMOutlookSignal()?.theory?.rows||BH_VOL41?.oneM?.()||[]}catch(e){return[]}};
+  V46.stretchRank=function(b){
+    const rows=V46.oneMRows().map(x=>({b:Number(x.boat),v:Number(x.stretchBody)})).filter(x=>Number.isFinite(x.v)).sort((a,b)=>b.v-a.v);
+    const i=rows.findIndex(x=>x.b===Number(b));return i<0?99:i+1;
+  };
+  V46.tilt=function(b){
+    try{const n=Number(bhBeforeRow(b)?.tilt);if(Number.isFinite(n))return n}catch(e){}
+    try{const p=preview(b)||{};for(const k of ['tilt','tilt_adjustment','tilt_angle','tiltAngle']){const n=Number(p[k]);if(Number.isFinite(n))return n}}catch(e){}
+    return null;
+  };
+  V46.motorAcePlus=function(b){try{const k=BH_VOL45?.motorClass?.(b)?.key;return k==='ace'||k==='monster'}catch(e){return false}};
+  V46.rates=function(b){
+    try{const x=BH_VOL41.methodRates(b)||{};return{sashi:N(x.sashi),makuri:N(x.makuri),makurizashi:N(x.makurizashi)}}catch(e){}
+    try{const d=decisions(racer(b))||{};return{sashi:N(d.sashi),makuri:N(d.maki),makurizashi:N(d.makiSashi)}}catch(e){return{sashi:0,makuri:0,makurizashi:0}}
+  };
+  V46.methodOrder=function(b){const r=V46.rates(b);return Object.entries(r).sort((a,z)=>z[1]-a[1]);};
+  V46.legScore=function(b,pos,head){let s=V46.ev(b)*.35;try{s+=N(bhV3LegScore(b,pos,head))}catch(e){};try{const row=V46.oneMRows().find(x=>Number(x.boat)===Number(b));if(row)s-=N(row.boatBehind)*25}catch(e){};if(V46.cls(b)==='third'&&pos===3)s+=20;if(V46.cls(b)==='cut')s-=1000;return s};
+  V46.circle=function(head,second,count=3){
+    const one=V46.boatAtCourse(1),behind=V46.boatAtCourse(Number(course(head))+1);
+    return boats.filter(b=>b!==head&&b!==second&&V46.cls(b)!=='cut').sort((a,b)=>{
+      let sa=V46.legScore(a,3,head),sb=V46.legScore(b,3,head);
+      if(a===one)sa+=55;if(b===one)sb+=55;if(a===behind)sa+=45;if(b===behind)sb+=45;
+      return sb-sa;
+    }).slice(0,count);
+  };
+  V46.circleSecond=function(head,fixedThird,count=2){
+    const one=V46.boatAtCourse(1),behind=V46.boatAtCourse(Number(course(head))+1);
+    return boats.filter(b=>b!==head&&b!==fixedThird&&V46.cls(b)==='normal').sort((a,b)=>{
+      let sa=V46.legScore(a,2,head),sb=V46.legScore(b,2,head);
+      if(a===one)sa+=60;if(b===one)sb+=60;if(a===behind)sa+=50;if(b===behind)sb+=50;
+      return sb-sa;
+    }).slice(0,count);
+  };
+  V46.ticket=function(legs,method,score=0,mandatory=false,label=''){
+    const k=legs.join('-'),o=Number(window.bhGetOdds?.(k));
+    return{legs:[...legs],betType:legs.length===2?'2連単':'3連単',method,label,score:N(score),mandatory:!!mandatory,bhV46Mandatory:!!mandatory,odds:Number.isFinite(o)&&o>0?o:null};
+  };
+  V46.add=function(arr,seen,t){const k=key(t);if(!k||seen.has(k)||new Set(t.legs).size!==t.legs.length)return;seen.add(k);arr.push(t)};
+  V46.addCircle=function(arr,seen,head,second,method,score,mandatory=false,count=2){for(const x of V46.circle(head,second,count))V46.add(arr,seen,V46.ticket([head,second,x],method,score+V46.legScore(x,3,head),mandatory,mandatory?'買い目確定':''))};
+  V46.addCourseLiteral=function(arr,seen,courses,method,score,mandatory=false){const legs=courses.map(V46.boatAtCourse);if(legs.every(Boolean))V46.add(arr,seen,V46.ticket(legs,method,score,mandatory,mandatory?'買い目確定':''))};
+  V46.sixMakuriSpecial=function(){
+    const b6=V46.boatAtCourse(6);if(!b6)return false;const t=V46.tilt(b6),p=V46.startPredict(b6);
+    return (t===2||t===3)&&V46.stretchRank(b6)===1&&Number.isFinite(p)&&p<=.17&&V46.startRank(b6)<=4;
+  };
+  V46.fiveMakuriOK=function(){const b5=V46.boatAtCourse(5);return !!b5&&V46.motorAcePlus(b5)&&V46.fourStartLate()&&V46.stretchRank(b5)<=2&&!BH_VOL45?.wall?.().strong};
+  V46.twoMakuriOK=function(){const b2=V46.boatAtCourse(2);return !!b2&&V46.oneStartVeryBad()&&V46.rates(b2).makuri>0};
+
+  V46.buildIn=function(out,outlook,seen){
+    const h=V46.boatAtCourse(1);if(!h)return;
+    const secs=boats.filter(b=>b!==h&&V46.cls(b)==='normal').sort((a,b)=>V46.legScore(b,2,h)-V46.legScore(a,2,h)).slice(0,3);
+    const hs=250+N(BH_VOL42?.escape?.(outlook));
+    for(const s of secs){
+      const thirds=V46.circle(h,s,2);if(thirds[0])V46.add(out,seen,V46.ticket([h,s,thirds[0]],'逃げ',hs+V46.legScore(s,2,h)+V46.legScore(thirds[0],3,h)));
+      // 2着候補は必ず3着になる裏側も1点作る。
+      const alt=boats.filter(x=>x!==h&&x!==s&&V46.cls(x)==='normal').sort((a,b)=>V46.legScore(b,2,h)-V46.legScore(a,2,h))[0];
+      if(alt)V46.add(out,seen,V46.ticket([h,alt,s],'逃げ',hs+V46.legScore(alt,2,h)+V46.legScore(s,3,h),true,'2着候補→3着'));
+    }
+  };
+
+  V46.buildNonIn=function(out,outlook,seen){
+    const wall=BH_VOL45?.wall?.()||{};
+    for(let c=2;c<=6;c++){
+      const h=V46.boatAtCourse(c);if(!h||V46.cls(h)!=='normal')continue;
+      const rates=V46.rates(h),ord=V46.methodOrder(h),top=ord[0]?.[0]||'sashi',second=ord[1];
+      // 同程度なら2種類まで展開候補に残す。率0は作らない。
+      const methods=[top];if(second&&second[1]>0&&ord[0][1]-second[1]<=5)methods.push(second[0]);
+      const base=160+V46.ev(h)+N(BH_VOL41?.scenarioScore?.(h,outlook,false));
+      for(const m of methods){
+        if(c===2){
+          if(m==='sashi'){const one=V46.boatAtCourse(1);if(one)V46.addCircle(out,seen,h,one,'差し',base,false,3)}
+          if(m==='makuri'&&V46.twoMakuriOK()){const b3=V46.boatAtCourse(3);if(b3)V46.addCircle(out,seen,h,b3,'まくり',base+35,false,3)}
+        }
+        if(c===3){
+          if(m==='makuri'){
+            if(wall.weak2){const b4=V46.boatAtCourse(4);if(b4)V46.addCircle(out,seen,h,b4,'まくり',base+45,false,3);
+              // 買い目確定
+              [[1,3,4],[1,3,5],[1,3,6],[4,3,1],[4,3,2]].forEach(x=>V46.addCourseLiteral(out,seen,x,'まくり',base+90,true));
+            }
+            if(V46.oneStartGood()){const one=V46.boatAtCourse(1);if(one)V46.addCircle(out,seen,h,one,'まくり',base+25,false,3)}
+          }
+          if(m==='makurizashi'){const one=V46.boatAtCourse(1),b2=V46.boatAtCourse(2);if(one)V46.addCircle(out,seen,h,one,'まくり差し',base+30,false,3);if(b2&&one)V46.add(out,seen,V46.ticket([h,b2,one],'まくり差し',base+55))}
+          // 3コース差しは「あまりない」ため基本買い目では自動生成しない。
+        }
+        if(c===4){
+          if(m==='sashi'){V46.addCourseLiteral(out,seen,[4,1,5],'差し',base+35);V46.addCourseLiteral(out,seen,[4,1,2],'差し',base+30)}
+          if(m==='makuri'){
+            const b5=V46.boatAtCourse(5);if(b5)V46.addCircle(out,seen,h,b5,'まくり',base+45,false,3);V46.addCourseLiteral(out,seen,[4,5,6],'まくり',base+50);
+            [[1,4,5],[5,1,4],[5,4,1]].forEach(x=>V46.addCourseLiteral(out,seen,x,'まくり',base+95,true));
+          }
+          if(m==='makurizashi'){
+            [[4,1,5],[4,3,1],[4,1,2],[4,2,1]].forEach(x=>V46.addCourseLiteral(out,seen,x,'まくり差し',base+45));
+            [[1,4,2],[1,4,3]].forEach(x=>V46.addCourseLiteral(out,seen,x,'まくり差し',base+95,true));
+          }
+        }
+        if(c===5){
+          if(m==='makuri'&&V46.fiveMakuriOK()){
+            const b6=V46.boatAtCourse(6);if(b6)for(const s of V46.circleSecond(h,b6,2))V46.add(out,seen,V46.ticket([h,s,b6],'まくり',base+70));
+            V46.addCourseLiteral(out,seen,[5,6,2],'まくり',base+65);V46.addCourseLiteral(out,seen,[5,6,4],'まくり',base+62);
+          }
+          if(m==='makurizashi')[[5,3,1],[5,1,3],[5,4,1],[5,1,4]].forEach(x=>V46.addCourseLiteral(out,seen,x,'まくり差し',base+45));
+          // 5コース差しは「あまりなし」なので基本買い目では自動生成しない。
+        }
+        if(c===6){
+          if(m==='sashi'){const one=V46.boatAtCourse(1);if(one)V46.addCircle(out,seen,h,one,'差し',base+30,false,3)}
+          if(m==='makuri'&&V46.sixMakuriSpecial()){
+            const one=V46.boatAtCourse(1),b2=V46.boatAtCourse(2);
+            if(one)for(const s of V46.circleSecond(h,one,2))V46.add(out,seen,V46.ticket([h,s,one],'まくり',base+120,true,'6コースまくり条件'));
+            if(b2)for(const s of V46.circleSecond(h,b2,2))V46.add(out,seen,V46.ticket([h,s,b2],'まくり',base+115,true,'6コースまくり条件'));
+          }
+          if(m==='makurizashi'){
+            const one=V46.boatAtCourse(1);if(one)V46.addCircle(out,seen,h,one,'まくり差し',base+20,false,2);
+            if(one){const thirds=V46.circle(one,h,2);for(const t of thirds)V46.add(out,seen,V46.ticket([one,h,t],'まくり差し',base+10))}
+          }
+        }
+      }
+    }
+  };
+
+  V46.ensureSixThird=function(out,seen,outlook){
+    const b6=V46.boatAtCourse(6);if(!b6||V46.ev(b6)<100||V46.sixMakuriSpecial())return;
+    if(out.some(t=>t.legs?.[2]===b6))return;
+    const heads=[V46.boatAtCourse(1),...boats.filter(b=>b!==b6)].filter(Boolean).sort((a,b)=>N(BH_VOL41?.scenarioScore?.(b,outlook,false))-N(BH_VOL41?.scenarioScore?.(a,outlook,false)));
+    for(const h of heads){if(h===b6||V46.cls(h)!=='normal')continue;const secs=boats.filter(s=>s!==h&&s!==b6&&V46.cls(s)==='normal').sort((a,b)=>V46.legScore(b,2,h)-V46.legScore(a,2,h));if(secs[0]){V46.add(out,seen,V46.ticket([h,secs[0],b6],h===V46.boatAtCourse(1)?'逃げ':'展開',220+V46.ev(b6),true,'6コース期待値100以上'));break}}
+  };
+  V46.normalize=function(list){
+    if(!list.length)return list;
+    const scores=list.map(t=>N(t.score)),min=Math.min(...scores),w=scores.map(s=>Math.max(1,s-min+20)),sum=w.reduce((a,b)=>a+b,0)||1;
+    list.forEach((t,i)=>{t.prob=w[i]/sum*100;t.pct=t.prob;const o=Number(window.bhGetOdds?.(key(t)));t.odds=Number.isFinite(o)&&o>0?o:null});
+    return list;
+  };
+  V46.generate=function(outlook){
+    const o=outlook||BH_VOL41?.outlook?.()||{};let esc=50;try{esc=BH_VOL42?.escape?.(o)??50}catch(e){}
+    const all=[],seen=new Set();
+    if(esc>=50)V46.buildIn(all,o,seen);
+    // 50台はイン本線＋イン以外候補、50未満はイン以外中心。
+    if(esc<60)V46.buildNonIn(all,o,seen);
+    // 60%以上でも、買い目確定条件に該当する攻め筋は必ず拾う。
+    if(esc>=60){const tmp=[],tmpSeen=new Set();V46.buildNonIn(tmp,o,tmpSeen);for(const t of tmp.filter(x=>x.mandatory))V46.add(all,seen,t)}
+    V46.ensureSixThird(all,seen,o);
+    const b6=V46.boatAtCourse(6),sixSpecial=V46.sixMakuriSpecial();
+    let filtered=all.filter(t=>{
+      if(!Array.isArray(t.legs)||t.legs.length!==3)return false;
+      if(sixSpecial&&b6&&t.legs.includes(b6)&&t.legs[0]!==b6)return false; // 6まくり条件下は6頭以外の6を3連対へ入れない
+      if(V46.cls(t.legs[0])!=='normal'&&!t.mandatory)return false;
+      return true;
+    });
+    // 旧「払戻1,500円以下」「200円で1,200円未満」フィルターは一切使わない。
+    filtered.sort((a,b)=>(b.mandatory?1:0)-(a.mandatory?1:0)||N(b.score)-N(a.score));
+    const mandatory=filtered.filter(t=>t.mandatory),normal=filtered.filter(t=>!t.mandatory);
+    const target=12,maxNormal=Math.max(0,target-mandatory.length);
+    let picked=[...mandatory,...normal.slice(0,maxNormal)];
+    if(!picked.length){try{picked=(BH_VOL41.generate(o)||[]).slice(0,12)}catch(e){}}
+    return V46.normalize(picked);
+  };
+
+  // 旧生成チェーンを完全にバイパス。これで旧最低払戻フィルターも無効化。
+  window.bhV3Generate=function(outlook){return V46.generate(outlook)};
+  if(window.BH_VOL42)BH_VOL42.recoverOK=function(){return true};
+
+  // 買い目表示：確定オッズを各点に必ず表示。未取得時は「取得待ち」と明記。
+  window.bhV3Render=function(tickets,outlook){
+    tickets=Array.isArray(tickets)?tickets:[];V46.normalize(tickets);if(typeof bhV3Allocate==='function')bhV3Allocate(tickets);
+    const box=document.getElementById('bhNewBetRows'),card=document.getElementById('bhNewBetCard');if(!box||!card)return;card.style.display='block';
+    box.innerHTML=tickets.map((t,i)=>{const o=Number(window.bhGetOdds?.(key(t)))||Number(t.odds)||0,ret=o>0?Math.floor(o*N(t.amount)):null;return `<div class="bhV3Bet ${t.mandatory?'bhV46Mandatory':''}"><span class="bhV3Rank">${i+1}</span><span class="bhV3Ticket">${key(t)} <small style="font-size:10px;color:#9aa">${t.betType||'3連単'}</small>${t.mandatory?'<span class="bhV46MandatoryTag">買い目確定</span>':''}</span><span class="bhV3Pct">${N(t.prob).toFixed(1)}%</span><span class="bhV3Odds"><small class="bhV46OddsLabel">確定オッズ</small>${o>0?o.toFixed(1)+'倍':'取得待ち'}</span><span class="bhV3Amount">${N(t.amount).toLocaleString()}円</span><span class="bhV3Return">${ret!=null?ret.toLocaleString()+'円':'－'}</span><span class="bhV3Method"><span class="bhBetPatch bhPatchMethod">決まり手：${t.method||'展開'}</span>${t.label?` <span class="bhBetPatch bhPatchMandatory">${t.label}</span>`:''}</span></div>`}).join('');
+    window.bhV3Tickets=tickets;window.bhLastTickets=tickets;window.currentBets=tickets;window.bhFinanceEvaluate?.(tickets);
+  };
+
+  // 結果は常に最大3日。結果画面を開くたびに再取得し、各場は閉じた状態から開始。
+  V46.foldVenues=function(){
+    document.querySelectorAll('.bhResultDashVenue').forEach(v=>{
+      if(v.querySelector(':scope > .bhV46VenueBody'))return;
+      const head=v.querySelector(':scope > .bhResultDashVenueHead');if(!head)return;
+      const body=document.createElement('div');body.className='bhV46VenueBody';
+      [...v.children].filter(x=>x!==head).forEach(x=>body.appendChild(x));v.appendChild(body);
+      const mark=document.createElement('span');mark.className='bhV46FoldMark';head.appendChild(mark);
+      head.addEventListener('click',e=>{if(e.target.closest('button'))return;v.classList.toggle('bhV46Open')});
+      v.classList.remove('bhV46Open');
+    });
+  };
+  const baseDash=window.bhRenderResultDashboard;
+  if(typeof baseDash==='function')window.bhRenderResultDashboard=function(){try{bhPruneResultDetails?.()}catch(e){};const r=baseDash.apply(this,arguments);setTimeout(V46.foldVenues,0);return r};
+  document.getElementById('bhResultDashOpen')?.addEventListener('click',()=>{setTimeout(async()=>{try{await bhAutoCheckResults(true)}catch(e){};try{window.bhRenderResultDashboard?.()}catch(e){}},30)});
+  const baseReset=window.bhResetVenueResults;
+  if(typeof baseReset==='function')window.bhResetVenueResults=function(){const r=baseReset.apply(this,arguments);setTimeout(async()=>{try{await bhAutoCheckResults(true)}catch(e){};try{window.bhRenderResultDashboard?.()}catch(e){}},200);return r};
+  const baseAuto=window.bhAutoCheckResults;
+  if(typeof baseAuto==='function')window.bhAutoCheckResults=async function(){const r=await baseAuto.apply(this,arguments);try{bhPruneResultDetails?.();window.bhRenderResultDashboard?.()}catch(e){}return r};
+
+  // 既存の保存ストアを使い、毎回3日を超える結果を削除。結果は取得時点で日別保存される。
+  try{bhPruneResultDetails?.()}catch(e){}
+  document.addEventListener('DOMContentLoaded',()=>{try{bhPruneResultDetails?.()}catch(e){}});
+  window.BH_VOL46=V46;
+})();
+</script>
 </body>
 </html>

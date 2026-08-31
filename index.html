@@ -1027,7 +1027,7 @@ body:not(.sgFestival):not(.allLadies) header:after{display:none!important}
 .bhExRelInfo{display:block;margin-top:3px;font-size:10px;opacity:.78;line-height:1.35}
 </style>
 </head>
-<body><div class="bhVol">vol.44</div>
+<body><div class="bhVol">vol.45</div>
 <!-- dev compatibility placeholders: 買い目UIは非表示だが既存AI解析ルートのDOM参照を維持 -->
 <div id="betJumpWrap" style="display:none!important"><button id="betJumpBtn" type="button"></button></div>
 <div id="bettingCard" style="display:none!important"><div id="bettingPatterns"></div></div>
@@ -7542,6 +7542,287 @@ function bhV30ResistanceReverse(){
      return render.call(this,normalizeTickets(tickets),outlook);
    };
  }
+})();
+</script>
+
+<style id="bh-vol45-prediction-ranking-ui">
+/* vol45: ticket container itself must remain visible even though legacy note class is hidden. */
+#bhNewBetRows.bhVerifyNote{display:block!important}
+.bhV45StartSetup{margin:10px 0 2px;padding:10px;border:1px solid #343434;border-radius:12px;background:#111}
+.bhV45StartSetupHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-weight:900;font-size:12px}
+.bhV45ModeBtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bhV45ModeBtn{min-height:44px;border-radius:10px;border:1px solid #3b3b3b;background:#1d1d1f;color:#aaa;font-weight:900;font-size:13px}
+.bhV45ModeBtn.active{border-color:#e1bd55;color:#fff;background:#302814}
+.bhV45Distance{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:#aaa}
+.bhV45Distance input{width:92px;min-height:40px;padding:7px 8px;border-radius:9px;border:1px solid #444;background:#090909;color:#fff;font-size:16px;font-weight:900;text-align:center}
+.bhV45Distance.isDash{opacity:.36}
+.bhV45PatchRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.bhV45Patch{display:inline-flex;align-items:center;min-height:24px;padding:3px 8px;border-radius:999px;border:1px solid #555;background:#161616;font-size:10px;font-weight:1000;line-height:1.2}
+.bhV45Patch.motorWeak{border-color:#864747;color:#ff9b9b}.bhV45Patch.motorGood{border-color:#4c7f72;color:#98efd8}.bhV45Patch.motorAce{border-color:#8d742a;color:#ffe37b}.bhV45Patch.motorMonster{border-color:#a14d83;color:#ff9ede}
+.bhV45Patch.wallStrong{border-color:#5c8bb0;color:#9edcff}.bhV45Patch.wallWarn{border-color:#a56a30;color:#ffc17b}.bhV45Patch.directMaki{border-color:#b34b4b;color:#ff9696}.bhV45Patch.oneDown{border-color:#8c7331;color:#ffe27f}.bhV45Patch.thirdOnly{border-color:#8c7331;color:#ffe27f}.bhV45Patch.cut{border-color:#9e3d3d;color:#ff7f7f}.bhV45Patch.venue{border-color:#6f5a93;color:#d7b9ff}
+.bhV45VenueBox{margin-top:9px;padding:9px 10px;border:1px solid #403654;border-radius:11px;background:#15111b}.bhV45VenueTitle{font-weight:1000;font-size:12px;color:#e2c9ff}.bhV45VenueTags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+@media(max-width:650px){.bhV45ModeBtns{grid-template-columns:1fr 1fr}.bhV45StartSetup{padding:9px}}
+</style>
+<script id="bh-vol45-prediction-ranking-engine">
+(function(){
+  const V45={};
+  V45.mode={};
+  V45.dist={};
+  V45.manual={};
+  V45.motorPoints={weak:-12,normal:0,good:12,ace:24,monster:38};
+
+  V45.clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  V45.defaultMode=b=>b<=3?'slow':'dash';
+  V45.resetModes=function(){
+    V45.mode={};V45.dist={};V45.manual={};
+    for(let b=1;b<=6;b++){V45.mode[b]=V45.defaultMode(b);V45.dist[b]=145;V45.manual[b]=false}
+  };
+  V45.resetModes();
+
+  V45.motorRate=function(b){
+    const r=racer(b)||{};
+    return num(r.motor_top_2_percent||r.motor_2ren_rate||r.motor_2ren);
+  };
+  V45.motorClass=function(b){
+    const m=V45.motorRate(b);
+    if(m<30)return{key:'weak',label:'🔻 モーター弱',points:V45.motorPoints.weak};
+    if(m<43)return{key:'normal',label:'',points:V45.motorPoints.normal};
+    if(m<50)return{key:'good',label:'🔧 好モーター',points:V45.motorPoints.good};
+    if(m<65)return{key:'ace',label:'⭐ エースモーター',points:V45.motorPoints.ace};
+    return{key:'monster',label:'👹 モンスター級',points:V45.motorPoints.monster};
+  };
+  window.bhV45MotorClass=V45.motorClass;
+
+  // 開催場別・コース別の決まり手特性。まず合意済みの具体例を実装。
+  // 他場はデータ確定後、この表へ追加するだけでランキング/買い目へ自動反映される。
+  V45.venueMethods={
+    2:[{course:3,method:'まくり',label:'🔥 3コースまくり優位'},{course:4,method:'まくり',label:'🔥 4コースまくり優位'}],
+    4:[{course:2,method:'差し',label:'🎯 2コース差し優位'}]
+  };
+  V45.venueRows=function(){return V45.venueMethods[Number(document.getElementById('venue')?.value)]||[]};
+  V45.venueBonus=function(b){
+    const c=course(b),d=decisions(racer(b));let best=0;
+    for(const x of V45.venueRows()){
+      if(x.course!==c)continue;
+      const rate=x.method==='差し'?num(d.sashi):x.method==='まくり'?num(d.maki):num(d.makiSashi);
+      if(rate>0)best=Math.max(best,10+Math.min(10,rate*.25));
+    }
+    return best;
+  };
+  V45.venueHTML=function(){
+    const vt=typeof venueTrait==='function'?venueTrait():{name:'開催場'},rows=V45.venueRows();
+    if(!rows.length)return `<div class="bhV45VenueBox"><div class="bhV45VenueTitle">🏟️ ${esc(vt.name)} 開催場特性</div><div class="bhV45VenueTags"><span class="bhV45Patch venue">コース別決まり手特性：追加データ待ち</span></div></div>`;
+    return `<div class="bhV45VenueBox"><div class="bhV45VenueTitle">🏟️ ${esc(vt.name)} 開催場特性</div><div class="bhV45VenueTags">${rows.map(x=>`<span class="bhV45Patch venue">${x.label}</span>`).join('')}</div></div>`;
+  };
+
+  V45.oneLapEval=function(){
+    let rank=null;try{rank=bhLapContext()?.rows?.find(x=>Number(x.boat)===1)?.rawRank??null}catch(e){}
+    rank=Number(rank);
+    if(!Number.isFinite(rank))return{rank:null,state:'none',label:''};
+    if(rank===1)return{rank,state:'normal',label:'1号艇評価：通常'};
+    if(rank===2)return{rank,state:'down',label:'1号艇 1着率DOWN'};
+    return{rank,state:'third',label:'1号艇 3着候補'};
+  };
+  window.bhV45OneLapEval=V45.oneLapEval;
+
+  // 2号艇が3コースからまくられた率を独立保持。
+  V45.twoFromThree=function(){
+    const b2=[1,2,3,4,5,6].find(b=>course(b)===2)||2;
+    try{return makurareCountFromCourse(b2,3)}catch(e){return{count:0,total:0,rate:0,detailCount:0}}
+  };
+  window.bhV45TwoFromThree=V45.twoFromThree;
+
+  V45.wall=function(){
+    const b1=[1,2,3,4,5,6].find(b=>course(b)===1)||1;
+    const b2=[1,2,3,4,5,6].find(b=>course(b)===2)||2;
+    const b3=[1,2,3,4,5,6].find(b=>course(b)===3)||3;
+    const d1=decisions(racer(b1)),s2=outerMakurareStats(b2),s3=outerMakurareStats(b3),from3=V45.twoFromThree();
+    const rates=[num(d1.makareRate),num(s2.rate),num(s3.rate)],avg=rates.reduce((a,b)=>a+b,0)/3,max=Math.max(...rates);
+    const strong=(max<=10)||(avg<=7.5&&max<=12);
+    const weak2=(num(s2.rate)>=20)||(num(from3.rate)>=15);
+    return{strong,weak2,rates,avg,max,from3,b1,b2,b3};
+  };
+  V45.direct2Maki=function(){
+    const b1=[1,2,3,4,5,6].find(b=>course(b)===1)||1,b2=[1,2,3,4,5,6].find(b=>course(b)===2)||2;
+    let st=null;try{st=bhStartStats(b1)?.avg}catch(e){}
+    const maki=num(decisions(racer(b2)).maki);
+    return{on:Number.isFinite(Number(st))&&Number(st)>.15&&maki>0,b1,b2,st:Number(st),maki};
+  };
+  window.bhV45Wall=V45.wall;window.bhV45Direct2Maki=V45.direct2Maki;
+
+  // START: existing 30-race + recent + ST-rank model, then agreed F and variance corrections.
+  const baseStartStats=window.bhStartStats;
+  if(typeof baseStartStats==='function')window.bhStartStats=function(b){
+    const x=baseStartStats.call(this,b);if(!x||!Number.isFinite(Number(x.predict)))return x;
+    let fAdj=0,sdAdj=0,fc=0;try{fc=bhFCount(b)}catch(e){}
+    if(fc>0){const a=Number(x.avg);fAdj=a<=.13?.02:a<=.16?.03:.05}
+    const sd=Number(x.sd);if(Number.isFinite(sd)){if(sd>=.061)sdAdj=.02;else if(sd>=.041)sdAdj=.01}
+    x.predict=V45.clamp(Number(x.predict)+fAdj+sdAdj,.01,.30);x.fAdj=fAdj;x.sdAdj=sdAdj;x.fCount=fc;
+    return x;
+  };
+
+  V45.historyMetric=function(b,keys){
+    let vals=[];try{for(const row of history(b)){for(const k of keys){const n=Number(row?.[k]);if(Number.isFinite(n)&&n>0&&n<30){vals.push(n);break}}}}catch(e){}
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  };
+  V45.metricRankScore=function(value,all){
+    if(!Number.isFinite(value))return null;
+    const vals=all.filter(Number.isFinite).slice().sort((a,b)=>a-b);if(vals.length<2)return 0;
+    const rank=vals.findIndex(v=>v===value)+1||Math.ceil(vals.length/2),mid=(vals.length+1)/2;
+    return V45.clamp((mid-rank)/Math.max(1,(vals.length-1)/2),-1,1);
+  };
+
+  // 1M伸び：スロー 直線40/同コース展示20/今回展示40、ダッシュ35/25/40。
+  // 位置補正は小さく抑え、4-6は同じ+0.12艇身。深インは起こし距離で加速不足を減点。
+  const baseOneM=window.bhOneMModel;
+  if(typeof baseOneM==='function')window.bhOneMModel=function(stats){
+    let rows=baseOneM.call(this,stats);if(!Array.isArray(rows)||!rows.length)return rows;
+    const boats=[1,2,3,4,5,6];
+    const hStraight=Object.fromEntries(boats.map(b=>[b,V45.historyMetric(b,['straight_time','straightTime','direct_time','directTime','pre_time','preTime'])]));
+    const hEx=Object.fromEntries(boats.map(b=>[b,V45.historyMetric(b,['exhibition_time','exhibitionTime','exhibition'])]));
+    const curEx=Object.fromEntries(boats.map(b=>[b,typeof bhExTime==='function'?bhExTime(b):null]));
+    const hsAll=boats.map(b=>hStraight[b]),heAll=boats.map(b=>hEx[b]),ceAll=boats.map(b=>curEx[b]);
+    let usable=rows.filter(x=>Number.isFinite(Number(x.predict)));if(!usable.length)return rows;
+    const lead=Math.min(...usable.map(x=>Number(x.predict)));
+    for(const x of usable){
+      const b=x.boat,mode=V45.mode[b]||V45.defaultMode(b),weights=mode==='slow'?[.40,.20,.40]:[.35,.25,.40];
+      const comps=[V45.metricRankScore(hStraight[b],hsAll),V45.metricRankScore(hEx[b],heAll),V45.metricRankScore(curEx[b],ceAll)];
+      let sum=0,w=0;comps.forEach((v,i)=>{if(v!=null){sum+=v*weights[i];w+=weights[i]}});let q=w?sum/w:0;
+      let move=V45.clamp(q*.30,-.25,.30);
+      if(mode==='dash')move+=.12;
+      let deep=0;if(mode==='slow'){const d=V45.clamp(Number(V45.dist[b]||145),80,180);deep=V45.clamp((145-d)/45*.30,0,.35);move-=deep}
+      move=V45.clamp(move,-.35,.42);
+      x.startDelay=Number(x.predict)-lead;x.startBoatBehind=x.startDelay/.15;x.moveForwardBody=move;x.deepStartPenaltyBody=deep;x.startMode=mode;x.startDistance=mode==='slow'?Number(V45.dist[b]||145):null;
+      x.arrivalScore=x.startDelay-(move*.15);x.arrival=x.arrivalScore;
+    }
+    const finalLead=Math.min(...usable.map(x=>x.arrivalScore));
+    for(const x of rows){if(Number.isFinite(Number(x.arrivalScore))){x.delay=x.arrivalScore-finalLead;x.boatBehind=x.delay/.15;x.moveBody=x.boatBehind-x.startBoatBehind;x.arrival=x.arrivalScore}}
+    return rows;
+  };
+
+  // EXPECTED VALUE ranking: no current/pre-race info (preview ST, current exhibition, lap, wind, manual exhibit) is used here.
+  window.score=function(b){
+    const r=racer(b);if(!r)return 0;const d=decisions(r),c=course(b),m=V45.motorClass(b);let s=0;
+    s+=num(r.national_win_rate||r.win_rate_national)*7;
+    s+=num(r.local_win_rate||r.win_rate_local)*4;
+    s+=num(r.national_top_2_percent||r.national_2ren_rate)*.12;
+    s+=m.points;
+    const ast=num(r.average_start_timing||r.average_st);if(ast>0){s+=Math.max(0,.30-ast)*20;if(ast<=.15)s+=5;else if(ast<=.18)s+=3}
+    try{const hs0=bhStartStats(b);if(hs0?.count){if(hs0.avg<=.13)s+=8;else if(hs0.avg<=.16)s+=5;else if(hs0.avg<=.18)s+=2;else s-=2;if(hs0.sd<=.025)s+=3;else if(hs0.sd>=.061)s-=3}}catch(e){}
+    s+=({1:10,2:6,3:5,4:3,5:1,6:0}[c]||0);
+    const hs=hstats(b);if(hs.count){s+=hscore(b);s+=hs.rate>=60?5:hs.rate>=40?3:hs.rate<20?-2:0}
+    const form=recentForm(b);s+=form.score;
+    const rk=rank(r.rank_number||r.class_number||r.rank||r.class);s+=rk==='A1'?5:rk==='A2'?2:rk==='B2'?-2:0;
+    if(c===1){
+      s+=num(d.escape)*.20-sumSafe([num(d.makareRate)*.20,num(d.sasareRate)*.15,num(d.makiSashiSareRate)*.10]);
+    }else if(c===2){
+      s+=Math.max(num(d.sashi),num(d.maki))*.20;
+      const f3=V45.twoFromThree();s-=Math.min(10,num(f3.rate)*.18);
+    }else{s+=Math.max(num(d.sashi),num(d.maki),num(d.makiSashi))*.20}
+    s+=V45.venueBonus(b);
+    return Math.max(0,s);
+  };
+  function sumSafe(a){return a.reduce((s,x)=>s+(Number.isFinite(x)?x:0),0)}
+
+  // Cut/3rd-only using absolute points + gaps. Cut takes precedence.
+  const baseClassification=window.classification;
+  window.classification=function(boat,a){
+    const rows=(a||ranking()).map(x=>({boat:Number(x.boat),score:num(x.score)})).sort((x,y)=>y.score-x.score),x=rows.find(r=>r.boat===Number(boat));
+    if(!x)return{type:'normal',reason:'',diff:0,rankGap:0};
+    const idx=rows.findIndex(r=>r.boat===Number(boat)),avg=rows.reduce((s,r)=>s+r.score,0)/(rows.length||1),diff=x.score-avg;
+    const upper=idx>0?rows[idx-1]:null,rankGap=upper?upper.score-x.score:0;
+    let type='normal',reason='';
+    const fifth=rows[4],fourth=rows[3];
+    if(x.score<=100&&idx===5&&fifth&&fifth.score-x.score>=40){type='cut';reason=`AI期待値100以下＋5位との差${(fifth.score-x.score).toFixed(1)}pt`}
+    else if(x.score<=100&&idx>=4&&fourth&&fourth.score-x.score>=40){type='third';reason=`AI期待値100以下＋4位との差${(fourth.score-x.score).toFixed(1)}pt`}
+    const one=V45.oneLapEval();if(Number(boat)===1&&one.state==='third'&&type!=='cut'){type='third';reason='1号艇の一周タイム3位以下'}
+    return{type,reason,diff,rankGap};
+  };
+
+  V45.patchHTML=function(b,rankings){
+    const arr=[],m=V45.motorClass(b);if(m.label)arr.push(`<span class="bhV45Patch motor${m.key[0].toUpperCase()+m.key.slice(1)}">${m.label}</span>`);
+    if(b===1){const o=V45.oneLapEval();if(o.state==='down')arr.push('<span class="bhV45Patch oneDown">⬇️ 1着率DOWN</span>');if(o.state==='third')arr.push('<span class="bhV45Patch thirdOnly">🟡 3着候補</span>')}
+    const c=classification(b,rankings);if(c.type==='cut')arr.push('<span class="bhV45Patch cut">✂️ 切り候補</span>');else if(c.type==='third'&&b!==1)arr.push('<span class="bhV45Patch thirdOnly">🟡 3着まで</span>');
+    const wall=V45.wall();if(wall.strong&&course(b)<=3)arr.push('<span class="bhV45Patch wallStrong">🛡️ 強固な壁</span>');if(wall.weak2&&course(b)===2)arr.push(`<span class="bhV45Patch wallWarn">⚠️ まくり警戒</span>`);
+    const dm=V45.direct2Maki();if(dm.on&&b===dm.b2)arr.push('<span class="bhV45Patch directMaki">🚀 2直まくり</span>');
+    for(const x of V45.venueRows())if(x.course===course(b))arr.push(`<span class="bhV45Patch venue">${x.label}</span>`);
+    return arr.length?`<div class="bhV45PatchRow">${arr.join('')}</div>`:'';
+  };
+
+  V45.startSetupHTML=function(b){
+    const mode=V45.mode[b]||V45.defaultMode(b),d=V45.dist[b]||145;
+    return `<div class="bhV45StartSetup" data-v45-setup="${b}"><div class="bhV45StartSetupHead"><span>🚦 起こし設定</span><span>${mode==='slow'?'スロー':'ダッシュ'}</span></div><div class="bhV45ModeBtns"><button type="button" class="bhV45ModeBtn ${mode==='slow'?'active':''}" data-v45-mode="slow">スロー</button><button type="button" class="bhV45ModeBtn ${mode==='dash'?'active':''}" data-v45-mode="dash">ダッシュ</button></div><label class="bhV45Distance ${mode==='dash'?'isDash':''}">スタートまでの距離 <input type="number" inputmode="decimal" min="80" max="180" step="5" value="${d}" data-v45-distance ${mode==='dash'?'disabled':''}> m</label></div>`;
+  };
+  V45.bindSetup=function(root,b){
+    root.querySelectorAll('[data-v45-mode]').forEach(btn=>btn.addEventListener('click',()=>{V45.mode[b]=btn.dataset.v45Mode;V45.manual[b]=true;V45.refreshRacerExtras()}));
+    const input=root.querySelector('[data-v45-distance]');if(input)input.addEventListener('change',()=>{let n=V45.clamp(Number(input.value)||145,80,180);V45.dist[b]=n;input.value=String(n)});
+  };
+  V45.refreshRacerExtras=function(){
+    const cards=[...document.querySelectorAll('#racers .racer')];cards.forEach((card,i)=>{const b=i+1;card.querySelector('.bhV45StartSetup')?.remove();card.querySelector('.bhV45PatchRow')?.remove();const top=card.querySelector('.racerTop');if(top){top.insertAdjacentHTML('afterend',V45.startSetupHTML(b)+V45.patchHTML(b,ranking()));const setup=card.querySelector('.bhV45StartSetup');if(setup)V45.bindSetup(setup,b)}});
+  };
+
+  const baseRenderRace=window.renderRace;
+  if(typeof baseRenderRace==='function')window.renderRace=function(){const out=baseRenderRace.apply(this,arguments);try{V45.refreshRacerExtras();const ri=document.getElementById('raceInfo');if(ri&&!ri.querySelector('.bhV45VenueBox'))ri.insertAdjacentHTML('beforeend',V45.venueHTML())}catch(e){console.warn('vol45 render extras',e)}return out};
+  const baseLoadRace=window.loadRaceData;
+  if(typeof baseLoadRace==='function')window.loadRaceData=async function(){V45.resetModes();return await baseLoadRace.apply(this,arguments)};
+
+  // 2号艇は「3コースからの被まくられ率」を独立表示。
+  const baseDecisionTrendHTML=window.decisionTrendHTML;
+  if(typeof baseDecisionTrendHTML==='function')window.decisionTrendHTML=function(b,d){
+    let html=baseDecisionTrendHTML.apply(this,arguments);
+    if(Number(b)===2){const x=V45.twoFromThree();html+=`<div class="decisionStats"><div class="decisionStat"><span>3コースからの被まくられ率</span><strong>${num(x.rate).toFixed(1)}%</strong><small>${x.count}/${x.total||0}走</small></div></div>`}
+    return html;
+  };
+
+  // Ranking rendering: keep existing table, add motor patches, then refresh racer-card patches.
+  const baseRenderRanking=window.renderRanking;
+  if(typeof baseRenderRanking==='function')window.renderRanking=function(a){
+    const out=baseRenderRanking.apply(this,arguments);
+    try{
+      const trs=[...document.querySelectorAll('#ranking table tr')];
+      (a||[]).forEach((x,i)=>{const tr=trs[1+i*2],cell=tr?.children?.[7],m=V45.motorClass(x.boat);if(cell&&m.label&&!cell.querySelector('.bhV45Patch'))cell.insertAdjacentHTML('beforeend',`<div class="bhV45PatchRow"><span class="bhV45Patch motor${m.key[0].toUpperCase()+m.key.slice(1)}">${m.label}</span></div>`) });
+      V45.refreshRacerExtras();
+    }catch(e){}
+    return out;
+  };
+
+  // Buy-order evaluation: wall / 2-direct-makuri / 1C lap / venue are mandatory evaluation layers.
+  if(window.BH_VOL41){
+    const baseScenario=BH_VOL41.scenarioScore.bind(BH_VOL41);
+    BH_VOL41.scenarioScore=function(b,outlook,even){
+      let s=baseScenario(b,outlook,even);const c=course(b),wall=V45.wall(),dm=V45.direct2Maki(),one=V45.oneLapEval();
+      s+=num(ranking().find(x=>x.boat===b)?.score)*.30;
+      if(wall.strong&&c>=4)s-=75;if(wall.strong&&c<=3)s+=18;
+      if(wall.weak2&&c===3&&num(decisions(racer(b)).maki)>0)s+=48;
+      if(dm.on&&b===dm.b2)s+=70;if(dm.on&&b===dm.b1)s-=35;
+      if(b===1&&one.state==='down')s-=30;if(b===1&&one.state==='third')s-=190;
+      s+=V45.venueBonus(b)*2.2;
+      return s;
+    };
+    const baseHeads=BH_VOL41.headCandidates.bind(BH_VOL41);
+    BH_VOL41.headCandidates=function(outlook){
+      // Both actual and even-slit scenarios must agree: intersection first, then only supplement if too few.
+      const actual=[1,2,3,4,5,6].map(b=>({b,s:BH_VOL41.scenarioScore(b,outlook,false)})).sort((a,b)=>b.s-a.s);
+      const even=[1,2,3,4,5,6].map(b=>({b,s:BH_VOL41.scenarioScore(b,outlook,true)})).sort((a,b)=>b.s-a.s);
+      const aTop=new Set(actual.slice(0,3).map(x=>x.b)),eTop=new Set(even.slice(0,3).map(x=>x.b));let ids=[...aTop].filter(b=>eTop.has(b));
+      if(ids.length<2){for(const x of baseHeads(outlook)){if(!ids.includes(x.b))ids.push(x.b);if(ids.length>=2)break}}
+      return ids.map(b=>({b,score:(actual.find(x=>x.b===b)?.s||0)+(even.find(x=>x.b===b)?.s||0)})).filter(x=>classification(x.b,ranking()).type!=='cut'&&classification(x.b,ranking()).type!=='third').sort((a,b)=>b.score-a.score).slice(0,4);
+    };
+    const baseSecond=BH_VOL41.secondCandidates.bind(BH_VOL41);
+    BH_VOL41.secondCandidates=function(h,outlook){return baseSecond(h,outlook).filter(b=>classification(b,ranking()).type==='normal')};
+    const baseThird=BH_VOL41.thirdCandidates.bind(BH_VOL41);
+    BH_VOL41.thirdCandidates=function(h,s,outlook){return baseThird(h,s,outlook).filter(b=>classification(b,ranking()).type!=='cut').sort((a,b)=>{const ca=classification(a,ranking()).type==='third'?1:0,cb=classification(b,ranking()).type==='third'?1:0;return cb-ca})};
+  }
+
+  // Direct head/leg score wrappers used by older ticket candidate layers too.
+  if(typeof window.bhV3HeadScore==='function'){
+    const base=window.bhV3HeadScore;window.bhV3HeadScore=function(b,outlook){let v=base.apply(this,arguments),c=course(b),w=V45.wall(),dm=V45.direct2Maki(),o=V45.oneLapEval();if(w.strong&&c>=4)v-=90;if(w.weak2&&c===3)v+=45;if(dm.on&&b===dm.b2)v+=75;if(dm.on&&b===dm.b1)v-=35;if(b===1&&o.state==='down')v-=30;if(b===1&&o.state==='third')v-=200;v+=V45.venueBonus(b)*2;return v};
+  }
+  if(typeof window.bhV3LegScore==='function'){
+    const base=window.bhV3LegScore;window.bhV3LegScore=function(b,pos,head){let v=base.apply(this,arguments),c=classification(b,ranking()),w=V45.wall();if(c.type==='cut')v-=500;if(c.type==='third'&&pos===2)v-=180;if(c.type==='third'&&pos===3)v+=18;if(w.strong&&course(b)>=4&&pos===2)v-=45;return v};
+  }
+
+  window.BH_VOL45=V45;
 })();
 </script>
 

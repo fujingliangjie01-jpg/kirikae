@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.63</div>
+<div class="bhVol">vol.64</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8021,6 +8021,91 @@ window.bhV3Allocate=function(tickets){
 };
 
 window.BH_VOL63={version:63,headGateBeforeBasics:true,amountRuleFixed:true};
+})();
+</script>
+
+
+<script id="bh-vol64-use-full-planned-budget">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function oddsOf(t){
+  return Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+}
+function baseAmount(t){
+  const o=oddsOf(t);
+  if(o<=0)return 100;
+  const p=Math.floor(o*100);
+  if(p<=800)return 0;
+  if(p>=810&&p<=1500)return 200;
+  return 100;
+}
+
+// 資金は「使用予定額」まで使い切る。
+// ただし 800円以下は0円、810〜1500円は200円固定、1510円以上は100円固定。
+// 余剰資金は金額上乗せではなく、追加買い目を100円で補充して使う。
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  let chosen=prevGen(outlook)||[];
+  const targetBudget=Math.min(1200,Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1200)/100)*100));
+
+  const used=new Set(chosen.map(K));
+  const calc=arr=>arr.reduce((sum,t)=>sum+baseAmount(t),0);
+  let planned=calc(chosen);
+
+  if(planned<targetBudget){
+    const o=outlook||window.BH_VOL41?.outlook?.()||{};
+    const pool=[],seen=new Set();
+    try{V46.buildIn(pool,o,seen)}catch(e){}
+    try{V46.buildNonIn(pool,o,seen)}catch(e){}
+    try{V46.ensureSixThird(pool,seen,o)}catch(e){}
+
+    const heads=new Set(chosen.map(t=>t?.legs?.[0]).filter(Boolean));
+    let extraHead=null;
+
+    const candidates=pool
+      .filter(t=>!used.has(K(t)))
+      .filter(t=>{
+        const a=baseAmount(t);
+        if(a!==100)return false; // 追加補充は1510円以上またはオッズ未取得の100円点のみ
+        const h=t?.legs?.[0];
+        if(!h)return false;
+        if(heads.has(h))return true;
+        const rev=((t.note||'')+' '+(t.label||'')).includes('裏展開');
+        if(heads.size<3){heads.add(h);return true}
+        if(rev && (extraHead===null||extraHead===h)){extraHead=h;return true}
+        return false;
+      })
+      .sort((a,b)=>(b.mandatory?1:0)-(a.mandatory?1:0)||N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja'));
+
+    for(const t of candidates){
+      if(planned>=targetBudget)break;
+      if(planned+100>targetBudget)break;
+      used.add(K(t));
+      chosen.push(t);
+      planned+=100;
+    }
+  }
+  return V46.normalize(chosen);
+};
+
+window.bhV3Allocate=function(tickets){
+  const budget=Math.min(1200,Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1200)/100)*100));
+  let total=0;
+  for(const t of tickets||[]){
+    let amount=baseAmount(t);
+    if(amount>0 && total+amount>budget)amount=0;
+    t.amount=amount;
+    total+=amount;
+  }
+  // 金額は固定。余りがある場合はgenerate側で追加買い目を補充する。
+  return tickets;
+};
+
+window.BH_VOL64={version:64,useFullPlannedBudget:true};
 })();
 </script>
 

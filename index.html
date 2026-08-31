@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.62</div>
+<div class="bhVol">vol.63</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -7936,6 +7936,91 @@ window.bhRenderBeforeInfo=function(){
 };
 
 window.BH_VOL62={version:62,oddsCut800:true,midOddsTwoUnits:true,budgetCap1200:true,beforeRankHighlight:true};
+})();
+</script>
+
+
+<script id="bh-vol63-head-gate-and-amount-fix">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function headRank(outlook){
+  const a=[];
+  for(let c=1;c<=6;c++){
+    const b=V46.boatAtCourse(c); if(!b||V46.cls(b)==='cut')continue;
+    let sc=0;
+    try{sc=N(window.BH_VOL41?.scenarioScore?.(b,outlook,false))}catch(e){}
+    sc+=N(V46.ev(b))*.35;
+    if(V46.cls(b)==='third')sc-=120;
+    a.push({b,c,sc,ev:N(V46.ev(b))});
+  }
+  a.sort((x,y)=>y.sc-x.sc||y.ev-x.ev||x.c-y.c||x.b-y.b);
+  return a;
+}
+function reverseBet(t){
+  const z=((t?.note||'')+' '+(t?.label||'')).toLowerCase();
+  return z.includes('裏展開')||z.includes('reverse');
+}
+
+// vol62生成後、基本買い目から勝手に頭が生えるのを禁止。
+// 頭は先にAI評価で最大3艇。4艇目は裏展開だけ。
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const ranked=headRank(o);
+  const allowed=new Set(ranked.slice(0,3).map(x=>x.b));
+  let raw=prevGen(o)||[];
+
+  raw=raw.filter(t=>{
+    const h=t?.legs?.[0]; if(!h)return false;
+    if(allowed.has(h))return true;
+    return reverseBet(t); // 4艇目は裏展開のみ
+  });
+
+  // 裏展開の4艇目も最大1艇だけ
+  const normalHeads=new Set(raw.filter(t=>allowed.has(t.legs[0])).map(t=>t.legs[0]));
+  let reverseHead=null;
+  raw=raw.filter(t=>{
+    const h=t.legs[0];
+    if(normalHeads.has(h))return true;
+    if(!reverseBet(t))return false;
+    if(reverseHead===null)reverseHead=h;
+    return h===reverseHead;
+  });
+  return V46.normalize(raw);
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 金額ルールを最終段で固定。
+// 100円払戻 = odds*100。
+// <=800円は0円、810〜1500円だけ200円、それ以外は100円。
+// 「残額を上位へ追加配分」は廃止。総額は最大1200円。
+window.bhV3Allocate=function(tickets){
+  let total=0;
+  const ordered=tickets||[];
+  for(const t of ordered){
+    const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+    const payout=o>0?Math.floor(o*100):0;
+    let amount=100;
+
+    if(o>0&&payout<=800) amount=0;
+    else if(o>0&&payout>=810&&payout<=1500) amount=200;
+    else amount=100;
+
+    if(total+amount>1200){
+      // 200円必須帯でも上限超過なら、その買い目は投資しない。
+      amount=0;
+    }
+    t.amount=amount;
+    total+=amount;
+  }
+  return ordered;
+};
+
+window.BH_VOL63={version:63,headGateBeforeBasics:true,amountRuleFixed:true};
 })();
 </script>
 

@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.71</div>
+<div class="bhVol">vol.72</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -634,7 +634,15 @@ let name=x.name??x.racer_name??x.racerName??x.player_name??
 x.playerName??x.racer??x.player??x.racers_name??"";
 if(typeof name==="object")
 name=name.name||name.racer_name||name.player_name||"";
-return{...x,entry_number:entry,name:name}
+let rawClass=
+x.rank_number??x.class_number??x.racer_rank_number??x.racer_class_number??
+x.rank??x.class??x.grade??x.classification??x.current_class??
+x.racer_class??x.racerClass??x.rank_class??x.rankClass??
+x.rank_name??x.class_name??x.grade_name??x.racer_rank_name??
+x.racer?.rank_number??x.racer?.class_number??x.racer?.racer_rank_number??x.racer?.racer_class_number??
+x.player?.rank_number??x.player?.class_number??x.player?.racer_rank_number??x.player?.racer_class_number??"";
+let bhClass=bhNormalizeClassCore(rawClass);
+return{...x,entry_number:entry,name:name,_bhClass:bhClass}
 }
 function extractRaceEntries(race){
 if(!race)return[];
@@ -2117,7 +2125,7 @@ API：boatraceopenapi
 </div>`;
 $("racers").innerHTML=racers.map(r=>{
 let b=num(r.entry_number),hasHistory=history(b).length>0;
-return`<div class="racer"><div class="racerTop"><div class="number n${b}">${b}</div><div class="racerName">${esc(r.name||r.racer_name||r.player_name||"-")}${typeof bhV23ExhibitPatchHTML==="function"?bhV23ExhibitPatchHTML(b):""}</div></div><button type="button" class="detailToggleBtn" data-detail-target="racerDetail${b}" ${hasHistory?"":"disabled"}>${hasHistory?"📊 過去30走・決まり手を見る":"📊 過去30走・決まり手（AI解析後に表示）"}</button><div id="racerDetail${b}" class="detailPanel" style="display:none">${hasHistory?decisionTrendHTML(b,decisions(r))+renderHistory(b):'<div class="noPick">AI解析を実行すると、今回と同コースの過去30走と決まり手率を表示します。</div>'}</div></div>`
+return`<div class="racer"><div class="racerTop"><div class="number n${b}">${b}</div><div class="racerName">${esc(r.name||r.racer_name||r.player_name||"-")}${bhClassPatchCore(r)}${typeof bhV23ExhibitPatchHTML==="function"?bhV23ExhibitPatchHTML(b):""}</div></div><button type="button" class="detailToggleBtn" data-detail-target="racerDetail${b}" ${hasHistory?"":"disabled"}>${hasHistory?"📊 過去30走・決まり手を見る":"📊 過去30走・決まり手（AI解析後に表示）"}</button><div id="racerDetail${b}" class="detailPanel" style="display:none">${hasHistory?decisionTrendHTML(b,decisions(r))+renderHistory(b):'<div class="noPick">AI解析を実行すると、今回と同コースの過去30走と決まり手率を表示します。</div>'}</div></div>`
 }).join("");
 document.querySelectorAll('[data-detail-target]').forEach(btn=>{
 btn.addEventListener('click',()=>{
@@ -9316,6 +9324,359 @@ window.BH_VOL71={
  numericClassMap:true,
  methodFallback:['全国勝率','階級','内側有利性','今コース得意決まり手','1コース防御力'],
  basicBetScenarioOnly:true
+};
+})();
+</script>
+
+
+<style id="bh-vol72-full-review-style">
+.bhClassPatch{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;vertical-align:middle!important;white-space:nowrap!important}
+.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
+.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
+.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
+.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
+.bhV72ScenarioNote{margin-top:7px;font-size:11px;color:#a9bbc6;text-align:center}
+</style>
+
+<script id="bh-vol72-authoritative-engine">
+/* ===== vol72 authoritative final layer =====
+   目的:
+   - 階級は renderRace の名前生成時点で直接描画
+   - 全体見通し / 展開軸 / 決まり手 / 買い目を同一 scenario で統一
+   - 買い目不足は全120通り候補から補充
+   - 「決まり手確定」条件は使用しない
+   - 基本買い目は scenario 一致時だけ
+*/
+(()=>{
+'use strict';
+
+const V46=window.BH_VOL46;
+if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const boats=[1,2,3,4,5,6];
+const K=t=>(t?.legs||[]).join('-');
+
+window.bhNormalizeClassCore=function(v){
+  if(v==null)return '';
+  if(typeof v==='object'){
+    v=v.rank_number??v.class_number??v.racer_rank_number??v.racer_class_number??
+      v.rank??v.class??v.grade??v.classification??v.current_class??
+      v.rank_name??v.class_name??v.grade_name??v.racer_rank_name??'';
+  }
+  const x=String(v).toUpperCase().replace(/\s+/g,'').trim();
+  const m=x.match(/A1|A2|B1|B2/);
+  if(m)return m[0];
+  if(x==='1')return 'A1';
+  if(x==='2')return 'A2';
+  if(x==='3')return 'B1';
+  if(x==='4')return 'B2';
+  return '';
+};
+window.bhClassPatchCore=function(r){
+  const raw=r?._bhClass || (
+    r?.rank_number??r?.class_number??r?.racer_rank_number??r?.racer_class_number??
+    r?.rank??r?.class??r?.grade??r?.classification??r?.current_class??
+    r?.racer_class??r?.racerClass??r?.rank_class??r?.rankClass??
+    r?.rank_name??r?.class_name??r?.grade_name??r?.racer_rank_name??''
+  );
+  const c=window.bhNormalizeClassCore(raw);
+  if(!c)return '';
+  const css=c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2';
+  return `<span class="bhClassPatch ${css}">${c}</span>`;
+};
+
+// 既に描画済みの場合にも確実に反映
+function refreshClassPatches(){
+  const list=Array.isArray(window.racers)?window.racers:[];
+  document.querySelectorAll('#racers .racer').forEach((row,i)=>{
+    const name=row.querySelector('.racerName'); if(!name)return;
+    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
+    const b=Number(row.querySelector('.number')?.textContent)||i+1;
+    const r=list.find(x=>Number(x?.entry_number)===b)||list[i];
+    if(!r)return;
+    const html=window.bhClassPatchCore(r);
+    if(html){
+      const exhibit=name.querySelector('.bhV23ExhibitPatch,.exhibitHistoryPatch');
+      if(exhibit)exhibit.insertAdjacentHTML('beforebegin',html);
+      else name.insertAdjacentHTML('beforeend',html);
+    }
+  });
+}
+
+function classScore(b){
+  let c='';
+  try{c=window.bhNormalizeClassCore(racer(b)?._bhClass||racer(b))}catch(e){}
+  return c==='A1'?14:c==='A2'?8:c==='B1'?3:c==='B2'?-3:0;
+}
+function nationalWin(b){
+  try{
+    const r=racer(b)||{};
+    return N(r.national_win_rate??r.win_rate??r.nationalWinRate??r.winRate??r.rate);
+  }catch(e){return 0}
+}
+function oneDefense(){
+  try{
+    const d=decisions(racer(1))||{};
+    const danger=N(d.makareRate)+N(d.sasareRate)+N(d.makiSashiSareRate);
+    return Math.max(0,Math.min(100,100-danger));
+  }catch(e){return 50}
+}
+function preferredMethod(b){
+  try{
+    const c=Number(course(b)||b),d=decisions(racer(b))||{};
+    if(c===1)return {method:'逃げ',rate:N(d.escape||d.nige)};
+    let cand=[];
+    if(c===2)cand=[['差し',N(d.sashi)],['まくり',N(d.maki)]];
+    else cand=[['まくり',N(d.maki)],['まくり差し',N(d.makiSashi)]];
+    cand.sort((a,b)=>b[1]-a[1]);
+    return {method:cand[0]?.[0]||(c===2?'差し':'まくり'),rate:cand[0]?.[1]||0};
+  }catch(e){return {method:b===1?'逃げ':'まくり',rate:0}}
+}
+function lapRank1(){
+  try{
+    const vals=boats.map(b=>({b,v:Number(window.bhBeforeRow?.(b)?.lap)})).filter(x=>Number.isFinite(x.v)&&x.v>0).sort((a,b)=>a.v-b.v);
+    return vals[0]?.b||0;
+  }catch(e){return 0}
+}
+function aiRankMap(){
+  const m=new Map();
+  try{
+    const arr=window.currentRankings||window.lastRankings||[];
+    arr.forEach((x,i)=>m.set(Number(x.boat??x.entry_number??x.b),i+1));
+  }catch(e){}
+  return m;
+}
+
+/* 共通scenario:
+   明確な1M攻めがある -> attack
+   イン自身が強い -> escape
+   外に攻め手なしで1が相対上昇 -> 1軸候補。ただし逃げ率を65%以上にしない
+   それ以外 -> 5要素で最終決定
+*/
+function scenario(){
+  const oldOut=window.BH_VOL41?.outlook?.()||{};
+  let escape=N(window.BH_VOL42?.escape?.(oldOut)??oldOut.escape??50);
+  let nonEscape=100-escape;
+  const sig=window.bhOneMOutlookSignal?.()||{};
+  const rows=(sig?.theory?.rows||[]).filter(x=>Number.isFinite(Number(x.boatBehind)));
+  const methods=(sig.methodProbs||[]).filter(x=>!x.hole);
+
+  let lead=0,front=[];
+  if(rows.length){
+    lead=Math.min(...rows.map(x=>N(x.boatBehind)));
+    front=rows.map(x=>({
+      boat:Number(x.boat),course:Number(course(x.boat)||x.boat),
+      gap:N(x.boatBehind)-lead
+    })).filter(x=>x.gap<=.30+1e-9).sort((a,b)=>a.course-b.course||a.gap-b.gap);
+  }
+
+  const clear=methods.filter(m=>{
+    const b=Number(m.boat),c=Number(course(b)||b),t=String(m.type||'');
+    if(front.length&&!front.some(f=>f.boat===b))return false;
+    return c===2?(t==='差し'||t==='まくり'):(c>=3&&(t==='まくり'||t==='まくり差し'));
+  }).sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
+
+  if(nonEscape>=55 && clear.length && N(clear[0].raceProb)>=18){
+    const a=clear[0];
+    return {mode:'attack',head:Number(a.boat),axis:Number(a.boat),method:String(a.type),escape,nonEscape,
+      reason:`1M隊形＋決まり手適性が一致（展開評価 ${N(a.raceProb).toFixed(1)}%）`};
+  }
+
+  // 1号艇自身に逃げ根拠がある場合のみ65%以上を許可
+  const one=preferredMethod(1);
+  const oneStrong=(lapRank1()===1 || one.rate>=65 || (aiRankMap().get(1)||99)<=2) && oneDefense()>=45;
+  if(escape>=65 && oneStrong){
+    return {mode:'escape',head:1,axis:1,method:'逃げ',escape,nonEscape,
+      reason:`1号艇自身の逃げ根拠あり（逃げ適性 ${one.rate.toFixed(1)}% / 防御 ${oneDefense().toFixed(1)}）`};
+  }
+
+  // 外に攻め手がなく、1号艇が相対的に戻るだけなら64.9%上限
+  if(!clear.length){
+    escape=Math.min(64.9,escape);
+    nonEscape=100-escape;
+  }
+
+  const scores=boats.map(b=>{
+    const c=Number(course(b)||b),pm=preferredMethod(b);
+    let score=(7-c)*4.2 + Math.min(9,nationalWin(b))*4 + classScore(b) + pm.rate*1.15;
+    score += b===1?(oneDefense()-50)*.42:(50-oneDefense())*.18;
+    if(front.some(f=>f.boat===b))score+=10;
+    return {boat:b,course:c,method:pm.method,methodRate:pm.rate,score};
+  }).sort((a,b)=>b.score-a.score||a.course-b.course);
+
+  const top=scores[0];
+  if(top.boat===1){
+    return {mode:'axis',head:null,axis:1,method:'軸候補',escape,nonEscape,
+      reason:'外に明確な攻め手なし。全国勝率・階級・内側有利・今コース適性・1C防御力で1号艇が相対上位'};
+  }
+  return {mode:'attack',head:top.boat,axis:top.boat,method:top.method,escape,nonEscape,
+    reason:'決まり手不明→全国勝率・階級・内側有利・今コース得意決まり手・1C防御力で最終判定'};
+}
+window.bhRaceScenario=scenario;
+window.bhMainAttackInfo=()=>{
+  const s=scenario();
+  return {boat:s.head||s.axis||1,method:s.method,mode:s.mode,axis:s.axis,escape:s.escape,nonEscape:s.nonEscape,reason:s.reason};
+};
+
+function confirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+function isBasic(t){
+  return ((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).includes('基本買い目');
+}
+function normMethod(m){
+  m=String(m||'');
+  if(m==='maki'||m==='makuri')return 'まくり';
+  if(m==='makiSashi'||m==='makurizashi')return 'まくり差し';
+  if(m==='sashi')return '差し';
+  if(m==='escape')return '逃げ';
+  return m;
+}
+function basicOK(t,sc){
+  if(!isBasic(t))return true;
+  const h=Number(t?.legs?.[0]||0);
+  if(sc.mode==='axis'&&sc.axis===1)return h===1;
+  if(sc.head&&h!==sc.head)return false;
+  const a=normMethod(t?.method),b=normMethod(sc.method);
+  return !a||!b||a===b;
+}
+function ticketScore(t,sc){
+  const l=t?.legs||[];
+  let p=N(t.score);
+  if(confirmed(t))p+=20000;
+  if(sc.mode==='attack'&&Number(l[0])===sc.head)p+=3500;
+  if(sc.mode==='escape'&&Number(l[0])===1)p+=3500;
+  if(sc.mode==='axis'&&sc.axis){
+    if(Number(l[1])===sc.axis)p+=2800;
+    if(Number(l[2])===sc.axis)p+=1800;
+    if(Number(l[0])===sc.axis)p+=600;
+  }
+  return p;
+}
+function fallbackPermutations(sc){
+  const arr=[];
+  for(const a of boats)for(const b of boats)for(const c of boats){
+    if(a===b||a===c||b===c)continue;
+    let method= a===1?'逃げ':preferredMethod(a).method;
+    let score=0;
+    try{
+      score=N(V46.legScore?.(a,1,a))+N(V46.legScore?.(b,2,a))+N(V46.legScore?.(c,3,a));
+    }catch(e){}
+    if(sc.mode==='attack'&&a===sc.head)score+=500;
+    if(sc.mode==='escape'&&a===1)score+=500;
+    if(sc.mode==='axis'&&sc.axis){
+      if(b===sc.axis)score+=420;
+      if(c===sc.axis)score+=280;
+    }
+    arr.push(V46.ticket?V46.ticket([a,b,c],method,score,false,''):({legs:[a,b,c],betType:'3連単',method,score}));
+  }
+  return arr;
+}
+
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const sc=scenario();
+
+  const built=[],seenBuilt=new Set();
+  try{V46.buildIn?.(built,o,seenBuilt)}catch(e){}
+  try{V46.buildNonIn?.(built,o,seenBuilt)}catch(e){}
+  try{V46.ensureSixThird?.(built,seenBuilt,o)}catch(e){}
+  try{
+    const ex=V46.exactaPool?.(o)||[];
+    ex.forEach(t=>built.push(t));
+  }catch(e){}
+
+  // 3〜6Cの差しは基本展開から除外
+  const forbidden=t=>{
+    const h=Number(t?.legs?.[0]||0),m=normMethod(t?.method);
+    return h>=3&&h<=6&&m==='差し';
+  };
+
+  let all=[...built,...fallbackPermutations(sc)]
+    .filter(t=>Array.isArray(t?.legs)&&t.legs.length>=2)
+    .filter(t=>!forbidden(t))
+    .filter(t=>confirmed(t)||basicOK(t,sc));
+
+  const uniq=new Map();
+  for(const t of all){
+    const k=K(t);if(!k)continue;
+    const prev=uniq.get(k);
+    if(!prev||ticketScore(t,sc)>ticketScore(prev,sc))uniq.set(k,t);
+  }
+  all=[...uniq.values()].sort((a,b)=>ticketScore(b,sc)-ticketScore(a,sc)||K(a).localeCompare(K(b),'ja'));
+
+  const budget=Math.max(100,Math.floor((N(window.bhRaceBudget?.())||1200)/100)*100);
+  const cap=Math.min(1300,budget);
+  const maxByBudget=Math.floor(cap/100);
+  const maxRule=sc.escape>=85?Math.min(10,maxByBudget):Math.min(13,maxByBudget);
+  const target=Math.max(1,maxRule);
+
+  const out=[],seen=new Set();
+  const add=t=>{
+    if(!t||out.length>=target)return;
+    const k=K(t);if(!k||seen.has(k))return;
+    const o=Number(window.bhGetOdds?.(k))||Number(t.odds)||0;
+    // オッズ取得後のみ8倍以下を除外。取得待ちは残す。
+    if(!confirmed(t)&&o>0&&o<=8)return;
+    seen.add(k);out.push({...t,bhConfirmed:confirmed(t),mandatory:confirmed(t)});
+  };
+
+  // 買い目確定は最優先
+  all.filter(confirmed).forEach(add);
+  all.filter(t=>!confirmed(t)).forEach(add);
+
+  return V46.normalize(out.slice(0,target));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 決まり手確定条件は無効のまま
+window.bhMethodConfirmEnabled=false;
+window.bhIsMethodConfirmed=()=>false;
+
+// 全体見通し内の攻め表示も同じscenario
+function renderScenario(){
+  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
+  if(!graph)return;
+  graph.parentElement?.querySelectorAll('.bhV64AttackFocus,.bhV65AttackFocus,.bhV66AttackFocus,.bhV69AttackFocus,.bhV72Attack').forEach(x=>x.remove());
+  const s=scenario();
+  let main=s.mode==='axis'?`${s.axis}号艇 軸候補`:s.mode==='escape'?'1号艇 逃げ本線':`${s.head}号艇 ${s.method}`;
+  graph.insertAdjacentHTML('beforebegin',
+    `<div class="bhV69AttackFocus bhV72Attack"><div class="ttl">⚡ このレースの展開軸</div>
+      <div class="main">${main}</div>
+      <div class="bhV72ScenarioNote">${s.reason}<br>イン逃げ ${s.escape.toFixed(1)}% / イン以外 ${s.nonEscape.toFixed(1)}%</div>
+    </div>`);
+}
+
+const prevRace=window.renderRace;
+if(typeof prevRace==='function')window.renderRace=function(){
+  const r=prevRace.apply(this,arguments);
+  setTimeout(refreshClassPatches,0);setTimeout(refreshClassPatches,100);
+  return r;
+};
+const prevRun=window.runAnalysis;
+if(typeof prevRun==='function')window.runAnalysis=async function(){
+  const r=await prevRun.apply(this,arguments);
+  setTimeout(()=>{refreshClassPatches();renderScenario()},0);
+  setTimeout(()=>{refreshClassPatches();renderScenario()},180);
+  return r;
+};
+const prevRenderBets=window.renderPatternBets;
+if(typeof prevRenderBets==='function')window.renderPatternBets=function(){
+  const r=prevRenderBets.apply(this,arguments);
+  setTimeout(renderScenario,0);
+  return r;
+};
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(refreshClassPatches,100);setTimeout(renderScenario,130)});
+
+window.BH_VOL72={
+  version:72,
+  authoritative:true,
+  directClassRender:true,
+  sharedScenario:true,
+  fallback120Permutations:true,
+  maxTickets:13,
+  methodConfirm:false
 };
 })();
 </script>

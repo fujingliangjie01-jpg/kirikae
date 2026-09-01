@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.63</div>
+<div class="bhVol">vol.64</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8021,6 +8021,143 @@ window.bhV3Allocate=function(tickets){
 };
 
 window.BH_VOL63={version:63,headGateBeforeBasics:true,amountRuleFixed:true};
+})();
+</script>
+
+
+<style id="bh-vol64-attack-outlook-style">
+.bhV64AttackFocus{margin:10px 0 12px;padding:13px 14px;border-radius:14px;border:2px solid #d4af37;background:linear-gradient(135deg,#201806,#0d1117);text-align:center;box-shadow:0 0 18px rgba(212,175,55,.16)}
+.bhV64AttackFocus small{display:block;color:#aaa;font-weight:900;font-size:10px;margin-bottom:4px}
+.bhV64AttackBoat{font-size:30px;font-weight:1000;color:#ffd84d;line-height:1.15}
+.bhV64AttackMethod{margin-top:5px;font-size:22px;font-weight:1000;color:#fff}
+.bhV64AttackSub{margin-top:5px;font-size:10px;color:#aeb8c5}
+</style>
+<script id="bh-vol64-confirmed-max13-attack-slow100-correction">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function isConfirmed(t){
+  const txt=((t?.note||'')+' '+(t?.label||'')+' '+(t?.pattern||'')).toLowerCase();
+  return t?.confirmed===true||txt.includes('買い目確定')||txt.includes('確定');
+}
+function isLegacySashi(t){
+  const h=Number(t?.legs?.[0]||0),m=String(t?.method||t?.decision||'');
+  return h>=3&&h<=6&&m.includes('差し')&&!m.includes('まくり差し');
+}
+function liveOdds(t){
+  const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+  return Number.isFinite(o)&&o>0?o:0;
+}
+function oddsAllowed(t){
+  if(isConfirmed(t))return true;
+  const o=liveOdds(t);
+  return !o||o>8;
+}
+
+const prevGenerate=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const raw=prevGenerate.call(this,o)||[];
+  const pool=[],ps=new Set();
+  try{V46.buildIn?.(pool,o,ps)}catch(e){}
+  try{V46.buildNonIn?.(pool,o,ps)}catch(e){}
+  try{V46.ensureSixThird?.(pool,ps,o)}catch(e){}
+  const confirmed=pool.filter(t=>Array.isArray(t?.legs)&&t.legs.length>=2&&isConfirmed(t)&&!isLegacySashi(t));
+  const out=[],seen=new Set();
+  const add=t=>{
+    if(!t||!Array.isArray(t.legs)||!t.legs.length||isLegacySashi(t))return;
+    const k=K(t);if(!k||seen.has(k)||!oddsAllowed(t))return;
+    const x={...t};x.bhConfirmed=isConfirmed(x);x.mandatory=x.bhConfirmed;
+    seen.add(k);out.push(x);
+  };
+  confirmed.forEach(add);
+  raw.forEach(add);
+  return V46.normalize(out.slice(0,13));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+// 旧別枠買い目が13点の外へ増えるのを停止。裏目は13点内で扱う。
+if(typeof window.bhV5ReverseTickets==='function')window.bhV5ReverseTickets=()=>[];
+if(typeof window.bhV17PhysicalReverseTickets==='function')window.bhV17PhysicalReverseTickets=()=>[];
+
+// 投資上限1300円。確定を先に資金確保。0円買い目は残さない。
+window.bhV3Allocate=function(tickets){
+  if(!Array.isArray(tickets))return[];
+  const user=Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1300)/100)*100);
+  const cap=Math.min(1300,user);
+  const ordered=[...tickets.filter(isConfirmed),...tickets.filter(t=>!isConfirmed(t))];
+  const kept=[],seen=new Set();let used=0;
+  for(const t of ordered){
+    const k=K(t);if(!k||seen.has(k))continue;
+    const o=liveOdds(t);
+    if(!isConfirmed(t)&&o>0&&o<=8)continue;
+    const amount=(o>8&&o<=15)?200:100;
+    if(used+amount>cap)continue;
+    t.amount=amount;t.bhConfirmed=isConfirmed(t);t.mandatory=t.bhConfirmed;
+    kept.push(t);seen.add(k);used+=amount;
+    if(kept.length>=13)break;
+  }
+  tickets.splice(0,tickets.length,...kept);
+  return tickets;
+};
+
+// 全体見通しに攻め艇・決まり手を大型表示。
+function attackInfo(){
+  try{
+    const sig=window.bhOneMOutlookSignal?.();
+    if(!sig)return{boat:1,method:'逃げ',note:'1Mデータ不足'};
+    const methods=(sig.methodProbs||[]).filter(x=>!x.hole).filter(x=>{
+      const c=Number(window.course?.(x.boat)||x.boat),m=String(x.type||'');
+      if(c===2)return m==='差し'||m==='まくり';
+      if(c>=3&&c<=6)return m==='まくり'||m==='まくり差し';
+      return false;
+    }).sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
+    if(sig.hasAttack&&methods[0])return{boat:methods[0].boat,method:methods[0].type,note:`1M攻め差 ${N(sig.attackGap).toFixed(2)}艇身`};
+    return{boat:1,method:'逃げ',note:`明確な外攻めなし（差 ${N(sig.attackGap).toFixed(2)}艇身）`};
+  }catch(e){return{boat:1,method:'逃げ',note:''}}
+}
+function renderAttackFocus(){
+  const root=document.getElementById('attack');if(!root)return;
+  root.querySelector('.bhV64AttackFocus')?.remove();
+  const a=attackInfo(),graph=root.querySelector('.outlookGraphBox');
+  const html=`<div class="bhV64AttackFocus"><small>⚡ このレースの攻め</small><div class="bhV64AttackBoat">${a.boat}号艇</div><div class="bhV64AttackMethod">${a.method}</div><div class="bhV64AttackSub">${a.note}</div></div>`;
+  if(graph)graph.insertAdjacentHTML('beforebegin',html);else root.insertAdjacentHTML('afterbegin',html);
+}
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await oldRun.apply(this,arguments);setTimeout(renderAttackFocus,0);return r};
+
+// スロー起こし距離＋直前タイム補正。
+// 100m付近は加速不足を反映し、直前/直線タイム上位なら行き足で救済。
+const oldOneM=window.bhOneMModel;
+if(typeof oldOneM==='function')window.bhOneMModel=function(stats){
+  const rows=oldOneM.call(this,stats);if(!Array.isArray(rows)||!rows.length)return rows;
+  const pre={},vals=[];
+  for(let b=1;b<=6;b++){let v=null;try{v=Number(window.bhBeforeRow?.(b)?.straight)}catch(e){}if(Number.isFinite(v)&&v>0){pre[b]=v;vals.push(v)}}
+  const sorted=[...vals].sort((a,b)=>a-b);
+  const rankScore=v=>{if(!Number.isFinite(v)||sorted.length<2)return 0;const r=sorted.findIndex(x=>x===v)+1;return Math.max(-1,Math.min(1,1-2*(r-1)/Math.max(1,sorted.length-1)))};
+  for(const x of rows){
+    if(!Number.isFinite(Number(x.arrivalScore)))continue;
+    const b=Number(x.boat),mode=String(x.startMode||window.BH_VOL45?.mode?.[b]||(b<=3?'slow':'dash'));
+    const dist=Number(x.startDistance||window.BH_VOL45?.dist?.[b]||145),q=rankScore(pre[b]);
+    const accel=q*.18;
+    if(mode==='slow'){
+      const shortage=Math.max(0,Math.min(.30,(145-dist)/45*.30));
+      const rescue=q>0?shortage*q*.80:0,extra=q<0?shortage*(-q)*.25:0;
+      const net=Math.max(0,shortage-rescue+extra),old=N(x.deepStartPenaltyBody);
+      x.arrivalScore+=(net-old)*.15;
+      x.deepStartPenaltyBody=net;x.beforeTimeRescueBody=rescue;
+    }
+    x.arrivalScore-=accel*.15;x.beforeAccelBody=accel;x.beforeStraightTime=Number.isFinite(pre[b])?pre[b]:null;
+  }
+  const usable=rows.filter(x=>Number.isFinite(Number(x.arrivalScore)));
+  if(usable.length){const lead=Math.min(...usable.map(x=>Number(x.arrivalScore)));for(const x of usable){x.arrival=x.arrivalScore;x.delay=x.arrivalScore-lead;x.boatBehind=x.delay/.15;if(Number.isFinite(Number(x.startBoatBehind)))x.moveBody=x.boatBehind-x.startBoatBehind}}
+  return rows;
+};
+
+window.BH_VOL64={version:64,confirmedAlwaysFirst:true,absoluteMaxTickets:13,attackFocus:true,slowDistanceBeforeTimeCorrection:true,budgetCap:1300};
 })();
 </script>
 

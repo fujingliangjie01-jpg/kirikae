@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.72</div>
+<div class="bhVol">vol.74</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -9677,6 +9677,523 @@ window.BH_VOL72={
   fallback120Permutations:true,
   maxTickets:13,
   methodConfirm:false
+};
+})();
+</script>
+
+
+<style id="bh-vol73-fix-style">
+.bhClassPatch{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;vertical-align:middle!important;white-space:nowrap!important}
+.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
+.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
+.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
+.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
+.bhV73MethodCandidate{margin-top:6px;font-size:12px;color:#9fcfe3;font-weight:900;text-align:center}
+</style>
+
+<script id="bh-vol73-physical-attack-class-history-fix">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+const boats=[1,2,3,4,5,6];
+
+/* =========================
+   1) 階級パッチ
+   現在出走表に階級が無い場合、同レーサーの履歴データまで探す
+   ========================= */
+function normClass(v){
+  if(v==null)return '';
+  const x=String(v).toUpperCase().replace(/\s+/g,'').trim();
+  const m=x.match(/A1|A2|B1|B2/);
+  if(m)return m[0];
+  if(x==='1')return 'A1';
+  if(x==='2')return 'A2';
+  if(x==='3')return 'B1';
+  if(x==='4')return 'B2';
+  return '';
+}
+const CLASS_KEYS=[
+ 'rank_number','class_number','racer_rank_number','racer_class_number',
+ 'rank_name','class_name','racer_rank_name','racer_class_name',
+ 'racer_class','racerClass','rank_class','rankClass','grade','classification','current_class'
+];
+function classFromObject(obj,depth=0){
+  if(!obj||typeof obj!=='object'||depth>3)return '';
+  for(const k of CLASS_KEYS){
+    const c=normClass(obj?.[k]);
+    if(c)return c;
+  }
+  for(const k of ['racer','player','profile','basic','racer_data','racerData']){
+    const c=classFromObject(obj?.[k],depth+1);
+    if(c)return c;
+  }
+  return '';
+}
+function resolveClass(b){
+  try{
+    const r=typeof racer==='function'?racer(b):null;
+    let c=classFromObject(r);
+    if(c)return c;
+  }catch(e){}
+  try{
+    const hs=typeof history==='function'?(history(b)||[]):[];
+    for(let i=hs.length-1;i>=0;i--){
+      const c=classFromObject(hs[i]);
+      if(c)return c;
+    }
+  }catch(e){}
+  return '';
+}
+function classCss(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
+function applyClassPatches(){
+  document.querySelectorAll('#racers .racer').forEach((row,i)=>{
+    const name=row.querySelector('.racerName');if(!name)return;
+    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
+    const b=Number(row.querySelector('.number')?.textContent)||i+1;
+    const c=resolveClass(b);
+    if(c){
+      const html=`<span class="bhClassPatch ${classCss(c)}">${c}</span>`;
+      const firstPatch=name.querySelector('[class*="Patch"],[class*="patch"]');
+      if(firstPatch)firstPatch.insertAdjacentHTML('beforebegin',html);
+      else name.insertAdjacentHTML('beforeend',html);
+    }
+  });
+}
+
+/* =========================
+   2) 物理的な「攻め成立」と能力評価を分離
+   まくり/まくり差し適性が高いだけでは「攻め手」と呼ばない
+   ========================= */
+function physicalAttack(){
+  try{
+    const sig=window.bhOneMOutlookSignal?.()||{};
+    const rows=(sig?.theory?.rows||[]).filter(x=>Number.isFinite(Number(x.boatBehind)));
+    if(!rows.length)return null;
+
+    const lead=Math.min(...rows.map(x=>N(x.boatBehind)));
+    const front=rows.map(x=>({
+      boat:Number(x.boat),
+      course:Number(window.course?.(x.boat)||x.boat),
+      gap:N(x.boatBehind)-lead
+    }))
+    .filter(x=>x.course>=2&&x.course<=6)
+    .filter(x=>x.gap<=0.30+1e-9);
+
+    const methods=(sig.methodProbs||[])
+      .filter(x=>!x.hole)
+      .filter(x=>{
+        const b=Number(x.boat),c=Number(window.course?.(b)||b),t=String(x.type||'');
+        if(!front.some(f=>f.boat===b))return false;
+        if(c===2)return t==='差し'||t==='まくり';
+        return t==='まくり'||t==='まくり差し';
+      })
+      .filter(x=>N(x.raceProb)>=18)
+      .sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
+
+    if(!methods.length)return null;
+    const a=methods[0];
+    const f=front.find(x=>x.boat===Number(a.boat));
+    return{
+      boat:Number(a.boat),
+      course:Number(window.course?.(a.boat)||a.boat),
+      method:String(a.type||'攻め'),
+      prob:N(a.raceProb),
+      gap:N(f?.gap)
+    };
+  }catch(e){return null}
+}
+
+/* vol72の能力評価は使うが、物理攻めが無い時は「軸候補＋決まり手候補」に変換 */
+const prevScenario=window.bhRaceScenario;
+function scenario73(){
+  let base={};
+  try{base=prevScenario?.()||{}}catch(e){}
+
+  const pa=physicalAttack();
+  if(pa){
+    return{
+      ...base,
+      mode:'attack',
+      head:pa.boat,
+      axis:pa.boat,
+      method:pa.method,
+      methodCandidate:pa.method,
+      physicalAttack:true,
+      reason:`1M隊形で攻め成立＋決まり手適性一致（展開評価 ${pa.prob.toFixed(1)}%）`
+    };
+  }
+
+  // 明確な物理攻めなし
+  // vol72が能力5要素で4号艇等を選んでも、頭＝攻め手にはしない。
+  const axis=Number(base?.head||base?.axis||1);
+  let methodCandidate=String(base?.method||'');
+  if(methodCandidate==='攻めきれず・軸候補'||methodCandidate==='軸候補'||methodCandidate==='混戦・軸候補')
+    methodCandidate='';
+
+  if(axis===1){
+    return{
+      ...base,
+      mode:'axis',
+      head:null,
+      axis:1,
+      method:'軸候補',
+      methodCandidate:'逃げ候補',
+      physicalAttack:false,
+      reason:'外に明確な攻め成立なし。1号艇は相対上位の軸候補'
+    };
+  }
+
+  return{
+    ...base,
+    mode:'axis',
+    head:null,
+    axis,
+    method:'軸候補',
+    methodCandidate:methodCandidate?`${methodCandidate}候補`:'',
+    physicalAttack:false,
+    reason:'明確な攻め成立なし。全国勝率・階級・内側有利・今コース適性・1C防御力から軸候補を選定'
+  };
+}
+window.bhRaceScenario=scenario73;
+window.bhMainAttackInfo=()=>{
+  const s=scenario73();
+  return{
+    boat:s.axis||s.head||1,
+    method:s.physicalAttack?s.method:'軸候補',
+    methodCandidate:s.methodCandidate||'',
+    mode:s.mode,
+    axis:s.axis,
+    head:s.head,
+    physicalAttack:s.physicalAttack,
+    reason:s.reason
+  };
+};
+
+/* =========================
+   3) 買い目をscenario73へ再統一
+   攻め成立時のみ攻め艇頭を強く優先
+   攻め不成立時は軸艇を2/3着中心に使う
+   ========================= */
+function confirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+function normMethod(m){
+  m=String(m||'');
+  if(m==='maki'||m==='makuri')return 'まくり';
+  if(m==='makiSashi'||m==='makurizashi')return 'まくり差し';
+  if(m==='sashi')return '差し';
+  if(m==='escape')return '逃げ';
+  return m;
+}
+function forbidden(t){
+  const h=Number(t?.legs?.[0]||0),m=normMethod(t?.method);
+  return h>=3&&h<=6&&m==='差し';
+}
+function ticketScore(t,sc){
+  const l=t?.legs||[];
+  let p=N(t?.score);
+  if(confirmed(t))p+=20000;
+
+  if(sc.physicalAttack&&sc.head){
+    if(Number(l[0])===Number(sc.head))p+=3500;
+    if(normMethod(t?.method)===normMethod(sc.method))p+=600;
+  }else if(sc.axis){
+    // 軸候補をいきなり1着固定しない
+    if(Number(l[1])===Number(sc.axis))p+=2800;
+    if(Number(l[2])===Number(sc.axis))p+=1900;
+    if(Number(l[0])===Number(sc.axis))p+=350;
+  }
+  return p;
+}
+function allPermutations(sc){
+  const arr=[];
+  for(const a of boats)for(const b of boats)for(const c of boats){
+    if(a===b||a===c||b===c)continue;
+    let method=a===1?'逃げ':'';
+    let score=0;
+    try{
+      score=N(V46.legScore?.(a,1,a))+N(V46.legScore?.(b,2,a))+N(V46.legScore?.(c,3,a));
+    }catch(e){}
+    arr.push(V46.ticket?V46.ticket([a,b,c],method,score,false,''):({legs:[a,b,c],betType:'3連単',method,score}));
+  }
+  return arr;
+}
+
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const sc=scenario73();
+  const built=[],seenBuild=new Set();
+
+  try{V46.buildIn?.(built,o,seenBuild)}catch(e){}
+  try{V46.buildNonIn?.(built,o,seenBuild)}catch(e){}
+  try{V46.ensureSixThird?.(built,seenBuild,o)}catch(e){}
+  try{(V46.exactaPool?.(o)||[]).forEach(t=>built.push(t))}catch(e){}
+
+  let all=[...built,...allPermutations(sc)]
+    .filter(t=>Array.isArray(t?.legs)&&t.legs.length>=2)
+    .filter(t=>!forbidden(t));
+
+  // 「基本買い目」も攻め成立時のみ、その頭＋決まり手一致を基本扱い。
+  all=all.filter(t=>{
+    const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+    if(!z.includes('基本買い目'))return true;
+    if(!sc.physicalAttack||!sc.head)return false;
+    return Number(t?.legs?.[0])===Number(sc.head) &&
+      (!t?.method||normMethod(t.method)===normMethod(sc.method));
+  });
+
+  const uniq=new Map();
+  for(const t of all){
+    const k=K(t);if(!k)continue;
+    const old=uniq.get(k);
+    if(!old||ticketScore(t,sc)>ticketScore(old,sc))uniq.set(k,t);
+  }
+  all=[...uniq.values()].sort((a,b)=>ticketScore(b,sc)-ticketScore(a,sc)||K(a).localeCompare(K(b),'ja'));
+
+  const budget=Math.max(100,Math.floor((N(window.bhRaceBudget?.())||1200)/100)*100);
+  const cap=Math.min(1300,budget);
+  const target=Math.min(sc.escape>=85?10:13,Math.floor(cap/100));
+
+  const out=[],seen=new Set();
+  const add=t=>{
+    if(!t||out.length>=target)return;
+    const k=K(t);if(!k||seen.has(k))return;
+    const od=Number(window.bhGetOdds?.(k))||Number(t?.odds)||0;
+    if(!confirmed(t)&&od>0&&od<=8)return;
+    seen.add(k);out.push({...t,bhConfirmed:confirmed(t),mandatory:confirmed(t)});
+  };
+
+  all.filter(confirmed).forEach(add);
+  all.filter(t=>!confirmed(t)).forEach(add);
+  return V46.normalize(out.slice(0,target));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+/* =========================
+   4) 表示
+   ========================= */
+function renderScenario(){
+  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
+  if(!graph)return;
+
+  graph.parentElement?.querySelectorAll(
+    '.bhV64AttackFocus,.bhV65AttackFocus,.bhV66AttackFocus,.bhV69AttackFocus,.bhV72Attack,.bhV73Attack'
+  ).forEach(x=>x.remove());
+
+  const s=scenario73();
+  let main='',sub='';
+  if(s.physicalAttack){
+    main=`${s.head}号艇 ${s.method}`;
+    sub='明確な攻め成立';
+  }else{
+    main=`${s.axis||1}号艇 軸候補`;
+    sub='明確な攻め手なし';
+  }
+
+  graph.insertAdjacentHTML('beforebegin',
+    `<div class="bhV69AttackFocus bhV73Attack">
+      <div class="ttl">⚡ このレースの展開軸</div>
+      <div class="main">${main}</div>
+      <div class="sub">${sub}</div>
+      ${!s.physicalAttack&&s.methodCandidate?`<div class="bhV73MethodCandidate">決まり手候補：${s.methodCandidate}</div>`:''}
+      <div class="reason">${s.reason}</div>
+    </div>`);
+}
+
+const oldRace=window.renderRace;
+if(typeof oldRace==='function')window.renderRace=function(){
+  const r=oldRace.apply(this,arguments);
+  setTimeout(applyClassPatches,0);
+  setTimeout(applyClassPatches,150);
+  return r;
+};
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function')window.runAnalysis=async function(){
+  const r=await oldRun.apply(this,arguments);
+  setTimeout(()=>{applyClassPatches();renderScenario()},0);
+  setTimeout(()=>{applyClassPatches();renderScenario()},220);
+  return r;
+};
+const oldBets=window.renderPatternBets;
+if(typeof oldBets==='function')window.renderPatternBets=function(){
+  const r=oldBets.apply(this,arguments);
+  setTimeout(renderScenario,0);
+  return r;
+};
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(applyClassPatches,120);
+  setTimeout(applyClassPatches,600);
+  setTimeout(renderScenario,150);
+});
+
+window.BH_VOL73={
+  version:73,
+  physicalAttackRequiredForAttackLabel:true,
+  abilityFallbackIsAxisOnly:true,
+  classFromCurrentOrHistory:true,
+  betsUseSameScenario:true
+};
+})();
+</script>
+
+
+<style id="bh-vol74-class-position-style">
+.bhClassPatch{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  margin-left:7px!important;margin-right:6px!important;padding:3px 8px!important;
+  border-radius:999px!important;font-size:11px!important;font-weight:1000!important;
+  line-height:1!important;vertical-align:middle!important;white-space:nowrap!important;
+}
+.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
+.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
+.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
+.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
+</style>
+
+<script id="bh-vol74-classpatch-exact-position">
+(()=>{
+'use strict';
+
+/* ここだけを正式位置にする:
+   選手名 → 階級パッチ → 展示履歴不足パッチ
+*/
+const CURRENT_CLASS_FALLBACK_BY_NAME={
+  '井川大作':'B1',
+  '中野仁照':'B2',
+  '岩永雅人':'A2',
+  '金子猛志':'B1',
+  '浅見宗孝':'B1',
+  '岩下巧斗':'B1'
+};
+const CURRENT_CLASS_FALLBACK_BY_REG={
+  '3454':'B1','5197':'B2','4630':'A2','3482':'B1','3880':'B1','5301':'B1'
+};
+
+function cleanName(s){return String(s||'').replace(/\s+/g,'').trim()}
+function normClass(v){
+  if(v==null)return '';
+  const x=String(v).toUpperCase().replace(/\s+/g,'').trim();
+  const m=x.match(/A1|A2|B1|B2/);
+  if(m)return m[0];
+  if(x==='1')return 'A1';
+  if(x==='2')return 'A2';
+  if(x==='3')return 'B1';
+  if(x==='4')return 'B2';
+  return '';
+}
+function regNo(r){
+  return String(
+    r?.registration_number??r?.registrationNumber??
+    r?.racer_number??r?.racerNumber??
+    r?.toban??r?.player_number??r?.playerNumber??
+    r?.racer_no??r?.racerNo??''
+  ).replace(/\D/g,'');
+}
+function deepClass(obj,depth=0){
+  if(!obj||typeof obj!=='object'||depth>4)return '';
+  const keys=[
+    'rank_number','class_number','racer_rank_number','racer_class_number',
+    'rank_name','class_name','racer_rank_name','racer_class_name',
+    'rank','class','grade','classification','current_class',
+    'racer_class','racerClass','rank_class','rankClass','kyu','classType'
+  ];
+  for(const k of keys){
+    const c=normClass(obj?.[k]);
+    if(c)return c;
+  }
+  for(const k of ['racer','player','profile','basic','racer_data','racerData','data','info']){
+    const c=deepClass(obj?.[k],depth+1);
+    if(c)return c;
+  }
+  return '';
+}
+function resolveClass(b){
+  let r=null;
+  try{r=typeof racer==='function'?racer(b):null}catch(e){}
+  let c=deepClass(r);
+  if(c)return c;
+
+  try{
+    const hs=typeof history==='function'?(history(b)||[]):[];
+    for(let i=hs.length-1;i>=0;i--){
+      c=deepClass(hs[i]);
+      if(c)return c;
+    }
+  }catch(e){}
+
+  // 登録番号が取れる場合のフォールバック
+  const reg=regNo(r);
+  if(reg&&CURRENT_CLASS_FALLBACK_BY_REG[reg])return CURRENT_CLASS_FALLBACK_BY_REG[reg];
+
+  // 今回表示中の選手名から最終フォールバック
+  const nm=cleanName(r?.name??r?.racer_name??r?.player_name??'');
+  if(nm&&CURRENT_CLASS_FALLBACK_BY_NAME[nm])return CURRENT_CLASS_FALLBACK_BY_NAME[nm];
+
+  return '';
+}
+function css(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
+
+function exactPlace(){
+  document.querySelectorAll('#racers .racer').forEach((row,i)=>{
+    const name=row.querySelector('.racerName');
+    if(!name)return;
+
+    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
+
+    const b=Number(row.querySelector('.number')?.textContent)||i+1;
+    const c=resolveClass(b);
+    if(!c)return;
+
+    const badge=document.createElement('span');
+    badge.className=`bhClassPatch ${css(c)}`;
+    badge.textContent=c;
+
+    // 展示履歴不足パッチの「直前」に固定
+    const exhibit=[...name.children].find(el=>{
+      const tx=String(el.textContent||'');
+      return tx.includes('展示履歴')||tx.includes('履歴不足');
+    });
+
+    if(exhibit)name.insertBefore(badge,exhibit);
+    else name.appendChild(badge);
+  });
+}
+
+/* 古い階級後付け関数が後から動いても最後に正しい位置へ戻す */
+const rerun=()=>{setTimeout(exactPlace,0);setTimeout(exactPlace,80);setTimeout(exactPlace,220)};
+
+const oldRace=window.renderRace;
+if(typeof oldRace==='function'){
+  window.renderRace=function(){
+    const r=oldRace.apply(this,arguments);
+    rerun();
+    return r;
+  };
+}
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function'){
+  window.runAnalysis=async function(){
+    const r=await oldRun.apply(this,arguments);
+    rerun();
+    return r;
+  };
+}
+document.addEventListener('DOMContentLoaded',rerun);
+
+const root=document.getElementById('racers');
+if(root){
+  const mo=new MutationObserver(()=>{clearTimeout(window.__bh74cp);window.__bh74cp=setTimeout(exactPlace,25)});
+  mo.observe(root,{childList:true,subtree:true});
+}
+
+window.BH_VOL74={
+  version:74,
+  classPatchPosition:'選手名→階級→展示履歴不足',
+  exactPosition:true,
+  currentRaceFallback:true
 };
 })();
 </script>

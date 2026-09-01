@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.76</div>
+<div class="bhVol">vol.77</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -9359,6 +9359,222 @@ window.BH_VOL76={
   axisRule:'軸候補≠2着固定',
   weakAxis:'AI期待値中位以下は1〜3着分散',
   headPriority:'AI期待値上位艇を頭優先'
+};
+})();
+</script>
+
+
+<script id="bh-vol77-axis-hard-cap">
+(()=>{
+'use strict';
+
+const V46=window.BH_VOL46;
+if(!V46)return;
+
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+const BOATS=[1,2,3,4,5,6];
+
+function confirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+
+function aiRanks(){
+  const map=new Map();
+
+  // まず内部ランキングを使う
+  for(const key of ['currentRankings','lastRankings','aiRankings']){
+    const arr=window[key];
+    if(Array.isArray(arr)&&arr.length){
+      arr.forEach((x,i)=>{
+        const b=Number(x?.boat??x?.entry_number??x?.number??x?.b);
+        if(b>=1&&b<=6&&!map.has(b))map.set(b,i+1);
+      });
+      if(map.size>=6)return map;
+    }
+  }
+
+  // 無い時だけ表示中のAI期待値ランキングから拾う
+  try{
+    const rows=[...document.querySelectorAll('#analysisCard table tr,.decisionRankTable tr')].filter(tr=>!tr.querySelector('th'));
+    rows.forEach((tr,i)=>{
+      const cells=[...tr.querySelectorAll('td')];
+      const vals=cells.map(td=>(td.textContent||'').trim());
+      // 順位列の次にある「艇」列を優先
+      let b=Number(vals[1]);
+      if(!(b>=1&&b<=6)){
+        const hit=vals.find((v,idx)=>idx>0&&/^[1-6]$/.test(v));
+        b=Number(hit);
+      }
+      if(b>=1&&b<=6&&!map.has(b))map.set(b,i+1);
+    });
+  }catch(e){}
+
+  return map;
+}
+
+function scenarioMode(sc,ranks){
+  if(sc?.physicalAttack&&sc?.head)return 'attack';
+  if(sc?.mode==='escape'&&Number(sc?.head)===1)return 'escape';
+  if(sc?.mode==='axis'&&sc?.axis){
+    const r=Number(ranks.get(Number(sc.axis))||99);
+    return r<=2?'strongAxis':'weakAxis';
+  }
+  return 'mixed';
+}
+
+function baseScore(t,sc,ranks){
+  const l=t?.legs||[];
+  const h=Number(l[0]),s=Number(l[1]),th=Number(l[2]);
+  const hr=Number(ranks.get(h)||99);
+  const mode=scenarioMode(sc,ranks);
+
+  let p=N(t?.score);
+  if(confirmed(t))p+=50000;
+
+  // 頭不明時はAI期待値上位を頭候補にする
+  if(hr===1)p+=5000;
+  else if(hr===2)p+=3600;
+  else if(hr===3)p+=2400;
+  else if(hr===4)p+=900;
+
+  if(mode==='attack'){
+    if(h===Number(sc.head))p+=6500;
+  }else if(mode==='escape'){
+    if(h===1)p+=6500;
+  }else if(mode==='strongAxis'){
+    const a=Number(sc.axis);
+    if(s===a)p+=1200;
+    if(th===a)p+=1000;
+    if(h===a)p+=800;
+  }else if(mode==='weakAxis'){
+    const a=Number(sc.axis);
+    // 弱い軸候補は着順固定しない。ほぼ均等な小加点だけ。
+    if(h===a)p+=250;
+    if(s===a)p+=250;
+    if(th===a)p+=250;
+  }
+
+  return p;
+}
+
+function permutationPool(sc,ranks){
+  const out=[];
+  for(const a of BOATS)for(const b of BOATS)for(const c of BOATS){
+    if(a===b||a===c||b===c)continue;
+    let score=0;
+    try{
+      score=
+        N(V46.legScore?.(a,1,a))+
+        N(V46.legScore?.(b,2,a))+
+        N(V46.legScore?.(c,3,a));
+    }catch(e){}
+
+    const method=a===1?'逃げ':'';
+    const t=V46.ticket
+      ? V46.ticket([a,b,c],method,score,false,'')
+      : {legs:[a,b,c],betType:'3連単',method,score};
+
+    out.push(t);
+  }
+  return out;
+}
+
+const prevGen=V46.generate;
+
+V46.generate=function(outlook){
+  const raw=prevGen.call(this,outlook)||[];
+  const sc=window.bhRaceScenario?.()||{};
+  const ranks=aiRanks();
+  const mode=scenarioMode(sc,ranks);
+
+  const budget=Math.max(100,Math.floor((N(window.bhRaceBudget?.())||1200)/100)*100);
+  const target=Math.max(1,Math.min(sc.escape>=85?10:13,Math.floor(Math.min(1300,budget)/100)));
+
+  // 既存候補 + 全120通りで、制限をかけても点数不足にならないようにする
+  const all=[...raw,...permutationPool(sc,ranks)];
+  const uniq=new Map();
+
+  for(const t of all){
+    if(!t||!Array.isArray(t.legs)||t.legs.length<3)continue;
+    const k=K(t);
+    if(!k)continue;
+    const old=uniq.get(k);
+    if(!old||baseScore(t,sc,ranks)>baseScore(old,sc,ranks))uniq.set(k,t);
+  }
+
+  const sorted=[...uniq.values()]
+    .sort((a,b)=>baseScore(b,sc,ranks)-baseScore(a,sc,ranks)||K(a).localeCompare(K(b),'ja'));
+
+  // 弱い軸候補時は「2着固定」を物理的に禁止
+  if(mode==='weakAxis'&&sc.axis){
+    const axis=Number(sc.axis);
+    const out=[],seen=new Set(),headCount=new Map();
+    let axisHead=0,axisSecond=0,axisThird=0;
+
+    // 12〜13点なら各着最大2点。10点以下でも最大2点。
+    const axisPosMax=2;
+    // 頭も1艇へ寄せすぎない
+    const perHeadMax=Math.max(3,Math.ceil(target*.34));
+
+    const add=t=>{
+      if(!t||out.length>=target)return false;
+      const k=K(t);
+      if(!k||seen.has(k))return false;
+
+      const [h,s,th]=t.legs.map(Number);
+      const isConf=confirmed(t);
+
+      // 確定買い目は絶対残す。それ以外は着順上限を厳守。
+      if(!isConf){
+        if(h===axis&&axisHead>=axisPosMax)return false;
+        if(s===axis&&axisSecond>=axisPosMax)return false;
+        if(th===axis&&axisThird>=axisPosMax)return false;
+
+        const hc=Number(headCount.get(h)||0);
+        if(hc>=perHeadMax)return false;
+      }
+
+      seen.add(k);
+      out.push(t);
+      headCount.set(h,Number(headCount.get(h)||0)+1);
+      if(h===axis)axisHead++;
+      if(s===axis)axisSecond++;
+      if(th===axis)axisThird++;
+      return true;
+    };
+
+    // 1. 確定
+    sorted.filter(confirmed).forEach(add);
+
+    // 2. AI期待値1〜3位の頭を順番に散らす
+    for(const r of [1,2,3]){
+      sorted.filter(t=>Number(ranks.get(Number(t?.legs?.[0]))||99)===r).forEach(add);
+    }
+
+    // 3. その他
+    sorted.forEach(add);
+
+    // 重要：ここで上限を解除した補充はしない
+    // 120通りあるので、制限を守ったまま target まで埋められる
+    return V46.normalize(out.slice(0,target));
+  }
+
+  // 明確な攻め手あり / 強い軸 / イン逃げは通常の優先順
+  return V46.normalize(sorted.slice(0,target));
+};
+
+window.bhV3Generate=o=>V46.generate(o);
+
+window.BH_VOL77={
+  version:77,
+  weakAxisSecondMax:2,
+  weakAxisHeadMax:2,
+  weakAxisThirdMax:2,
+  noRelaxedFallback:true,
+  pool:'120 permutations + existing candidates',
+  rule:'軸候補≠2着固定'
 };
 })();
 </script>

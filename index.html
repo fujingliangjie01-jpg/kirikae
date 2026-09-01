@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.74</div>
+<div class="bhVol">vol.76</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8033,817 +8033,6 @@ window.BH_VOL63={version:63,headGateBeforeBasics:true,amountRuleFixed:true};
 </script>
 
 
-<style id="bh-vol64-attack-outlook-style">
-.bhV64AttackFocus{margin:10px 0 12px;padding:13px 14px;border-radius:14px;border:2px solid #d4af37;background:linear-gradient(135deg,#201806,#0d1117);text-align:center;box-shadow:0 0 18px rgba(212,175,55,.16)}
-.bhV64AttackFocus small{display:block;color:#aaa;font-weight:900;font-size:10px;margin-bottom:4px}
-.bhV64AttackBoat{font-size:30px;font-weight:1000;color:#ffd84d;line-height:1.15}
-.bhV64AttackMethod{margin-top:5px;font-size:22px;font-weight:1000;color:#fff}
-.bhV64AttackSub{margin-top:5px;font-size:10px;color:#aeb8c5}
-</style>
-<script id="bh-vol64-confirmed-max13-attack-slow100-correction">
-(()=>{
-'use strict';
-const V46=window.BH_VOL46;if(!V46)return;
-const N=v=>Number.isFinite(Number(v))?Number(v):0;
-const K=t=>(t?.legs||[]).join('-');
-
-function isConfirmed(t){
-  const txt=((t?.note||'')+' '+(t?.label||'')+' '+(t?.pattern||'')).toLowerCase();
-  return t?.confirmed===true||txt.includes('買い目確定')||txt.includes('確定');
-}
-function isLegacySashi(t){
-  const h=Number(t?.legs?.[0]||0),m=String(t?.method||t?.decision||'');
-  return h>=3&&h<=6&&m.includes('差し')&&!m.includes('まくり差し');
-}
-function liveOdds(t){
-  const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
-  return Number.isFinite(o)&&o>0?o:0;
-}
-function oddsAllowed(t){
-  if(isConfirmed(t))return true;
-  const o=liveOdds(t);
-  return !o||o>8;
-}
-
-const prevGenerate=V46.generate;
-V46.generate=function(outlook){
-  const o=outlook||window.BH_VOL41?.outlook?.()||{};
-  const raw=prevGenerate.call(this,o)||[];
-  const pool=[],ps=new Set();
-  try{V46.buildIn?.(pool,o,ps)}catch(e){}
-  try{V46.buildNonIn?.(pool,o,ps)}catch(e){}
-  try{V46.ensureSixThird?.(pool,ps,o)}catch(e){}
-  const confirmed=pool.filter(t=>Array.isArray(t?.legs)&&t.legs.length>=2&&isConfirmed(t)&&!isLegacySashi(t));
-  const out=[],seen=new Set();
-  const add=t=>{
-    if(!t||!Array.isArray(t.legs)||!t.legs.length||isLegacySashi(t))return;
-    const k=K(t);if(!k||seen.has(k)||!oddsAllowed(t))return;
-    const x={...t};x.bhConfirmed=isConfirmed(x);x.mandatory=x.bhConfirmed;
-    seen.add(k);out.push(x);
-  };
-  confirmed.forEach(add);
-  raw.forEach(add);
-  return V46.normalize(out.slice(0,13));
-};
-window.bhV3Generate=o=>V46.generate(o);
-
-// 旧別枠買い目が13点の外へ増えるのを停止。裏目は13点内で扱う。
-if(typeof window.bhV5ReverseTickets==='function')window.bhV5ReverseTickets=()=>[];
-if(typeof window.bhV17PhysicalReverseTickets==='function')window.bhV17PhysicalReverseTickets=()=>[];
-
-// 投資上限1300円。確定を先に資金確保。0円買い目は残さない。
-window.bhV3Allocate=function(tickets){
-  if(!Array.isArray(tickets))return[];
-  const user=Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1300)/100)*100);
-  const cap=Math.min(1300,user);
-  const ordered=[...tickets.filter(isConfirmed),...tickets.filter(t=>!isConfirmed(t))];
-  const kept=[],seen=new Set();let used=0;
-  for(const t of ordered){
-    const k=K(t);if(!k||seen.has(k))continue;
-    const o=liveOdds(t);
-    if(!isConfirmed(t)&&o>0&&o<=8)continue;
-    const amount=(o>8&&o<=15)?200:100;
-    if(used+amount>cap)continue;
-    t.amount=amount;t.bhConfirmed=isConfirmed(t);t.mandatory=t.bhConfirmed;
-    kept.push(t);seen.add(k);used+=amount;
-    if(kept.length>=13)break;
-  }
-  tickets.splice(0,tickets.length,...kept);
-  return tickets;
-};
-
-// 全体見通しに攻め艇・決まり手を大型表示。
-function attackInfo(){
-  try{
-    const sig=window.bhOneMOutlookSignal?.();
-    if(!sig)return{boat:1,method:'逃げ',note:'1Mデータ不足'};
-    const methods=(sig.methodProbs||[]).filter(x=>!x.hole).filter(x=>{
-      const c=Number(window.course?.(x.boat)||x.boat),m=String(x.type||'');
-      if(c===2)return m==='差し'||m==='まくり';
-      if(c>=3&&c<=6)return m==='まくり'||m==='まくり差し';
-      return false;
-    }).sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
-    if(sig.hasAttack&&methods[0])return{boat:methods[0].boat,method:methods[0].type,note:`1M攻め差 ${N(sig.attackGap).toFixed(2)}艇身`};
-    return{boat:1,method:'逃げ',note:`明確な外攻めなし（差 ${N(sig.attackGap).toFixed(2)}艇身）`};
-  }catch(e){return{boat:1,method:'逃げ',note:''}}
-}
-function renderAttackFocus(){
-  const root=document.getElementById('attack');if(!root)return;
-  root.querySelector('.bhV64AttackFocus')?.remove();
-  const a=attackInfo(),graph=root.querySelector('.outlookGraphBox');
-  const html=`<div class="bhV64AttackFocus"><small>⚡ このレースの攻め</small><div class="bhV64AttackBoat">${a.boat}号艇</div><div class="bhV64AttackMethod">${a.method}</div><div class="bhV64AttackSub">${a.note}</div></div>`;
-  if(graph)graph.insertAdjacentHTML('beforebegin',html);else root.insertAdjacentHTML('afterbegin',html);
-}
-const oldRun=window.runAnalysis;
-if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await oldRun.apply(this,arguments);setTimeout(renderAttackFocus,0);return r};
-
-// スロー起こし距離＋直前タイム補正。
-// 100m付近は加速不足を反映し、直前/直線タイム上位なら行き足で救済。
-const oldOneM=window.bhOneMModel;
-if(typeof oldOneM==='function')window.bhOneMModel=function(stats){
-  const rows=oldOneM.call(this,stats);if(!Array.isArray(rows)||!rows.length)return rows;
-  const pre={},vals=[];
-  for(let b=1;b<=6;b++){let v=null;try{v=Number(window.bhBeforeRow?.(b)?.straight)}catch(e){}if(Number.isFinite(v)&&v>0){pre[b]=v;vals.push(v)}}
-  const sorted=[...vals].sort((a,b)=>a-b);
-  const rankScore=v=>{if(!Number.isFinite(v)||sorted.length<2)return 0;const r=sorted.findIndex(x=>x===v)+1;return Math.max(-1,Math.min(1,1-2*(r-1)/Math.max(1,sorted.length-1)))};
-  for(const x of rows){
-    if(!Number.isFinite(Number(x.arrivalScore)))continue;
-    const b=Number(x.boat),mode=String(x.startMode||window.BH_VOL45?.mode?.[b]||(b<=3?'slow':'dash'));
-    const dist=Number(x.startDistance||window.BH_VOL45?.dist?.[b]||145),q=rankScore(pre[b]);
-    const accel=q*.18;
-    if(mode==='slow'){
-      const shortage=Math.max(0,Math.min(.30,(145-dist)/45*.30));
-      const rescue=q>0?shortage*q*.80:0,extra=q<0?shortage*(-q)*.25:0;
-      const net=Math.max(0,shortage-rescue+extra),old=N(x.deepStartPenaltyBody);
-      x.arrivalScore+=(net-old)*.15;
-      x.deepStartPenaltyBody=net;x.beforeTimeRescueBody=rescue;
-    }
-    x.arrivalScore-=accel*.15;x.beforeAccelBody=accel;x.beforeStraightTime=Number.isFinite(pre[b])?pre[b]:null;
-  }
-  const usable=rows.filter(x=>Number.isFinite(Number(x.arrivalScore)));
-  if(usable.length){const lead=Math.min(...usable.map(x=>Number(x.arrivalScore)));for(const x of usable){x.arrival=x.arrivalScore;x.delay=x.arrivalScore-lead;x.boatBehind=x.delay/.15;if(Number.isFinite(Number(x.startBoatBehind)))x.moveBody=x.boatBehind-x.startBoatBehind}}
-  return rows;
-};
-
-window.BH_VOL64={version:64,confirmedAlwaysFirst:true,absoluteMaxTickets:13,attackFocus:true,slowDistanceBeforeTimeCorrection:true,budgetCap:1300};
-})();
-</script>
-
-
-<style id="bh-vol65-outlook-attack-fix-style">
-.bhV65AttackFocus{margin:10px 0 12px;padding:14px;border-radius:14px;border:2px solid #d4af37;background:linear-gradient(135deg,#211a07,#0b0d12);text-align:center;box-shadow:0 0 18px rgba(212,175,55,.18)}
-.bhV65AttackFocus .ttl{font-size:11px;font-weight:900;color:#b9b9b9}
-.bhV65AttackFocus .boat{font-size:31px;line-height:1.15;font-weight:1000;color:#ffd84d;margin-top:4px}
-.bhV65AttackFocus .method{font-size:22px;font-weight:1000;color:#fff;margin-top:4px}
-.bhV65AttackFocus .reason{font-size:10px;color:#aab2bf;margin-top:6px}
-</style>
-<script id="bh-vol65-outlook-linked-bets-attack">
-(()=>{
-'use strict';
-const V46=window.BH_VOL46;if(!V46)return;
-const N=v=>Number.isFinite(Number(v))?Number(v):0;
-const K=t=>(t?.legs||[]).join('-');
-
-function escRate(o){try{return N(window.BH_VOL42?.escape?.(o)??o?.escape??50)}catch(e){return N(o?.escape)||50}}
-function config(e){
-  if(e>=85)return{in3:10,out3:0,ex2:0,max:10};
-  if(e>=65)return{in3:8,out3:4,ex2:1,max:13};
-  if(e>=45)return{in3:4,out3:7,ex2:2,max:13};
-  return{in3:3,out3:8,ex2:2,max:13};
-}
-function isConfirmed(t){
-  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
-  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
-}
-function isForbiddenSashi(t){
-  const h=Number(t?.legs?.[0]||0),m=String(t?.method||'');
-  return h>=3&&h<=6&&m.includes('差し')&&!m.includes('まくり差し');
-}
-function oddsOf(t){return Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0}
-function oddsOK(t){if(isConfirmed(t))return true;const o=oddsOf(t);return !o||o>8}
-function ticketRank(a,b){return(isConfirmed(b)?1:0)-(isConfirmed(a)?1:0)||N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja')}
-function uniq(arr){
-  const out=[],seen=new Set();
-  for(const t of arr||[]){
-    if(!t||!Array.isArray(t.legs)||t.legs.length<2||isForbiddenSashi(t)||!oddsOK(t))continue;
-    const k=K(t);if(!k||seen.has(k))continue;
-    seen.add(k);out.push(t);
-  }
-  return out;
-}
-
-V46.generate=function(outlook){
-  const o=outlook||window.BH_VOL41?.outlook?.()||{},e=escRate(o),cfg=config(e);
-  const inPool=[],outPool=[],exPool=[],s1=new Set(),s2=new Set();
-  try{V46.buildIn?.(inPool,o,s1)}catch(_){}
-  try{V46.buildNonIn?.(outPool,o,s2)}catch(_){}
-  try{V46.ensureSixThird?.(outPool,s2,o)}catch(_){}
-  try{
-    const heads=window.BH_VOL41?.headCandidates?.(o)||[];
-    exPool.push(...(window.BH_VOL42?.exactaPool?.(o,heads)||[]));
-  }catch(_){}
-
-  const inU=uniq(inPool.filter(t=>Number(t.legs?.[0])===1)).sort(ticketRank);
-  const outU=uniq(outPool.filter(t=>Number(t.legs?.[0])!==1)).sort(ticketRank);
-  const exU=uniq(exPool.filter(t=>t.legs?.length===2)).sort(ticketRank);
-  const allConfirmed=uniq([...inU,...outU,...exU].filter(isConfirmed)).sort(ticketRank);
-
-  const picked=[],seen=new Set();
-  function add(t){
-    if(!t||picked.length>=cfg.max)return false;
-    const k=K(t);if(!k||seen.has(k))return false;
-    seen.add(k);picked.push({...t,bhConfirmed:isConfirmed(t),mandatory:isConfirmed(t)});return true;
-  }
-  allConfirmed.forEach(add);
-
-  function count(fn){return picked.filter(fn).length}
-  function take(pool,n,fn){
-    for(const t of pool){
-      if(picked.length>=cfg.max||count(fn)>=n)break;
-      add(t);
-    }
-  }
-  take(inU,cfg.in3,t=>t.legs.length===3&&Number(t.legs[0])===1);
-  take(outU,cfg.out3,t=>t.legs.length===3&&Number(t.legs[0])!==1);
-  take(exU,cfg.ex2,t=>t.legs.length===2);
-
-  const rest=uniq([...inU,...outU,...exU]).filter(t=>!seen.has(K(t))).sort(ticketRank);
-  for(const t of rest){if(picked.length>=cfg.max)break;add(t)}
-  return V46.normalize(picked.slice(0,cfg.max));
-};
-window.bhV3Generate=o=>V46.generate(o);
-
-window.bhV3Allocate=function(tickets){
-  if(!Array.isArray(tickets))return[];
-  const user=Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1300)/100)*100);
-  const cap=Math.min(1300,user);
-  const ordered=[...tickets.filter(isConfirmed),...tickets.filter(t=>!isConfirmed(t))];
-  const kept=[],seen=new Set();let used=0;
-  for(const t of ordered){
-    const k=K(t);if(!k||seen.has(k))continue;
-    const o=oddsOf(t);
-    if(!isConfirmed(t)&&o>0&&o<=8)continue;
-    const amount=(o>8&&o<=15)?200:100;
-    if(used+amount>cap)continue;
-    t.amount=amount;kept.push(t);seen.add(k);used+=amount;
-    if(kept.length>=13)break;
-  }
-  tickets.splice(0,tickets.length,...kept);
-  return tickets;
-};
-
-function attackInfo(){
-  try{
-    const sig=window.bhOneMOutlookSignal?.();
-    if(!sig)return{boat:1,method:'逃げ',reason:'1Mデータ不足'};
-    const attacker=Number(sig?.front?.outer)||null;
-    if(sig.hasAttack&&attacker){
-      const ms=(sig.methodProbs||[]).filter(x=>Number(x.boat)===attacker&&!x.hole).filter(x=>{
-        const c=Number(window.course?.(x.boat)||x.boat),m=String(x.type||'');
-        if(c===2)return m==='差し'||m==='まくり';
-        if(c>=3&&c<=6)return m==='まくり'||m==='まくり差し';
-        return false;
-      }).sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
-      return{boat:attacker,method:ms[0]?.type||'攻め',reason:`直内艇より ${N(sig.attackGap).toFixed(2)}艇身前`};
-    }
-    return{boat:1,method:'逃げ',reason:'明確な外攻めなし'};
-  }catch(e){return{boat:1,method:'逃げ',reason:''}}
-}
-function renderAttack(){
-  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
-  if(!graph)return;
-  graph.parentElement?.querySelector('.bhV65AttackFocus')?.remove();
-  const a=attackInfo();
-  graph.insertAdjacentHTML('beforebegin',`<div class="bhV65AttackFocus"><div class="ttl">⚡ このレースの攻め</div><div class="boat">${a.boat}号艇</div><div class="method">${a.method}</div><div class="reason">${a.reason}</div></div>`);
-}
-const oldPattern=window.renderPatternBets;
-if(typeof oldPattern==='function')window.renderPatternBets=function(rankings,outlook){const r=oldPattern.apply(this,arguments);setTimeout(renderAttack,0);return r};
-const oldRun=window.runAnalysis;
-if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await oldRun.apply(this,arguments);setTimeout(renderAttack,0);return r};
-document.addEventListener('DOMContentLoaded',()=>setTimeout(renderAttack,50));
-
-window.BH_VOL65={version:65,outlookLinkedTicketCounts:true,confirmedFirst:true,attackShownInsideOutlook:true};
-})();
-</script>
-
-
-<script id="bh-vol66-inner-leader-attack-buy-link">
-(()=>{
-'use strict';
-const V46=window.BH_VOL46;if(!V46)return;
-const N=v=>Number.isFinite(Number(v))?Number(v):0;
-const K=t=>(t?.legs||[]).join('-');
-
-function normMethod(m){
-  m=String(m||'');
-  if(m==='makuri')return 'まくり';
-  if(m==='makurizashi')return 'まくり差し';
-  if(m==='sashi')return '差し';
-  return m;
-}
-function methodMatch(ticketMethod,attackMethod){
-  return normMethod(ticketMethod)===normMethod(attackMethod);
-}
-function isConfirmed(t){
-  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
-  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
-}
-function isForbiddenSashi(t){
-  const h=Number(t?.legs?.[0]||0),m=String(t?.method||'');
-  return h>=3&&h<=6&&m.includes('差し')&&!m.includes('まくり差し');
-}
-
-/*
- 主攻めの決め方
- 1) 1M到達で絶対先頭から0.30艇身以内を「先頭グループ」とする
- 2) そのグループ内では内側艇を優先する
- 3) その艇のまくり/まくり差し/2C差しの適性から決まり手を決める
-
- これで「6号艇が5号艇より0.63艇身前」という局所差だけを理由に
- 6号艇を主攻めにする誤判定をやめる。
-*/
-function mainAttack(){
-  try{
-    const sig=window.bhOneMOutlookSignal?.();
-    const rows=(sig?.theory?.rows||[]).filter(x=>Number.isFinite(Number(x.boatBehind)));
-    if(!rows.length)return{boat:1,course:1,method:'逃げ',prob:0,reason:'1Mデータ不足'};
-
-    const lead=Math.min(...rows.map(x=>N(x.boatBehind)));
-    const methods=(sig?.methodProbs||[]).filter(x=>!x.hole);
-
-    const candidates=rows
-      .map(x=>({
-        boat:Number(x.boat),
-        course:Number(window.course?.(x.boat)||x.boat),
-        behind:N(x.boatBehind)
-      }))
-      .filter(x=>x.course>=2&&x.course<=6)
-      .filter(x=>x.behind-lead<=0.30+1e-9)
-      .filter(x=>methods.some(m=>{
-        if(Number(m.boat)!==x.boat)return false;
-        const t=String(m.type||'');
-        if(x.course===2)return t==='差し'||t==='まくり';
-        return t==='まくり'||t==='まくり差し';
-      }))
-      .sort((a,b)=>a.course-b.course||a.behind-b.behind);
-
-    if(!candidates.length)
-      return{boat:1,course:1,method:'逃げ',prob:0,reason:'先頭0.30艇身内に有効な外攻めなし'};
-
-    const c=candidates[0];
-    const ms=methods
-      .filter(m=>Number(m.boat)===c.boat)
-      .filter(m=>{
-        const t=String(m.type||'');
-        if(c.course===2)return t==='差し'||t==='まくり';
-        return t==='まくり'||t==='まくり差し';
-      })
-      .sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
-
-    const top=ms[0];
-    return{
-      boat:c.boat,
-      course:c.course,
-      method:top?.type||'攻め',
-      prob:N(top?.raceProb),
-      behind:c.behind,
-      leadGap:c.behind-lead,
-      reason:`先頭グループ内の最内側（先頭差 ${Math.max(0,c.behind-lead).toFixed(2)}艇身）`
-    };
-  }catch(e){
-    return{boat:1,course:1,method:'逃げ',prob:0,reason:''};
-  }
-}
-window.bhMainAttackInfo=mainAttack;
-
-/* 全体見通しの表示も同じ主攻め判定を使用 */
-function repaintAttack(){
-  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
-  if(!graph)return;
-  graph.parentElement?.querySelectorAll('.bhV64AttackFocus,.bhV65AttackFocus,.bhV66AttackFocus').forEach(x=>x.remove());
-  const a=mainAttack();
-  graph.insertAdjacentHTML('beforebegin',
-    `<div class="bhV65AttackFocus bhV66AttackFocus">
-      <div class="ttl">⚡ このレースの攻め</div>
-      <div class="boat">${a.boat}号艇</div>
-      <div class="method">${a.method}</div>
-      <div class="reason">${a.reason}${a.prob?` / 展開評価 ${a.prob.toFixed(1)}%`:''}</div>
-    </div>`);
-}
-
-/* 買い目も同じ主攻め・決まり手へ紐付ける */
-const prevGen=V46.generate;
-V46.generate=function(outlook){
-  const o=outlook||window.BH_VOL41?.outlook?.()||{};
-  const raw=prevGen.call(this,o)||[];
-  const a=mainAttack();
-
-  // 1号艇逃げ判定なら既存構成をそのまま。
-  if(a.boat===1)return V46.normalize(raw.slice(0,13));
-
-  const pool=[],seenPool=new Set();
-  try{V46.buildNonIn?.(pool,o,seenPool)}catch(_){}
-  try{V46.buildIn?.(pool,o,seenPool)}catch(_){}
-
-  const attackPool=pool
-    .filter(t=>Array.isArray(t?.legs)&&t.legs.length>=2)
-    .filter(t=>Number(t.legs[0])===a.boat)
-    .filter(t=>methodMatch(t.method,a.method))
-    .filter(t=>!isForbiddenSashi(t))
-    .sort((x,y)=>
-      (isConfirmed(y)?1:0)-(isConfirmed(x)?1:0) ||
-      N(y.score)-N(x.score) ||
-      K(x).localeCompare(K(y),'ja')
-    );
-
-  const confirmed=[...pool,...raw]
-    .filter(isConfirmed)
-    .filter(t=>!isForbiddenSashi(t));
-
-  const out=[],seen=new Set();
-  const add=t=>{
-    if(!t||!Array.isArray(t.legs)||!t.legs.length||isForbiddenSashi(t))return;
-    const k=K(t);if(!k||seen.has(k)||out.length>=13)return;
-    seen.add(k);out.push({...t,bhConfirmed:isConfirmed(t),mandatory:isConfirmed(t)});
-  };
-
-  // ① 確定は必ず最初に確保
-  confirmed.forEach(add);
-
-  // ② 表示している主攻め艇＋決まり手の買い目を優先
-  // 少なくとも候補上位3点まで先に確保
-  attackPool.slice(0,3).forEach(add);
-
-  // ③ その後に全体見通し帯で作られた元の買い目を順番通り補充
-  raw.forEach(add);
-
-  // ④ まだ不足なら主攻め候補の残りから補充
-  attackPool.slice(3).forEach(add);
-
-  return V46.normalize(out.slice(0,13));
-};
-window.bhV3Generate=o=>V46.generate(o);
-
-/* 描画後に必ず再表示 */
-const oldPattern=window.renderPatternBets;
-if(typeof oldPattern==='function'){
-  window.renderPatternBets=function(){
-    const r=oldPattern.apply(this,arguments);
-    setTimeout(repaintAttack,0);
-    return r;
-  };
-}
-const oldRun=window.runAnalysis;
-if(typeof oldRun==='function'){
-  window.runAnalysis=async function(){
-    const r=await oldRun.apply(this,arguments);
-    setTimeout(repaintAttack,0);
-    return r;
-  };
-}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(repaintAttack,80));
-
-window.BH_VOL66={
-  version:66,
-  attackRule:'leadGroupWithin0.30_innerPriority',
-  attackAndBetsSameSource:true,
-  attackBetPriorityTop3:true,
-  confirmedFirst:true,
-  maxTickets:13
-};
-})();
-</script>
-
-
-<style id="bh-vol67-class-patch-style">
-.bhClassPatch{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:1000;line-height:1.15;border:1px solid rgba(255,255,255,.25);vertical-align:middle;white-space:nowrap}
-.bhClassA1{background:linear-gradient(135deg,#6f5200,#d4af37);color:#111;border-color:#ffe27a}
-.bhClassA2{background:linear-gradient(135deg,#17365f,#2f73c7);color:#fff;border-color:#6db2ff}
-.bhClassB1{background:linear-gradient(135deg,#194726,#2f8a49);color:#fff;border-color:#69d58a}
-.bhClassB2{background:linear-gradient(135deg,#5a2020,#9a3737);color:#fff;border-color:#ff7a7a}
-.bhClassOther{background:#35363a;color:#eee;border-color:#777}
-</style>
-<script id="bh-vol67-racer-class-patch">
-(()=>{
-'use strict';
-function normalizeClass(v){
-  const x=String(v||'').toUpperCase().replace(/\s+/g,'');
-  if(x.includes('A1'))return 'A1';
-  if(x.includes('A2'))return 'A2';
-  if(x.includes('B1'))return 'B1';
-  if(x.includes('B2'))return 'B2';
-  return x||'';
-}
-function classOfRacer(r){
-  return normalizeClass(r?.class??r?.grade??r?.racer_class??r?.racerClass??r?.rank_class??r?.rankClass??r?.current_class);
-}
-function classCss(c){
-  if(c==='A1')return 'bhClassA1';
-  if(c==='A2')return 'bhClassA2';
-  if(c==='B1')return 'bhClassB1';
-  if(c==='B2')return 'bhClassB2';
-  return 'bhClassOther';
-}
-function patchHTML(r){
-  const c=classOfRacer(r);
-  return c?`<span class="bhClassPatch ${classCss(c)}">${c}</span>`:'';
-}
-function applyClassPatches(){
-  const list=Array.isArray(window.racers)?window.racers:[];
-  document.querySelectorAll('.racer').forEach((row,i)=>{
-    const name=row.querySelector('.racerName');
-    if(!name)return;
-    name.querySelector('.bhClassPatch')?.remove();
-    const html=patchHTML(list[i]);
-    if(html)name.insertAdjacentHTML('beforeend',html);
-  });
-}
-const oldRenderRace=window.renderRace;
-if(typeof oldRenderRace==='function'){
-  window.renderRace=function(){
-    const r=oldRenderRace.apply(this,arguments);
-    setTimeout(applyClassPatches,0);
-    return r;
-  };
-}
-const oldRun=window.runAnalysis;
-if(typeof oldRun==='function'){
-  window.runAnalysis=async function(){
-    const r=await oldRun.apply(this,arguments);
-    setTimeout(applyClassPatches,0);
-    return r;
-  };
-}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(applyClassPatches,80));
-window.BH_VOL67={version:67,racerClassPatch:true};
-})();
-</script>
-
-
-<style id="bh-vol68-classpatch-fix-style">
-.bhClassPatch{display:inline-flex!important;align-items:center;justify-content:center;margin-left:7px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:1000;line-height:1;border:1px solid rgba(255,255,255,.30);vertical-align:middle;white-space:nowrap}
-.bhClassA1{background:#d4af37;color:#111;border-color:#ffe990}
-.bhClassA2{background:#2867b2;color:#fff;border-color:#79b8ff}
-.bhClassB1{background:#2f8748;color:#fff;border-color:#75dc91}
-.bhClassB2{background:#963737;color:#fff;border-color:#ff8383}
-</style>
-<script id="bh-vol68-classpatch-ticket-refill-method-confirm-off">
-(()=>{
-'use strict';
-const V46=window.BH_VOL46;if(!V46)return;
-const N=v=>Number.isFinite(Number(v))?Number(v):0;
-const K=t=>(t?.legs||[]).join('-');
-
-/* 1) 選手名横の階級パッチ：
-   racersオブジェクトのキー差に対応し、DOM上の選手番号から艇を照合 */
-function normClass(v){
-  const x=String(v||'').toUpperCase().replace(/\s+/g,'');
-  const m=x.match(/(?:^|[^A-Z0-9])(A1|A2|B1|B2)(?:$|[^A-Z0-9])/);
-  if(m)return m[1];
-  if(['A1','A2','B1','B2'].includes(x))return x;
-  return '';
-}
-function racerClass(r){
-  const keys=['class','grade','racer_class','racerClass','rank_class','rankClass','current_class',
-              'class_name','className','racer_rank','racerRank','rank','grade_name','gradeName'];
-  for(const k of keys){const c=normClass(r?.[k]);if(c)return c}
-  // APIによって階級がネストされる場合
-  for(const obj of [r?.profile,r?.racer,r?.player,r?.basic]){
-    if(!obj)continue;
-    for(const k of keys){const c=normClass(obj?.[k]);if(c)return c}
-  }
-  // 最後に文字列化したデータ内から A1/A2/B1/B2 を探索
-  try{
-    const txt=JSON.stringify(r||{});
-    const m=txt.match(/"(?:class|grade|racer_class|racerClass|rank_class|rankClass|rank)"\s*:\s*"(A1|A2|B1|B2)"/i);
-    if(m)return m[1].toUpperCase();
-  }catch(e){}
-  return '';
-}
-function clsCss(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
-function boatNo(row,index){
-  const n=row.querySelector('.number');
-  const v=Number((n?.textContent||'').match(/[1-6]/)?.[0]);
-  return v||index+1;
-}
-function applyClassPatches(){
-  const list=Array.isArray(window.racers)?window.racers:[];
-  document.querySelectorAll('.racer').forEach((row,i)=>{
-    const name=row.querySelector('.racerName');if(!name)return;
-    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
-    const b=boatNo(row,i);
-    const r=list.find(x=>Number(x?.entry_number??x?.boat_number??x?.boat??x?.number)===b)||list[i];
-    const c=racerClass(r);
-    if(c)name.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${clsCss(c)}">${c}</span>`);
-  });
-}
-
-/* 2) 「決まり手確定」だけ停止。
-   買い目確定の文言/フラグは残す。 */
-window.bhMethodConfirmEnabled=false;
-window.bhIsMethodConfirmed=()=>false;
-
-/* 3) 買い目不足対策。
-   全体見通しの最大点数まで、同じ攻め手→次候補の順で補充。
-   確定買い目は先に確保。8倍以下の通常買い目は除外。 */
-function isConfirmed(t){
-  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
-  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
-}
-function odds(t){return Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0}
-function allowed(t){const o=odds(t);return isConfirmed(t)||!o||o>8}
-function esc(o){try{return N(window.BH_VOL42?.escape?.(o)??o?.escape??50)}catch(e){return 50}}
-function maxCount(o){return esc(o)>=85?10:13}
-
-const prevGen=V46.generate;
-V46.generate=function(outlook){
-  const o=outlook||window.BH_VOL41?.outlook?.()||{};
-  const max=maxCount(o);
-  const raw=prevGen.call(this,o)||[];
-  const inPool=[],outPool=[],s1=new Set(),s2=new Set();
-  try{V46.buildIn?.(inPool,o,s1)}catch(e){}
-  try{V46.buildNonIn?.(outPool,o,s2)}catch(e){}
-  try{V46.ensureSixThird?.(outPool,s2,o)}catch(e){}
-
-  const attack=window.bhMainAttackInfo?.()||{boat:1,method:'逃げ'};
-  const all=[...inPool,...outPool];
-
-  const confirmed=all.filter(isConfirmed);
-  const sameAttack=all.filter(t=>Number(t?.legs?.[0])===Number(attack.boat));
-  const rest=all.filter(t=>Number(t?.legs?.[0])!==Number(attack.boat));
-
-  const sort=(a,b)=>(isConfirmed(b)?1:0)-(isConfirmed(a)?1:0)||N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja');
-  confirmed.sort(sort);sameAttack.sort(sort);rest.sort(sort);
-
-  const out=[],seen=new Set();
-  const add=t=>{
-    if(!t||!Array.isArray(t.legs)||t.legs.length<2||out.length>=max||!allowed(t))return;
-    const k=K(t);if(!k||seen.has(k))return;
-    seen.add(k);out.push(t);
-  };
-  confirmed.forEach(add);
-  raw.forEach(add);
-  sameAttack.forEach(add);
-  rest.forEach(add);
-
-  return V46.normalize(out.slice(0,max));
-};
-window.bhV3Generate=o=>V46.generate(o);
-
-/* 描画タイミング差対策：出走表生成直後・AI解析後・DOM変更後に再適用 */
-const oldRenderRace=window.renderRace;
-if(typeof oldRenderRace==='function')window.renderRace=function(){const r=oldRenderRace.apply(this,arguments);setTimeout(applyClassPatches,0);setTimeout(applyClassPatches,120);return r};
-const oldRun=window.runAnalysis;
-if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await oldRun.apply(this,arguments);setTimeout(applyClassPatches,0);setTimeout(applyClassPatches,180);return r};
-document.addEventListener('DOMContentLoaded',()=>{setTimeout(applyClassPatches,100);setTimeout(applyClassPatches,500)});
-const obs=new MutationObserver(()=>{clearTimeout(window.__bh68ClassTimer);window.__bh68ClassTimer=setTimeout(applyClassPatches,40)});
-document.addEventListener('DOMContentLoaded',()=>{const root=document.getElementById('racers');if(root)obs.observe(root,{childList:true,subtree:true})});
-
-window.BH_VOL68={version:68,classPatchRobust:true,methodConfirmDisabled:true,ticketRefill:true};
-})();
-</script>
-
-
-<style id="bh-vol69-alignment-style">
-.bhClassPatch{display:inline-flex!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;vertical-align:middle!important}
-.bhV69AttackFocus{border:2px solid #d4af37;border-radius:14px;padding:16px 12px;margin:12px 0;background:linear-gradient(135deg,#251d08,#111)}
-.bhV69AttackFocus .ttl{text-align:center;font-weight:1000;color:#ffd84d}
-.bhV69AttackFocus .main{text-align:center;font-size:27px;font-weight:1000;color:#ffd84d;margin-top:7px}
-.bhV69AttackFocus .sub{text-align:center;font-size:20px;font-weight:1000;margin-top:3px}
-.bhV69AttackFocus .reason{text-align:center;color:#aaa;font-size:11px;margin-top:8px}
-</style>
-<script id="bh-vol69-class-and-outlook-bet-alignment">
-(()=>{
-'use strict';
-const V46=window.BH_VOL46;if(!V46)return;
-const N=v=>Number.isFinite(Number(v))?Number(v):0;
-const K=t=>(t?.legs||[]).join('-');
-
-function cls(r){
-  const v=r?.rank_number??r?.class_number??r?.rank??r?.class??r?.grade??
-          r?.racer_class??r?.racerClass??r?.rank_class??r?.rankClass??'';
-  const x=String(v).toUpperCase().replace(/\s+/g,'');
-  const m=x.match(/A1|A2|B1|B2/);
-  return m?m[0]:'';
-}
-function css(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
-function applyClass(){
-  const list=Array.isArray(window.racers)?window.racers:[];
-  document.querySelectorAll('#racers .racer').forEach((row,i)=>{
-    const name=row.querySelector('.racerName');if(!name)return;
-    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
-    const b=Number(row.querySelector('.number')?.textContent)||i+1;
-    const r=list.find(x=>Number(x?.entry_number)===b)||list[i];
-    const c=cls(r);
-    if(c)name.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${css(c)}">${c}</span>`);
-  });
-}
-
-/* 全体見通し・攻め手・買い目で共通使用する展開 */
-function scenario(){
-  const sig=window.bhOneMOutlookSignal?.()||{};
-  const outlook=window.BH_VOL41?.outlook?.()||{};
-  const escape=N(window.BH_VOL42?.escape?.(outlook)??outlook.escape??50);
-  const nonEscape=100-escape;
-  const rows=(sig?.theory?.rows||[]).filter(x=>Number.isFinite(Number(x.boatBehind)));
-  if(!rows.length){
-    return {mode:escape>=50?'escape':'unclear',escape,nonEscape,head:escape>=50?1:null,axis:null,method:escape>=50?'逃げ':'攻め手不明',reason:'1Mデータ不足'};
-  }
-
-  const lead=Math.min(...rows.map(x=>N(x.boatBehind)));
-  const front=rows.map(x=>({
-    boat:Number(x.boat),course:Number(window.course?.(x.boat)||x.boat),
-    behind:N(x.boatBehind),gap:N(x.boatBehind)-lead
-  })).filter(x=>x.gap<=0.30+1e-9).sort((a,b)=>a.course-b.course||a.gap-b.gap);
-
-  const innerLead=front[0]||null;
-  const methods=(sig.methodProbs||[]).filter(x=>!x.hole).sort((a,b)=>N(b.raceProb)-N(a.raceProb));
-  const validAttack=methods.find(m=>{
-    const c=Number(window.course?.(m.boat)||m.boat),t=String(m.type||'');
-    if(!front.some(f=>f.boat===Number(m.boat)))return false;
-    return c===2?(t==='差し'||t==='まくり'):(c>=3&&(t==='まくり'||t==='まくり差し'));
-  });
-
-  // イン優勢なら1号艇逃げを本線
-  if(escape>=60){
-    return {mode:'escape',escape,nonEscape,head:1,axis:innerLead?.boat||1,method:'逃げ',
-      reason:`全体見通し イン逃げ ${escape.toFixed(1)}%`};
-  }
-
-  // イン以外優勢で、決まり手まで成立する攻め艇がある
-  if(nonEscape>=55 && validAttack){
-    return {mode:'attack',escape,nonEscape,head:Number(validAttack.boat),axis:innerLead?.boat||Number(validAttack.boat),
-      method:String(validAttack.type||'攻め'),prob:N(validAttack.raceProb),
-      reason:`イン以外 ${nonEscape.toFixed(1)}% / 1M先頭グループと決まり手適性が一致`};
-  }
-
-  // イン以外優勢なのに攻め切る艇が確定できない時は「1号艇逃げ」に戻さない
-  if(nonEscape>=55){
-    return {mode:'axis',escape,nonEscape,head:null,axis:innerLead?.boat||null,method:'攻めきれず・軸候補',
-      reason:`イン以外 ${nonEscape.toFixed(1)}% / 明確な頭は未確定。1M先頭グループ最内を軸評価`};
-  }
-
-  // 五分なら無理に頭を断定しない
-  return {mode:'mixed',escape,nonEscape,head:null,axis:innerLead?.boat||null,method:'混戦・軸候補',
-    reason:`イン ${escape.toFixed(1)}% / イン以外 ${nonEscape.toFixed(1)}%`};
-}
-window.bhRaceScenario=scenario;
-window.bhMainAttackInfo=()=>{
-  const s=scenario();
-  return {boat:s.head||s.axis||1,method:s.method,mode:s.mode,axis:s.axis,escape:s.escape,nonEscape:s.nonEscape,reason:s.reason};
-};
-
-function repaint(){
-  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
-  if(!graph)return;
-  graph.parentElement?.querySelectorAll('.bhV64AttackFocus,.bhV65AttackFocus,.bhV66AttackFocus,.bhV69AttackFocus').forEach(x=>x.remove());
-  const s=scenario();
-  let main,sub;
-  if(s.mode==='attack'){main=`${s.head}号艇`;sub=s.method}
-  else if(s.mode==='escape'){main='1号艇';sub='逃げ本線'}
-  else if(s.axis){main=`${s.axis}号艇`;sub=s.method}
-  else{main='頭は未確定';sub=s.method}
-  graph.insertAdjacentHTML('beforebegin',
-   `<div class="bhV69AttackFocus"><div class="ttl">⚡ このレースの展開軸</div>
-    <div class="main">${main}</div><div class="sub">${sub}</div><div class="reason">${s.reason}</div></div>`);
-}
-
-/* 買い目も同じscenarioを参照。
-   attack=頭優先、axis=その艇を2/3着軸として優先、escape=1頭優先 */
-const prev=V46.generate;
-V46.generate=function(outlook){
-  const o=outlook||window.BH_VOL41?.outlook?.()||{};
-  const raw=prev.call(this,o)||[];
-  const s=scenario();
-  const max=s.escape>=85?10:13;
-
-  const pool=[],seenBuild=new Set();
-  try{V46.buildIn?.(pool,o,seenBuild)}catch(e){}
-  try{V46.buildNonIn?.(pool,o,seenBuild)}catch(e){}
-  try{V46.ensureSixThird?.(pool,seenBuild,o)}catch(e){}
-
-  const confirmed=t=>{
-    const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
-    return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
-  };
-  const priority=t=>{
-    const l=t?.legs||[];
-    let p=confirmed(t)?10000:0;
-    if(s.mode==='attack'&&Number(l[0])===s.head)p+=3000;
-    if(s.mode==='escape'&&Number(l[0])===1)p+=3000;
-    if((s.mode==='axis'||s.mode==='mixed')&&s.axis){
-      if(Number(l[1])===s.axis)p+=2400;
-      if(Number(l[2])===s.axis)p+=1500;
-      if(Number(l[0])===s.axis)p+=700; // 軸候補を無条件に頭固定しない
-    }
-    p+=N(t.score);
-    return p;
-  };
-
-  const all=[...raw,...pool].sort((a,b)=>priority(b)-priority(a)||K(a).localeCompare(K(b),'ja'));
-  const out=[],seen=new Set();
-  for(const t of all){
-    if(!t||!Array.isArray(t.legs)||t.legs.length<2||out.length>=max)continue;
-    const k=K(t);if(!k||seen.has(k))continue;
-    seen.add(k);out.push(t);
-  }
-  return V46.normalize(out.slice(0,max));
-};
-window.bhV3Generate=o=>V46.generate(o);
-
-const oldRace=window.renderRace;
-if(typeof oldRace==='function')window.renderRace=function(){const r=oldRace.apply(this,arguments);setTimeout(applyClass,0);setTimeout(applyClass,150);return r};
-const oldAnalysis=window.runAnalysis;
-if(typeof oldAnalysis==='function')window.runAnalysis=async function(){const r=await oldAnalysis.apply(this,arguments);setTimeout(()=>{applyClass();repaint()},0);setTimeout(()=>{applyClass();repaint()},180);return r};
-const oldBets=window.renderPatternBets;
-if(typeof oldBets==='function')window.renderPatternBets=function(){const r=oldBets.apply(this,arguments);setTimeout(repaint,0);return r};
-document.addEventListener('DOMContentLoaded',()=>{setTimeout(applyClass,100);setTimeout(repaint,120)});
-
-window.BH_VOL69={version:69,classKeys:['rank_number','class_number','rank','class'],sharedScenario:true,axisMode:true};
-})();
-</script>
-
-
 <style id="bh-vol70-result-review-style">
 /* 結果検証：スマホでも一目で読める大きさに */
 .bhResultDashGrid{display:block!important;min-width:0!important}
@@ -9041,302 +8230,6 @@ window.BH_VOL70={version:70,resultReviewLarge:true,venuePnL:true,decisionSaved:t
 })();
 </script>
 
-
-<style id="bh-vol71-class-method-style">
-.bhClassPatch{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;vertical-align:middle!important;white-space:nowrap!important}
-.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
-.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
-.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
-.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
-</style>
-
-<script id="bh-vol71-method-class-basicfix">
-(()=>{
-'use strict';
-const V46=window.BH_VOL46;if(!V46)return;
-const N=v=>Number.isFinite(Number(v))?Number(v):0;
-const K=t=>(t?.legs||[]).join('-');
-
-function classLabel(v){
-  if(v==null)return '';
-  const x=String(v).toUpperCase().trim();
-  if(/A1/.test(x))return 'A1';
-  if(/A2/.test(x))return 'A2';
-  if(/B1/.test(x))return 'B1';
-  if(/B2/.test(x))return 'B2';
-  // boatrace系APIで階級番号が数値の場合
-  if(x==='1')return 'A1';
-  if(x==='2')return 'A2';
-  if(x==='3')return 'B1';
-  if(x==='4')return 'B2';
-  return '';
-}
-function boatClass(b){
-  try{
-    const r=typeof racer==='function'?racer(b):null;
-    if(!r)return '';
-    const vals=[
-      r.rank_name,r.class_name,r.grade_name,r.racer_rank_name,
-      r.rank_number,r.class_number,r.rank,r.class,r.grade,
-      r.racer_class,r.racerClass,r.rank_class,r.rankClass
-    ];
-    for(const v of vals){const c=classLabel(v);if(c)return c}
-  }catch(e){}
-  try{
-    const v=typeof bhClassOfBoat==='function'?bhClassOfBoat(b):'';
-    return classLabel(v);
-  }catch(e){}
-  return '';
-}
-function classCss(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
-function applyClassPatches(){
-  document.querySelectorAll('#racers .racer').forEach((row,i)=>{
-    const name=row.querySelector('.racerName');if(!name)return;
-    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
-    const b=Number(row.querySelector('.number')?.textContent)||i+1;
-    const c=boatClass(b);
-    if(c)name.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${classCss(c)}">${c}</span>`);
-  });
-
-  // AI期待値ランキングの選手名にも同じ階級を表示
-  const table=document.querySelector('#analysisCard table,.decisionRankTable');
-  if(table){
-    table.querySelectorAll('tr').forEach(tr=>{
-      if(tr.querySelector('th'))return;
-      const cells=[...tr.querySelectorAll('td')];
-      let b=0;
-      for(const td of cells){
-        const m=(td.textContent||'').trim().match(/^[1-6]$/);
-        if(m){b=Number(m[0]);break}
-      }
-      if(!b)return;
-      const c=boatClass(b);if(!c)return;
-      const r=typeof racer==='function'?racer(b):null;
-      const nm=String(r?.name||r?.racer_name||r?.player_name||'').trim();
-      if(!nm)return;
-      const target=cells.find(td=>(td.textContent||'').includes(nm));
-      if(target&&!target.querySelector('.bhClassPatch'))
-        target.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${classCss(c)}">${c}</span>`);
-    });
-  }
-}
-
-/* 決まり手が明確でない時の最終決定ロジック
-   全国勝率・階級・内側有利性・今コースの得意決まり手・1C防御力で決める */
-function nationalWin(b){
-  try{
-    const r=racer(b)||{};
-    return N(r.national_win_rate??r.win_rate??r.nationalWinRate??r.winRate);
-  }catch(e){return 0}
-}
-function classScore(b){
-  const c=boatClass(b);
-  return c==='A1'?14:c==='A2'?8:c==='B1'?3:c==='B2'?-3:0;
-}
-function oneDefense(){
-  try{
-    const d=decisions(racer(1))||{};
-    // 高いほど1C防御が強い
-    const danger=N(d.makareRate)+N(d.sasareRate)+N(d.makiSashiSareRate);
-    return Math.max(0,100-danger);
-  }catch(e){return 50}
-}
-function bestCourseMethod(b){
-  try{
-    const c=Number(course(b)||b),d=decisions(racer(b))||{};
-    if(c===1)return {method:'逃げ',rate:N(d.escape)};
-    const cand=[];
-    if(c===2){cand.push(['差し',N(d.sashi)],['まくり',N(d.maki)])}
-    else if(c>=3&&c<=6){cand.push(['まくり',N(d.maki)],['まくり差し',N(d.makiSashi)])}
-    cand.sort((a,b)=>b[1]-a[1]);
-    return {method:cand[0]?.[0]||'まくり',rate:cand[0]?.[1]||0};
-  }catch(e){return {method:b===1?'逃げ':'まくり',rate:0}}
-}
-function fallbackScenario(){
-  const base=window.bhRaceScenario?.__vol71prev
-    ? window.bhRaceScenario.__vol71prev()
-    : (typeof window.bhRaceScenario==='function'?window.bhRaceScenario():null);
-
-  // 既に外攻めが明確ならそのまま
-  if(base&&(base.mode==='attack'||base.mode==='escape')&&base.head)return {...base,fallback:false};
-
-  let candidates=[];
-  for(let b=1;b<=6;b++){
-    const c=Number(course(b)||b),m=bestCourseMethod(b);
-    const inner=(7-c)*4.2;                         // 内側有利
-    const win=Math.min(9,nationalWin(b))*4.0;     // 全国勝率
-    const cls=classScore(b);                      // 階級
-    const method=m.rate*1.15;                     // 今コース得意決まり手
-    let defense=0;
-    if(b===1)defense=(oneDefense()-50)*0.42;       // 1C自身の防御力
-    else defense=(50-oneDefense())*0.18;          // 1C防御が弱いほど外へ加点
-    let score=inner+win+cls+method+defense;
-    candidates.push({boat:b,course:c,method:m.method,methodRate:m.rate,score});
-  }
-  candidates.sort((a,b)=>b.score-a.score||a.course-b.course);
-  const top=candidates[0]||{boat:1,course:1,method:'逃げ',score:0};
-
-  const old=base||{};
-  return {
-    ...old,
-    mode:top.boat===1?'axis':'attack',
-    head:top.boat,
-    axis:top.boat,
-    method:top.method,
-    fallback:true,
-    fallbackScore:top.score,
-    reason:`決まり手不明→全国勝率・階級・内側有利・今コース得意決まり手・1C防御力で最終判定`
-  };
-}
-
-/* vol69 scenarioを保存して、その上に最終判定を被せる */
-const prevScenario=typeof window.bhRaceScenario==='function'?window.bhRaceScenario:null;
-function finalScenario(){
-  let base=null;
-  try{base=prevScenario?.()}catch(e){}
-  if(base&&(base.mode==='attack'||base.mode==='escape')&&base.head)return {...base,fallback:false};
-
-  let candidates=[];
-  for(let b=1;b<=6;b++){
-    const c=Number(course(b)||b),m=bestCourseMethod(b);
-    const score=
-      (7-c)*4.2 +
-      Math.min(9,nationalWin(b))*4.0 +
-      classScore(b) +
-      m.rate*1.15 +
-      (b===1?(oneDefense()-50)*0.42:(50-oneDefense())*0.18);
-    candidates.push({boat:b,course:c,method:m.method,rate:m.rate,score});
-  }
-  candidates.sort((a,b)=>b.score-a.score||a.course-b.course);
-  const top=candidates[0]||{boat:1,course:1,method:'逃げ',score:0};
-
-  return {
-    ...(base||{}),
-    mode:top.boat===1?'axis':'attack',
-    head:top.boat,
-    axis:top.boat,
-    method:top.method,
-    fallback:true,
-    fallbackScore:top.score,
-    reason:'決まり手不明→全国勝率・階級・内側有利・今コース得意決まり手・1C防御力で最終判定'
-  };
-}
-window.bhRaceScenario=finalScenario;
-window.bhMainAttackInfo=()=>{
-  const x=finalScenario();
-  return {boat:x.head||x.axis||1,method:x.method,mode:x.mode,axis:x.axis,reason:x.reason,fallback:x.fallback};
-};
-
-/* 基本買い目は「今決めた頭＋決まり手」に一致したものだけ。
-   関係ない基本買い目パッチを出さない。 */
-function normMethod(m){
-  m=String(m||'');
-  if(m==='maki')return 'まくり';
-  if(m==='makiSashi')return 'まくり差し';
-  if(m==='sashi')return '差し';
-  if(m==='escape')return '逃げ';
-  return m;
-}
-function isBasic(t){return String(t?.note||t?.label||'').includes('基本買い目')}
-function isConfirmed(t){
-  const z=((t?.note||'')+' '+(t?.label||'')+' '+(t?.pattern||''));
-  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
-}
-function basicMatches(t,sc){
-  if(!isBasic(t))return true;
-  const h=Number(t?.legs?.[0]||0);
-  if(h!==Number(sc.head||0))return false;
-  const tm=normMethod(t?.method||t?.decision);
-  const sm=normMethod(sc.method);
-  return !tm||!sm||tm===sm;
-}
-
-const prevGen=V46.generate;
-V46.generate=function(outlook){
-  const sc=finalScenario();
-  let list=prevGen.call(this,outlook)||[];
-  // 確定買い目は残す。基本買い目は展開一致だけ残す。
-  list=list.filter(t=>isConfirmed(t)||basicMatches(t,sc));
-
-  // 点数不足時は非基本候補で補充する
-  const max=N(sc.escape)>=85?10:13;
-  if(list.length<max){
-    const pool=[],seenBuild=new Set();
-    try{V46.buildIn?.(pool,outlook||{},seenBuild)}catch(e){}
-    try{V46.buildNonIn?.(pool,outlook||{},seenBuild)}catch(e){}
-    const seen=new Set(list.map(K));
-    pool
-      .filter(t=>!isBasic(t)||basicMatches(t,sc))
-      .sort((a,b)=>{
-        const ah=Number(a?.legs?.[0])===Number(sc.head)?1:0;
-        const bh=Number(b?.legs?.[0])===Number(sc.head)?1:0;
-        return bh-ah+N(b.score)-N(a.score);
-      })
-      .forEach(t=>{
-        if(list.length>=max)return;
-        const k=K(t);if(!k||seen.has(k))return;
-        seen.add(k);list.push(t);
-      });
-  }
-  return V46.normalize(list.slice(0,max));
-};
-window.bhV3Generate=o=>V46.generate(o);
-
-/* 表示済みの古い「基本買い目」パッチも整合しないものは削除 */
-function cleanBasicPatches(){
-  const sc=finalScenario();
-  document.querySelectorAll('.ticketComment,.betPatch').forEach(el=>{
-    if(!(el.textContent||'').includes('基本買い目'))return;
-    const row=el.closest('.betTicket,.pick,.betRow,[data-ticket]')||el.parentElement;
-    const txt=row?.textContent||'';
-    const m=txt.match(/\b([1-6])-([1-6])-([1-6])\b/);
-    if(m&&Number(m[1])!==Number(sc.head))el.remove();
-  });
-}
-
-const oldRace=window.renderRace;
-if(typeof oldRace==='function')window.renderRace=function(){
-  const r=oldRace.apply(this,arguments);
-  setTimeout(applyClassPatches,0);setTimeout(applyClassPatches,120);
-  return r;
-};
-const oldAnalysis=window.runAnalysis;
-if(typeof oldAnalysis==='function')window.runAnalysis=async function(){
-  const r=await oldAnalysis.apply(this,arguments);
-  setTimeout(()=>{applyClassPatches();cleanBasicPatches()},0);
-  setTimeout(()=>{applyClassPatches();cleanBasicPatches()},180);
-  return r;
-};
-const oldBets=window.renderPatternBets;
-if(typeof oldBets==='function')window.renderPatternBets=function(){
-  const r=oldBets.apply(this,arguments);
-  setTimeout(cleanBasicPatches,0);
-  return r;
-};
-document.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(applyClassPatches,100);
-  setTimeout(applyClassPatches,500);
-});
-
-window.BH_VOL71={
- version:71,
- classPatchDirectFromRacer:true,
- numericClassMap:true,
- methodFallback:['全国勝率','階級','内側有利性','今コース得意決まり手','1コース防御力'],
- basicBetScenarioOnly:true
-};
-})();
-</script>
-
-
-<style id="bh-vol72-full-review-style">
-.bhClassPatch{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;vertical-align:middle!important;white-space:nowrap!important}
-.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
-.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
-.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
-.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
-.bhV72ScenarioNote{margin-top:7px;font-size:11px;color:#a9bbc6;text-align:center}
-</style>
 
 <script id="bh-vol72-authoritative-engine">
 /* ===== vol72 authoritative final layer =====
@@ -9681,15 +8574,6 @@ window.BH_VOL72={
 })();
 </script>
 
-
-<style id="bh-vol73-fix-style">
-.bhClassPatch{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;vertical-align:middle!important;white-space:nowrap!important}
-.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
-.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
-.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
-.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
-.bhV73MethodCandidate{margin-top:6px;font-size:12px;color:#9fcfe3;font-weight:900;text-align:center}
-</style>
 
 <script id="bh-vol73-physical-attack-class-history-fix">
 (()=>{
@@ -10040,19 +8924,6 @@ window.BH_VOL73={
 </script>
 
 
-<style id="bh-vol74-class-position-style">
-.bhClassPatch{
-  display:inline-flex!important;align-items:center!important;justify-content:center!important;
-  margin-left:7px!important;margin-right:6px!important;padding:3px 8px!important;
-  border-radius:999px!important;font-size:11px!important;font-weight:1000!important;
-  line-height:1!important;vertical-align:middle!important;white-space:nowrap!important;
-}
-.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
-.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
-.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
-.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
-</style>
-
 <script id="bh-vol74-classpatch-exact-position">
 (()=>{
 'use strict';
@@ -10194,6 +9065,300 @@ window.BH_VOL74={
   classPatchPosition:'選手名→階級→展示履歴不足',
   exactPosition:true,
   currentRaceFallback:true
+};
+})();
+</script>
+
+
+<style id="bh-vol75-consolidated-style">
+/* 階級パッチ：vol67〜74の重複CSSを一本化 */
+.bhClassPatch{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  margin-left:7px!important;margin-right:6px!important;padding:3px 8px!important;
+  border-radius:999px!important;font-size:11px!important;font-weight:1000!important;
+  line-height:1!important;vertical-align:middle!important;white-space:nowrap!important;
+}
+.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
+.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
+.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
+.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
+
+/* 展開軸表示：vol69の見た目を現行表示用に残す */
+.bhV69AttackFocus{
+  border:2px solid #d4af37;border-radius:14px;padding:16px 12px;margin:12px 0;
+  background:linear-gradient(135deg,#251d08,#111)
+}
+.bhV69AttackFocus .ttl{text-align:center;font-weight:1000;color:#ffd84d}
+.bhV69AttackFocus .main{text-align:center;font-size:27px;font-weight:1000;color:#ffd84d;margin-top:7px}
+.bhV69AttackFocus .sub{text-align:center;font-size:20px;font-weight:1000;margin-top:3px}
+.bhV69AttackFocus .reason{text-align:center;color:#aaa;font-size:11px;margin-top:8px}
+.bhV72ScenarioNote{margin-top:7px;font-size:11px;color:#a9bbc6;text-align:center}
+.bhV73MethodCandidate{margin-top:6px;font-size:12px;color:#9fcfe3;font-weight:900;text-align:center}
+</style>
+
+<script id="bh-vol75-runtime-core">
+(()=>{
+'use strict';
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+/* vol64から必要部分だけ残す:
+   - 1レース予算上限1300円
+   - 8.1〜15.0倍は200円 / その他100円
+   - 買い目確定を先に資金確保
+*/
+function isConfirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+function liveOdds(t){
+  const o=Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0;
+  return Number.isFinite(o)&&o>0?o:0;
+}
+window.bhV3Allocate=function(tickets){
+  if(!Array.isArray(tickets))return[];
+  const user=Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1300)/100)*100);
+  const cap=Math.min(1300,user);
+  const ordered=[...tickets.filter(isConfirmed),...tickets.filter(t=>!isConfirmed(t))];
+  const kept=[],seen=new Set();let used=0;
+  for(const t of ordered){
+    const k=K(t);if(!k||seen.has(k))continue;
+    const o=liveOdds(t);
+    if(!isConfirmed(t)&&o>0&&o<=8)continue;
+    const amount=(o>8&&o<=15)?200:100;
+    if(used+amount>cap)continue;
+    t.amount=amount;t.bhConfirmed=isConfirmed(t);t.mandatory=t.bhConfirmed;
+    kept.push(t);seen.add(k);used+=amount;
+    if(kept.length>=13)break;
+  }
+  tickets.splice(0,tickets.length,...kept);
+  return tickets;
+};
+
+/* vol64のスロー100m＋直前タイム補正だけ維持 */
+const oldOneM=window.bhOneMModel;
+if(typeof oldOneM==='function'){
+  window.bhOneMModel=function(stats){
+    const rows=oldOneM.call(this,stats);
+    if(!Array.isArray(rows)||!rows.length)return rows;
+
+    const pre={},vals=[];
+    for(let b=1;b<=6;b++){
+      let v=null;
+      try{v=Number(window.bhBeforeRow?.(b)?.straight)}catch(e){}
+      if(Number.isFinite(v)&&v>0){pre[b]=v;vals.push(v)}
+    }
+    const sorted=[...vals].sort((a,b)=>a-b);
+    const rankScore=v=>{
+      if(!Number.isFinite(v)||sorted.length<2)return 0;
+      const r=sorted.findIndex(x=>x===v)+1;
+      return Math.max(-1,Math.min(1,1-2*(r-1)/Math.max(1,sorted.length-1)));
+    };
+
+    for(const x of rows){
+      if(!Number.isFinite(Number(x.arrivalScore)))continue;
+      const b=Number(x.boat);
+      const mode=String(x.startMode||window.BH_VOL45?.mode?.[b]||(b<=3?'slow':'dash'));
+      const dist=Number(x.startDistance||window.BH_VOL45?.dist?.[b]||145);
+      const q=rankScore(pre[b]),accel=q*.18;
+
+      if(mode==='slow'){
+        const shortage=Math.max(0,Math.min(.30,(145-dist)/45*.30));
+        const rescue=q>0?shortage*q*.80:0;
+        const extra=q<0?shortage*(-q)*.25:0;
+        const net=Math.max(0,shortage-rescue+extra);
+        const old=N(x.deepStartPenaltyBody);
+        x.arrivalScore+=(net-old)*.15;
+        x.deepStartPenaltyBody=net;
+        x.beforeTimeRescueBody=rescue;
+      }
+
+      x.arrivalScore-=accel*.15;
+      x.beforeAccelBody=accel;
+      x.beforeStraightTime=Number.isFinite(pre[b])?pre[b]:null;
+    }
+
+    const usable=rows.filter(x=>Number.isFinite(Number(x.arrivalScore)));
+    if(usable.length){
+      const lead=Math.min(...usable.map(x=>Number(x.arrivalScore)));
+      for(const x of usable){
+        x.arrival=x.arrivalScore;
+        x.delay=x.arrivalScore-lead;
+        x.boatBehind=x.delay/.15;
+        if(Number.isFinite(Number(x.startBoatBehind)))x.moveBody=x.boatBehind-x.startBoatBehind;
+      }
+    }
+    return rows;
+  };
+}
+
+/* 旧別枠裏目は現行13点内ルートに一本化 */
+if(typeof window.bhV5ReverseTickets==='function')window.bhV5ReverseTickets=()=>[];
+if(typeof window.bhV17PhysicalReverseTickets==='function')window.bhV17PhysicalReverseTickets=()=>[];
+
+window.BH_VOL75={
+  version:75,
+  lightweight:true,
+  removedLegacyLayers:[64,65,66,67,68,69,71],
+  keep:[70,72,73,74],
+  slow100Correction:true,
+  budgetAllocator:true
+};
+})();
+</script>
+
+
+<script id="bh-vol76-axis-distribution">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function confirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+function getAiRankMap(){
+  const map=new Map();
+  try{
+    const arr=window.currentRankings||window.lastRankings||window.aiRankings||[];
+    arr.forEach((x,i)=>{
+      const b=Number(x?.boat??x?.entry_number??x?.number??x?.b);
+      if(b>=1&&b<=6&&!map.has(b))map.set(b,i+1);
+    });
+  }catch(e){}
+  if(!map.size){
+    try{
+      const rows=[...document.querySelectorAll('#analysisCard table tr,.decisionRankTable tr')].filter(tr=>!tr.querySelector('th'));
+      rows.forEach((tr,i)=>{
+        const cells=[...tr.querySelectorAll('td')];
+        for(const td of cells){
+          const m=(td.textContent||'').trim().match(/^[1-6]$/);
+          if(m){const b=Number(m[0]);if(!map.has(b))map.set(b,i+1);break}
+        }
+      });
+    }catch(e){}
+  }
+  return map;
+}
+function axisRank(sc,rankMap){
+  return sc?.axis?Number(rankMap.get(Number(sc.axis))||99):99;
+}
+function mode(sc,rankMap){
+  if(sc?.physicalAttack&&sc?.head)return 'attack';
+  if(sc?.mode==='escape'&&sc?.head===1)return 'escape';
+  if(sc?.mode==='axis'&&sc?.axis){
+    const r=axisRank(sc,rankMap);
+    return r<=2?'strongAxis':'weakAxis';
+  }
+  return 'mixed';
+}
+function priority(t,sc,rankMap){
+  const l=t?.legs||[];
+  const h=Number(l[0]),s=Number(l[1]),th=Number(l[2]);
+  const m=mode(sc,rankMap);
+  let p=N(t?.score);
+  if(confirmed(t))p+=20000;
+
+  // AI期待値上位艇を頭候補として優先
+  const hr=Number(rankMap.get(h)||99);
+  if(hr===1)p+=3000;
+  else if(hr===2)p+=2200;
+  else if(hr===3)p+=1500;
+  else if(hr===4)p+=700;
+
+  if(m==='attack'){
+    if(h===Number(sc.head))p+=4200;
+  }else if(m==='escape'){
+    if(h===1)p+=4200;
+  }else if(m==='strongAxis'){
+    // 軸候補がAI期待値上位なら2着を少し強めるが固定はしない
+    const a=Number(sc.axis);
+    if(s===a)p+=1800;
+    if(th===a)p+=1300;
+    if(h===a)p+=900;
+  }else if(m==='weakAxis'){
+    // 軸候補がAI期待値中位以下なら着順固定しない
+    const a=Number(sc.axis);
+    if(h===a)p+=450;
+    if(s===a)p+=500;
+    if(th===a)p+=550;
+    // 同じ艇を2着に寄せすぎないよう、AI上位頭をさらに優先
+    if(hr<=3)p+=900;
+  }
+  return p;
+}
+
+function diversify(list,sc,rankMap,target){
+  const m=mode(sc,rankMap);
+  if(m!=='weakAxis')return list.slice(0,target);
+
+  const axis=Number(sc.axis);
+  const out=[];const seen=new Set();
+  const cntPos={head:0,second:0,third:0};
+  const headCount=new Map();
+
+  const add=t=>{
+    if(!t||out.length>=target)return false;
+    const k=K(t);if(!k||seen.has(k))return false;
+    const l=t.legs||[];
+    const h=Number(l[0]),s=Number(l[1]),th=Number(l[2]);
+
+    // 軸候補が期待値低い場合、同一着順への偏りを制限
+    if(s===axis && cntPos.second>=Math.max(2,Math.ceil(target*.25)))return false;
+    if(h===axis && cntPos.head>=Math.max(2,Math.ceil(target*.20)))return false;
+    if(th===axis && cntPos.third>=Math.max(2,Math.ceil(target*.30)))return false;
+
+    // 頭不明なので頭も最大3艇以上へ分散
+    const hc=Number(headCount.get(h)||0);
+    if(hc>=Math.max(3,Math.ceil(target*.40)))return false;
+
+    seen.add(k);out.push(t);
+    headCount.set(h,hc+1);
+    if(h===axis)cntPos.head++;
+    if(s===axis)cntPos.second++;
+    if(th===axis)cntPos.third++;
+    return true;
+  };
+
+  // 確定買い目は最優先
+  list.filter(confirmed).forEach(add);
+
+  // AI期待値上位頭を先に散らす
+  for(const r of [1,2,3,4,5,6]){
+    list.filter(t=>Number(rankMap.get(Number(t?.legs?.[0]))||99)===r).forEach(add);
+  }
+
+  // 制限で足りない時は残りを順番に補充
+  if(out.length<target){
+    for(const t of list){
+      if(out.length>=target)break;
+      const k=K(t);if(!k||seen.has(k))continue;
+      seen.add(k);out.push(t);
+    }
+  }
+  return out.slice(0,target);
+}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const raw=prevGen.call(this,outlook)||[];
+  const sc=window.bhRaceScenario?.()||{};
+  const rankMap=getAiRankMap();
+  const budget=Math.max(100,Math.floor((N(window.bhRaceBudget?.())||1200)/100)*100);
+  const target=Math.min(sc.escape>=85?10:13,Math.floor(Math.min(1300,budget)/100));
+
+  const sorted=[...raw].sort((a,b)=>priority(b,sc,rankMap)-priority(a,sc,rankMap)||K(a).localeCompare(K(b),'ja'));
+  return V46.normalize(diversify(sorted,sc,rankMap,target));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+window.BH_VOL76={
+  version:76,
+  axisRule:'軸候補≠2着固定',
+  weakAxis:'AI期待値中位以下は1〜3着分散',
+  headPriority:'AI期待値上位艇を頭優先'
 };
 })();
 </script>

@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.77</div>
+<div class="bhVol">vol.78</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -9575,6 +9575,177 @@ window.BH_VOL77={
   noRelaxedFallback:true,
   pool:'120 permutations + existing candidates',
   rule:'軸候補≠2着固定'
+};
+})();
+</script>
+
+
+<script id="bh-vol78-1m-150m-accel-top-speed">
+(()=>{
+'use strict';
+
+const V45=window.BH_VOL45;
+const old=window.bhOneMModel;
+if(typeof old!=='function'||!V45)return;
+
+const N=v=>Number.isFinite(Number(v))?Number(v):null;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const boats=[1,2,3,4,5,6];
+
+/*
+ vol78 STARTスリット→1Mスリット（150mモデル）
+ - 直線タイム：中間速度→最高速までの加速・伸び性能
+ - 展示タイム：到達最高速の性能
+ - 前半90m = 加速区間、後半60m = 最高速区間
+ - START予測位置は従来モデルを使用
+ - スロー/ダッシュ、起こし距離補正は維持
+ - 現在値が取れない時だけ過去同指標をフォールバック
+*/
+window.bhOneMModel=function(stats){
+  let rows=old.call(this,stats);
+  if(!Array.isArray(rows)||!rows.length)return rows;
+
+  function histMetric(b,keys){
+    try{
+      if(typeof V45.historyMetric==='function')return N(V45.historyMetric(b,keys));
+    }catch(e){}
+    return null;
+  }
+  function before(b){
+    try{return window.bhBeforeRow?.(b)||{}}catch(e){return{}}
+  }
+  function currentEx(b){
+    try{
+      const r=before(b),v=N(r.ex);
+      if(v!=null)return v;
+      if(typeof window.bhExTime==='function')return N(window.bhExTime(b));
+    }catch(e){}
+    return null;
+  }
+  function currentStraight(b){
+    try{return N(before(b).straight)}catch(e){return null}
+  }
+
+  const hs={},he={},cs={},ce={};
+  for(const b of boats){
+    hs[b]=histMetric(b,['straight_time','straightTime','direct_time','directTime','pre_time','preTime']);
+    he[b]=histMetric(b,['exhibition_time','exhibitionTime','exhibition']);
+    cs[b]=currentStraight(b);
+    ce[b]=currentEx(b);
+  }
+
+  function rankScore(value,map){
+    if(!Number.isFinite(Number(value)))return null;
+    const vals=boats.map(b=>N(map[b])).filter(v=>v!=null).sort((a,b)=>a-b);
+    if(vals.length<2)return 0;
+    const v=Number(value);
+    let rank=vals.findIndex(x=>x===v)+1;
+    if(!rank){
+      rank=1+vals.filter(x=>x<v).length;
+    }
+    return clamp(1-2*(rank-1)/Math.max(1,vals.length-1),-1,1);
+  }
+
+  // 今回データを最優先。無い場合だけ履歴値を使う。
+  const accelScore={},topScore={};
+  for(const b of boats){
+    accelScore[b]=cs[b]!=null ? rankScore(cs[b],cs) : rankScore(hs[b],hs);
+    topScore[b]=ce[b]!=null ? rankScore(ce[b],ce) : rankScore(he[b],he);
+    if(accelScore[b]==null)accelScore[b]=0;
+    if(topScore[b]==null)topScore[b]=0;
+  }
+
+  const usable=rows.filter(x=>Number.isFinite(Number(x.predict)));
+  if(!usable.length)return rows;
+
+  // START時点の最速艇を基準にする。従来の .15秒=1艇身換算を維持。
+  const startLead=Math.min(...usable.map(x=>Number(x.predict)));
+
+  for(const x of usable){
+    const b=Number(x.boat);
+    const mode=String(
+      x.startMode ||
+      V45.mode?.[b] ||
+      (typeof V45.defaultMode==='function'?V45.defaultMode(b):(b<=3?'slow':'dash'))
+    );
+
+    /*
+      150mを2区間化
+      前半90m（60%）：直線タイム＝加速・伸び
+      後半60m（40%）：展示タイム＝最高速
+
+      150m全体の最大性能差を約0.36艇身に抑え、
+      既存モデルより過剰に隊形を動かさない。
+    */
+    const accelBody=clamp(Number(accelScore[b])*.36*(90/150),-.24,.24);
+    const topBody=clamp(Number(topScore[b])*.36*(60/150),-.16,.16);
+
+    // ダッシュは助走済みの加速余力を少し加点。
+    const dashBody=mode==='dash' ? .10 : 0;
+
+    // スローは起こし距離が145mより短いほど、前半加速に不利。
+    let deepPenalty=0,dist=null;
+    if(mode==='slow'){
+      dist=clamp(Number(V45.dist?.[b]||x.startDistance||145),80,180);
+      deepPenalty=clamp((145-dist)/45*.30,0,.35);
+
+      // 今回の直線タイムが上位なら深インの加速不足を一部救済。
+      if(Number(accelScore[b])>0){
+        deepPenalty*=1-clamp(Number(accelScore[b])*.70,0,.70);
+      }
+    }
+
+    const gainBody=clamp(accelBody+topBody+dashBody-deepPenalty,-.38,.46);
+    const startDelay=Number(x.predict)-startLead;
+    const startBehind=startDelay/.15;
+
+    // 艇身利得を時間差へ戻して1M到達スコアを作る。
+    const arrivalScore=startDelay-(gainBody*.15);
+
+    x.startDelay=startDelay;
+    x.startBoatBehind=startBehind;
+    x.startMode=mode;
+    x.startDistance=mode==='slow'?dist:null;
+
+    x.accelSectionMeters=90;
+    x.topSpeedSectionMeters=60;
+    x.oneMDistanceMeters=150;
+
+    x.currentStraightTime=cs[b];
+    x.currentExhibitionTime=ce[b];
+    x.accelScore150=Number(accelScore[b]);
+    x.topSpeedScore150=Number(topScore[b]);
+    x.accelGainBody=accelBody;
+    x.topSpeedGainBody=topBody;
+    x.dashGainBody=dashBody;
+    x.deepStartPenaltyBody=deepPenalty;
+    x.moveForwardBody=gainBody;
+
+    x.arrivalScore=arrivalScore;
+    x.arrival=arrivalScore;
+  }
+
+  const finalLead=Math.min(...usable.map(x=>Number(x.arrivalScore)));
+  for(const x of rows){
+    if(!Number.isFinite(Number(x.arrivalScore)))continue;
+    x.delay=Number(x.arrivalScore)-finalLead;
+    x.boatBehind=x.delay/.15;
+    x.moveBody=x.boatBehind-x.startBoatBehind;
+    x.arrival=x.arrivalScore;
+  }
+
+  return rows;
+};
+
+window.BH_VOL78={
+  version:78,
+  oneMDistance:150,
+  accelMeters:90,
+  topSpeedMeters:60,
+  straightMeaning:'中間速度→最高速までの加速・伸び',
+  exhibitionMeaning:'最高速',
+  currentDataPriority:true,
+  historyFallback:true
 };
 })();
 </script>

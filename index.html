@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.67</div>
+<div class="bhVol">vol.68</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8548,6 +8548,130 @@ if(typeof oldRun==='function'){
 }
 document.addEventListener('DOMContentLoaded',()=>setTimeout(applyClassPatches,80));
 window.BH_VOL67={version:67,racerClassPatch:true};
+})();
+</script>
+
+
+<style id="bh-vol68-classpatch-fix-style">
+.bhClassPatch{display:inline-flex!important;align-items:center;justify-content:center;margin-left:7px;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:1000;line-height:1;border:1px solid rgba(255,255,255,.30);vertical-align:middle;white-space:nowrap}
+.bhClassA1{background:#d4af37;color:#111;border-color:#ffe990}
+.bhClassA2{background:#2867b2;color:#fff;border-color:#79b8ff}
+.bhClassB1{background:#2f8748;color:#fff;border-color:#75dc91}
+.bhClassB2{background:#963737;color:#fff;border-color:#ff8383}
+</style>
+<script id="bh-vol68-classpatch-ticket-refill-method-confirm-off">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+/* 1) 選手名横の階級パッチ：
+   racersオブジェクトのキー差に対応し、DOM上の選手番号から艇を照合 */
+function normClass(v){
+  const x=String(v||'').toUpperCase().replace(/\s+/g,'');
+  const m=x.match(/(?:^|[^A-Z0-9])(A1|A2|B1|B2)(?:$|[^A-Z0-9])/);
+  if(m)return m[1];
+  if(['A1','A2','B1','B2'].includes(x))return x;
+  return '';
+}
+function racerClass(r){
+  const keys=['class','grade','racer_class','racerClass','rank_class','rankClass','current_class',
+              'class_name','className','racer_rank','racerRank','rank','grade_name','gradeName'];
+  for(const k of keys){const c=normClass(r?.[k]);if(c)return c}
+  // APIによって階級がネストされる場合
+  for(const obj of [r?.profile,r?.racer,r?.player,r?.basic]){
+    if(!obj)continue;
+    for(const k of keys){const c=normClass(obj?.[k]);if(c)return c}
+  }
+  // 最後に文字列化したデータ内から A1/A2/B1/B2 を探索
+  try{
+    const txt=JSON.stringify(r||{});
+    const m=txt.match(/"(?:class|grade|racer_class|racerClass|rank_class|rankClass|rank)"\s*:\s*"(A1|A2|B1|B2)"/i);
+    if(m)return m[1].toUpperCase();
+  }catch(e){}
+  return '';
+}
+function clsCss(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
+function boatNo(row,index){
+  const n=row.querySelector('.number');
+  const v=Number((n?.textContent||'').match(/[1-6]/)?.[0]);
+  return v||index+1;
+}
+function applyClassPatches(){
+  const list=Array.isArray(window.racers)?window.racers:[];
+  document.querySelectorAll('.racer').forEach((row,i)=>{
+    const name=row.querySelector('.racerName');if(!name)return;
+    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
+    const b=boatNo(row,i);
+    const r=list.find(x=>Number(x?.entry_number??x?.boat_number??x?.boat??x?.number)===b)||list[i];
+    const c=racerClass(r);
+    if(c)name.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${clsCss(c)}">${c}</span>`);
+  });
+}
+
+/* 2) 「決まり手確定」だけ停止。
+   買い目確定の文言/フラグは残す。 */
+window.bhMethodConfirmEnabled=false;
+window.bhIsMethodConfirmed=()=>false;
+
+/* 3) 買い目不足対策。
+   全体見通しの最大点数まで、同じ攻め手→次候補の順で補充。
+   確定買い目は先に確保。8倍以下の通常買い目は除外。 */
+function isConfirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
+}
+function odds(t){return Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0}
+function allowed(t){const o=odds(t);return isConfirmed(t)||!o||o>8}
+function esc(o){try{return N(window.BH_VOL42?.escape?.(o)??o?.escape??50)}catch(e){return 50}}
+function maxCount(o){return esc(o)>=85?10:13}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const max=maxCount(o);
+  const raw=prevGen.call(this,o)||[];
+  const inPool=[],outPool=[],s1=new Set(),s2=new Set();
+  try{V46.buildIn?.(inPool,o,s1)}catch(e){}
+  try{V46.buildNonIn?.(outPool,o,s2)}catch(e){}
+  try{V46.ensureSixThird?.(outPool,s2,o)}catch(e){}
+
+  const attack=window.bhMainAttackInfo?.()||{boat:1,method:'逃げ'};
+  const all=[...inPool,...outPool];
+
+  const confirmed=all.filter(isConfirmed);
+  const sameAttack=all.filter(t=>Number(t?.legs?.[0])===Number(attack.boat));
+  const rest=all.filter(t=>Number(t?.legs?.[0])!==Number(attack.boat));
+
+  const sort=(a,b)=>(isConfirmed(b)?1:0)-(isConfirmed(a)?1:0)||N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja');
+  confirmed.sort(sort);sameAttack.sort(sort);rest.sort(sort);
+
+  const out=[],seen=new Set();
+  const add=t=>{
+    if(!t||!Array.isArray(t.legs)||t.legs.length<2||out.length>=max||!allowed(t))return;
+    const k=K(t);if(!k||seen.has(k))return;
+    seen.add(k);out.push(t);
+  };
+  confirmed.forEach(add);
+  raw.forEach(add);
+  sameAttack.forEach(add);
+  rest.forEach(add);
+
+  return V46.normalize(out.slice(0,max));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+/* 描画タイミング差対策：出走表生成直後・AI解析後・DOM変更後に再適用 */
+const oldRenderRace=window.renderRace;
+if(typeof oldRenderRace==='function')window.renderRace=function(){const r=oldRenderRace.apply(this,arguments);setTimeout(applyClassPatches,0);setTimeout(applyClassPatches,120);return r};
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await oldRun.apply(this,arguments);setTimeout(applyClassPatches,0);setTimeout(applyClassPatches,180);return r};
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(applyClassPatches,100);setTimeout(applyClassPatches,500)});
+const obs=new MutationObserver(()=>{clearTimeout(window.__bh68ClassTimer);window.__bh68ClassTimer=setTimeout(applyClassPatches,40)});
+document.addEventListener('DOMContentLoaded',()=>{const root=document.getElementById('racers');if(root)obs.observe(root,{childList:true,subtree:true})});
+
+window.BH_VOL68={version:68,classPatchRobust:true,methodConfirmDisabled:true,ticketRefill:true};
 })();
 </script>
 

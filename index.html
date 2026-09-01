@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.70</div>
+<div class="bhVol">vol.71</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -9030,6 +9030,293 @@ if(typeof oldAuto==='function')window.bhAutoCheckResults=async function(){
 };
 
 window.BH_VOL70={version:70,resultReviewLarge:true,venuePnL:true,decisionSaved:true};
+})();
+</script>
+
+
+<style id="bh-vol71-class-method-style">
+.bhClassPatch{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:7px!important;padding:3px 8px!important;border-radius:999px!important;font-size:11px!important;font-weight:1000!important;line-height:1!important;vertical-align:middle!important;white-space:nowrap!important}
+.bhClassA1{background:#d4af37!important;color:#111!important;border:1px solid #ffe990!important}
+.bhClassA2{background:#2867b2!important;color:#fff!important;border:1px solid #79b8ff!important}
+.bhClassB1{background:#2f8748!important;color:#fff!important;border:1px solid #75dc91!important}
+.bhClassB2{background:#963737!important;color:#fff!important;border:1px solid #ff8383!important}
+</style>
+
+<script id="bh-vol71-method-class-basicfix">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function classLabel(v){
+  if(v==null)return '';
+  const x=String(v).toUpperCase().trim();
+  if(/A1/.test(x))return 'A1';
+  if(/A2/.test(x))return 'A2';
+  if(/B1/.test(x))return 'B1';
+  if(/B2/.test(x))return 'B2';
+  // boatrace系APIで階級番号が数値の場合
+  if(x==='1')return 'A1';
+  if(x==='2')return 'A2';
+  if(x==='3')return 'B1';
+  if(x==='4')return 'B2';
+  return '';
+}
+function boatClass(b){
+  try{
+    const r=typeof racer==='function'?racer(b):null;
+    if(!r)return '';
+    const vals=[
+      r.rank_name,r.class_name,r.grade_name,r.racer_rank_name,
+      r.rank_number,r.class_number,r.rank,r.class,r.grade,
+      r.racer_class,r.racerClass,r.rank_class,r.rankClass
+    ];
+    for(const v of vals){const c=classLabel(v);if(c)return c}
+  }catch(e){}
+  try{
+    const v=typeof bhClassOfBoat==='function'?bhClassOfBoat(b):'';
+    return classLabel(v);
+  }catch(e){}
+  return '';
+}
+function classCss(c){return c==='A1'?'bhClassA1':c==='A2'?'bhClassA2':c==='B1'?'bhClassB1':'bhClassB2'}
+function applyClassPatches(){
+  document.querySelectorAll('#racers .racer').forEach((row,i)=>{
+    const name=row.querySelector('.racerName');if(!name)return;
+    name.querySelectorAll('.bhClassPatch').forEach(x=>x.remove());
+    const b=Number(row.querySelector('.number')?.textContent)||i+1;
+    const c=boatClass(b);
+    if(c)name.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${classCss(c)}">${c}</span>`);
+  });
+
+  // AI期待値ランキングの選手名にも同じ階級を表示
+  const table=document.querySelector('#analysisCard table,.decisionRankTable');
+  if(table){
+    table.querySelectorAll('tr').forEach(tr=>{
+      if(tr.querySelector('th'))return;
+      const cells=[...tr.querySelectorAll('td')];
+      let b=0;
+      for(const td of cells){
+        const m=(td.textContent||'').trim().match(/^[1-6]$/);
+        if(m){b=Number(m[0]);break}
+      }
+      if(!b)return;
+      const c=boatClass(b);if(!c)return;
+      const r=typeof racer==='function'?racer(b):null;
+      const nm=String(r?.name||r?.racer_name||r?.player_name||'').trim();
+      if(!nm)return;
+      const target=cells.find(td=>(td.textContent||'').includes(nm));
+      if(target&&!target.querySelector('.bhClassPatch'))
+        target.insertAdjacentHTML('beforeend',`<span class="bhClassPatch ${classCss(c)}">${c}</span>`);
+    });
+  }
+}
+
+/* 決まり手が明確でない時の最終決定ロジック
+   全国勝率・階級・内側有利性・今コースの得意決まり手・1C防御力で決める */
+function nationalWin(b){
+  try{
+    const r=racer(b)||{};
+    return N(r.national_win_rate??r.win_rate??r.nationalWinRate??r.winRate);
+  }catch(e){return 0}
+}
+function classScore(b){
+  const c=boatClass(b);
+  return c==='A1'?14:c==='A2'?8:c==='B1'?3:c==='B2'?-3:0;
+}
+function oneDefense(){
+  try{
+    const d=decisions(racer(1))||{};
+    // 高いほど1C防御が強い
+    const danger=N(d.makareRate)+N(d.sasareRate)+N(d.makiSashiSareRate);
+    return Math.max(0,100-danger);
+  }catch(e){return 50}
+}
+function bestCourseMethod(b){
+  try{
+    const c=Number(course(b)||b),d=decisions(racer(b))||{};
+    if(c===1)return {method:'逃げ',rate:N(d.escape)};
+    const cand=[];
+    if(c===2){cand.push(['差し',N(d.sashi)],['まくり',N(d.maki)])}
+    else if(c>=3&&c<=6){cand.push(['まくり',N(d.maki)],['まくり差し',N(d.makiSashi)])}
+    cand.sort((a,b)=>b[1]-a[1]);
+    return {method:cand[0]?.[0]||'まくり',rate:cand[0]?.[1]||0};
+  }catch(e){return {method:b===1?'逃げ':'まくり',rate:0}}
+}
+function fallbackScenario(){
+  const base=window.bhRaceScenario?.__vol71prev
+    ? window.bhRaceScenario.__vol71prev()
+    : (typeof window.bhRaceScenario==='function'?window.bhRaceScenario():null);
+
+  // 既に外攻めが明確ならそのまま
+  if(base&&(base.mode==='attack'||base.mode==='escape')&&base.head)return {...base,fallback:false};
+
+  let candidates=[];
+  for(let b=1;b<=6;b++){
+    const c=Number(course(b)||b),m=bestCourseMethod(b);
+    const inner=(7-c)*4.2;                         // 内側有利
+    const win=Math.min(9,nationalWin(b))*4.0;     // 全国勝率
+    const cls=classScore(b);                      // 階級
+    const method=m.rate*1.15;                     // 今コース得意決まり手
+    let defense=0;
+    if(b===1)defense=(oneDefense()-50)*0.42;       // 1C自身の防御力
+    else defense=(50-oneDefense())*0.18;          // 1C防御が弱いほど外へ加点
+    let score=inner+win+cls+method+defense;
+    candidates.push({boat:b,course:c,method:m.method,methodRate:m.rate,score});
+  }
+  candidates.sort((a,b)=>b.score-a.score||a.course-b.course);
+  const top=candidates[0]||{boat:1,course:1,method:'逃げ',score:0};
+
+  const old=base||{};
+  return {
+    ...old,
+    mode:top.boat===1?'axis':'attack',
+    head:top.boat,
+    axis:top.boat,
+    method:top.method,
+    fallback:true,
+    fallbackScore:top.score,
+    reason:`決まり手不明→全国勝率・階級・内側有利・今コース得意決まり手・1C防御力で最終判定`
+  };
+}
+
+/* vol69 scenarioを保存して、その上に最終判定を被せる */
+const prevScenario=typeof window.bhRaceScenario==='function'?window.bhRaceScenario:null;
+function finalScenario(){
+  let base=null;
+  try{base=prevScenario?.()}catch(e){}
+  if(base&&(base.mode==='attack'||base.mode==='escape')&&base.head)return {...base,fallback:false};
+
+  let candidates=[];
+  for(let b=1;b<=6;b++){
+    const c=Number(course(b)||b),m=bestCourseMethod(b);
+    const score=
+      (7-c)*4.2 +
+      Math.min(9,nationalWin(b))*4.0 +
+      classScore(b) +
+      m.rate*1.15 +
+      (b===1?(oneDefense()-50)*0.42:(50-oneDefense())*0.18);
+    candidates.push({boat:b,course:c,method:m.method,rate:m.rate,score});
+  }
+  candidates.sort((a,b)=>b.score-a.score||a.course-b.course);
+  const top=candidates[0]||{boat:1,course:1,method:'逃げ',score:0};
+
+  return {
+    ...(base||{}),
+    mode:top.boat===1?'axis':'attack',
+    head:top.boat,
+    axis:top.boat,
+    method:top.method,
+    fallback:true,
+    fallbackScore:top.score,
+    reason:'決まり手不明→全国勝率・階級・内側有利・今コース得意決まり手・1C防御力で最終判定'
+  };
+}
+window.bhRaceScenario=finalScenario;
+window.bhMainAttackInfo=()=>{
+  const x=finalScenario();
+  return {boat:x.head||x.axis||1,method:x.method,mode:x.mode,axis:x.axis,reason:x.reason,fallback:x.fallback};
+};
+
+/* 基本買い目は「今決めた頭＋決まり手」に一致したものだけ。
+   関係ない基本買い目パッチを出さない。 */
+function normMethod(m){
+  m=String(m||'');
+  if(m==='maki')return 'まくり';
+  if(m==='makiSashi')return 'まくり差し';
+  if(m==='sashi')return '差し';
+  if(m==='escape')return '逃げ';
+  return m;
+}
+function isBasic(t){return String(t?.note||t?.label||'').includes('基本買い目')}
+function isConfirmed(t){
+  const z=((t?.note||'')+' '+(t?.label||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+function basicMatches(t,sc){
+  if(!isBasic(t))return true;
+  const h=Number(t?.legs?.[0]||0);
+  if(h!==Number(sc.head||0))return false;
+  const tm=normMethod(t?.method||t?.decision);
+  const sm=normMethod(sc.method);
+  return !tm||!sm||tm===sm;
+}
+
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const sc=finalScenario();
+  let list=prevGen.call(this,outlook)||[];
+  // 確定買い目は残す。基本買い目は展開一致だけ残す。
+  list=list.filter(t=>isConfirmed(t)||basicMatches(t,sc));
+
+  // 点数不足時は非基本候補で補充する
+  const max=N(sc.escape)>=85?10:13;
+  if(list.length<max){
+    const pool=[],seenBuild=new Set();
+    try{V46.buildIn?.(pool,outlook||{},seenBuild)}catch(e){}
+    try{V46.buildNonIn?.(pool,outlook||{},seenBuild)}catch(e){}
+    const seen=new Set(list.map(K));
+    pool
+      .filter(t=>!isBasic(t)||basicMatches(t,sc))
+      .sort((a,b)=>{
+        const ah=Number(a?.legs?.[0])===Number(sc.head)?1:0;
+        const bh=Number(b?.legs?.[0])===Number(sc.head)?1:0;
+        return bh-ah+N(b.score)-N(a.score);
+      })
+      .forEach(t=>{
+        if(list.length>=max)return;
+        const k=K(t);if(!k||seen.has(k))return;
+        seen.add(k);list.push(t);
+      });
+  }
+  return V46.normalize(list.slice(0,max));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+/* 表示済みの古い「基本買い目」パッチも整合しないものは削除 */
+function cleanBasicPatches(){
+  const sc=finalScenario();
+  document.querySelectorAll('.ticketComment,.betPatch').forEach(el=>{
+    if(!(el.textContent||'').includes('基本買い目'))return;
+    const row=el.closest('.betTicket,.pick,.betRow,[data-ticket]')||el.parentElement;
+    const txt=row?.textContent||'';
+    const m=txt.match(/\b([1-6])-([1-6])-([1-6])\b/);
+    if(m&&Number(m[1])!==Number(sc.head))el.remove();
+  });
+}
+
+const oldRace=window.renderRace;
+if(typeof oldRace==='function')window.renderRace=function(){
+  const r=oldRace.apply(this,arguments);
+  setTimeout(applyClassPatches,0);setTimeout(applyClassPatches,120);
+  return r;
+};
+const oldAnalysis=window.runAnalysis;
+if(typeof oldAnalysis==='function')window.runAnalysis=async function(){
+  const r=await oldAnalysis.apply(this,arguments);
+  setTimeout(()=>{applyClassPatches();cleanBasicPatches()},0);
+  setTimeout(()=>{applyClassPatches();cleanBasicPatches()},180);
+  return r;
+};
+const oldBets=window.renderPatternBets;
+if(typeof oldBets==='function')window.renderPatternBets=function(){
+  const r=oldBets.apply(this,arguments);
+  setTimeout(cleanBasicPatches,0);
+  return r;
+};
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(applyClassPatches,100);
+  setTimeout(applyClassPatches,500);
+});
+
+window.BH_VOL71={
+ version:71,
+ classPatchDirectFromRacer:true,
+ numericClassMap:true,
+ methodFallback:['全国勝率','階級','内側有利性','今コース得意決まり手','1コース防御力'],
+ basicBetScenarioOnly:true
+};
 })();
 </script>
 

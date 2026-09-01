@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.64</div>
+<div class="bhVol">vol.65</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8158,6 +8158,143 @@ if(typeof oldOneM==='function')window.bhOneMModel=function(stats){
 };
 
 window.BH_VOL64={version:64,confirmedAlwaysFirst:true,absoluteMaxTickets:13,attackFocus:true,slowDistanceBeforeTimeCorrection:true,budgetCap:1300};
+})();
+</script>
+
+
+<style id="bh-vol65-outlook-attack-fix-style">
+.bhV65AttackFocus{margin:10px 0 12px;padding:14px;border-radius:14px;border:2px solid #d4af37;background:linear-gradient(135deg,#211a07,#0b0d12);text-align:center;box-shadow:0 0 18px rgba(212,175,55,.18)}
+.bhV65AttackFocus .ttl{font-size:11px;font-weight:900;color:#b9b9b9}
+.bhV65AttackFocus .boat{font-size:31px;line-height:1.15;font-weight:1000;color:#ffd84d;margin-top:4px}
+.bhV65AttackFocus .method{font-size:22px;font-weight:1000;color:#fff;margin-top:4px}
+.bhV65AttackFocus .reason{font-size:10px;color:#aab2bf;margin-top:6px}
+</style>
+<script id="bh-vol65-outlook-linked-bets-attack">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function escRate(o){try{return N(window.BH_VOL42?.escape?.(o)??o?.escape??50)}catch(e){return N(o?.escape)||50}}
+function config(e){
+  if(e>=85)return{in3:10,out3:0,ex2:0,max:10};
+  if(e>=65)return{in3:8,out3:4,ex2:1,max:13};
+  if(e>=45)return{in3:4,out3:7,ex2:2,max:13};
+  return{in3:3,out3:8,ex2:2,max:13};
+}
+function isConfirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
+}
+function isForbiddenSashi(t){
+  const h=Number(t?.legs?.[0]||0),m=String(t?.method||'');
+  return h>=3&&h<=6&&m.includes('差し')&&!m.includes('まくり差し');
+}
+function oddsOf(t){return Number(window.bhGetOdds?.(K(t)))||Number(t?.odds)||0}
+function oddsOK(t){if(isConfirmed(t))return true;const o=oddsOf(t);return !o||o>8}
+function ticketRank(a,b){return(isConfirmed(b)?1:0)-(isConfirmed(a)?1:0)||N(b.score)-N(a.score)||K(a).localeCompare(K(b),'ja')}
+function uniq(arr){
+  const out=[],seen=new Set();
+  for(const t of arr||[]){
+    if(!t||!Array.isArray(t.legs)||t.legs.length<2||isForbiddenSashi(t)||!oddsOK(t))continue;
+    const k=K(t);if(!k||seen.has(k))continue;
+    seen.add(k);out.push(t);
+  }
+  return out;
+}
+
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{},e=escRate(o),cfg=config(e);
+  const inPool=[],outPool=[],exPool=[],s1=new Set(),s2=new Set();
+  try{V46.buildIn?.(inPool,o,s1)}catch(_){}
+  try{V46.buildNonIn?.(outPool,o,s2)}catch(_){}
+  try{V46.ensureSixThird?.(outPool,s2,o)}catch(_){}
+  try{
+    const heads=window.BH_VOL41?.headCandidates?.(o)||[];
+    exPool.push(...(window.BH_VOL42?.exactaPool?.(o,heads)||[]));
+  }catch(_){}
+
+  const inU=uniq(inPool.filter(t=>Number(t.legs?.[0])===1)).sort(ticketRank);
+  const outU=uniq(outPool.filter(t=>Number(t.legs?.[0])!==1)).sort(ticketRank);
+  const exU=uniq(exPool.filter(t=>t.legs?.length===2)).sort(ticketRank);
+  const allConfirmed=uniq([...inU,...outU,...exU].filter(isConfirmed)).sort(ticketRank);
+
+  const picked=[],seen=new Set();
+  function add(t){
+    if(!t||picked.length>=cfg.max)return false;
+    const k=K(t);if(!k||seen.has(k))return false;
+    seen.add(k);picked.push({...t,bhConfirmed:isConfirmed(t),mandatory:isConfirmed(t)});return true;
+  }
+  allConfirmed.forEach(add);
+
+  function count(fn){return picked.filter(fn).length}
+  function take(pool,n,fn){
+    for(const t of pool){
+      if(picked.length>=cfg.max||count(fn)>=n)break;
+      add(t);
+    }
+  }
+  take(inU,cfg.in3,t=>t.legs.length===3&&Number(t.legs[0])===1);
+  take(outU,cfg.out3,t=>t.legs.length===3&&Number(t.legs[0])!==1);
+  take(exU,cfg.ex2,t=>t.legs.length===2);
+
+  const rest=uniq([...inU,...outU,...exU]).filter(t=>!seen.has(K(t))).sort(ticketRank);
+  for(const t of rest){if(picked.length>=cfg.max)break;add(t)}
+  return V46.normalize(picked.slice(0,cfg.max));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+window.bhV3Allocate=function(tickets){
+  if(!Array.isArray(tickets))return[];
+  const user=Math.max(100,Math.floor((Number(window.bhRaceBudget?.())||1300)/100)*100);
+  const cap=Math.min(1300,user);
+  const ordered=[...tickets.filter(isConfirmed),...tickets.filter(t=>!isConfirmed(t))];
+  const kept=[],seen=new Set();let used=0;
+  for(const t of ordered){
+    const k=K(t);if(!k||seen.has(k))continue;
+    const o=oddsOf(t);
+    if(!isConfirmed(t)&&o>0&&o<=8)continue;
+    const amount=(o>8&&o<=15)?200:100;
+    if(used+amount>cap)continue;
+    t.amount=amount;kept.push(t);seen.add(k);used+=amount;
+    if(kept.length>=13)break;
+  }
+  tickets.splice(0,tickets.length,...kept);
+  return tickets;
+};
+
+function attackInfo(){
+  try{
+    const sig=window.bhOneMOutlookSignal?.();
+    if(!sig)return{boat:1,method:'逃げ',reason:'1Mデータ不足'};
+    const attacker=Number(sig?.front?.outer)||null;
+    if(sig.hasAttack&&attacker){
+      const ms=(sig.methodProbs||[]).filter(x=>Number(x.boat)===attacker&&!x.hole).filter(x=>{
+        const c=Number(window.course?.(x.boat)||x.boat),m=String(x.type||'');
+        if(c===2)return m==='差し'||m==='まくり';
+        if(c>=3&&c<=6)return m==='まくり'||m==='まくり差し';
+        return false;
+      }).sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
+      return{boat:attacker,method:ms[0]?.type||'攻め',reason:`直内艇より ${N(sig.attackGap).toFixed(2)}艇身前`};
+    }
+    return{boat:1,method:'逃げ',reason:'明確な外攻めなし'};
+  }catch(e){return{boat:1,method:'逃げ',reason:''}}
+}
+function renderAttack(){
+  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
+  if(!graph)return;
+  graph.parentElement?.querySelector('.bhV65AttackFocus')?.remove();
+  const a=attackInfo();
+  graph.insertAdjacentHTML('beforebegin',`<div class="bhV65AttackFocus"><div class="ttl">⚡ このレースの攻め</div><div class="boat">${a.boat}号艇</div><div class="method">${a.method}</div><div class="reason">${a.reason}</div></div>`);
+}
+const oldPattern=window.renderPatternBets;
+if(typeof oldPattern==='function')window.renderPatternBets=function(rankings,outlook){const r=oldPattern.apply(this,arguments);setTimeout(renderAttack,0);return r};
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await oldRun.apply(this,arguments);setTimeout(renderAttack,0);return r};
+document.addEventListener('DOMContentLoaded',()=>setTimeout(renderAttack,50));
+
+window.BH_VOL65={version:65,outlookLinkedTicketCounts:true,confirmedFirst:true,attackShownInsideOutlook:true};
 })();
 </script>
 

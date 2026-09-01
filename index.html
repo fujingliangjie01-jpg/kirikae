@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.65</div>
+<div class="bhVol">vol.67</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -8295,6 +8295,259 @@ if(typeof oldRun==='function')window.runAnalysis=async function(){const r=await 
 document.addEventListener('DOMContentLoaded',()=>setTimeout(renderAttack,50));
 
 window.BH_VOL65={version:65,outlookLinkedTicketCounts:true,confirmedFirst:true,attackShownInsideOutlook:true};
+})();
+</script>
+
+
+<script id="bh-vol66-inner-leader-attack-buy-link">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+
+function normMethod(m){
+  m=String(m||'');
+  if(m==='makuri')return 'まくり';
+  if(m==='makurizashi')return 'まくり差し';
+  if(m==='sashi')return '差し';
+  return m;
+}
+function methodMatch(ticketMethod,attackMethod){
+  return normMethod(ticketMethod)===normMethod(attackMethod);
+}
+function isConfirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).toLowerCase();
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定')||z.includes('確定');
+}
+function isForbiddenSashi(t){
+  const h=Number(t?.legs?.[0]||0),m=String(t?.method||'');
+  return h>=3&&h<=6&&m.includes('差し')&&!m.includes('まくり差し');
+}
+
+/*
+ 主攻めの決め方
+ 1) 1M到達で絶対先頭から0.30艇身以内を「先頭グループ」とする
+ 2) そのグループ内では内側艇を優先する
+ 3) その艇のまくり/まくり差し/2C差しの適性から決まり手を決める
+
+ これで「6号艇が5号艇より0.63艇身前」という局所差だけを理由に
+ 6号艇を主攻めにする誤判定をやめる。
+*/
+function mainAttack(){
+  try{
+    const sig=window.bhOneMOutlookSignal?.();
+    const rows=(sig?.theory?.rows||[]).filter(x=>Number.isFinite(Number(x.boatBehind)));
+    if(!rows.length)return{boat:1,course:1,method:'逃げ',prob:0,reason:'1Mデータ不足'};
+
+    const lead=Math.min(...rows.map(x=>N(x.boatBehind)));
+    const methods=(sig?.methodProbs||[]).filter(x=>!x.hole);
+
+    const candidates=rows
+      .map(x=>({
+        boat:Number(x.boat),
+        course:Number(window.course?.(x.boat)||x.boat),
+        behind:N(x.boatBehind)
+      }))
+      .filter(x=>x.course>=2&&x.course<=6)
+      .filter(x=>x.behind-lead<=0.30+1e-9)
+      .filter(x=>methods.some(m=>{
+        if(Number(m.boat)!==x.boat)return false;
+        const t=String(m.type||'');
+        if(x.course===2)return t==='差し'||t==='まくり';
+        return t==='まくり'||t==='まくり差し';
+      }))
+      .sort((a,b)=>a.course-b.course||a.behind-b.behind);
+
+    if(!candidates.length)
+      return{boat:1,course:1,method:'逃げ',prob:0,reason:'先頭0.30艇身内に有効な外攻めなし'};
+
+    const c=candidates[0];
+    const ms=methods
+      .filter(m=>Number(m.boat)===c.boat)
+      .filter(m=>{
+        const t=String(m.type||'');
+        if(c.course===2)return t==='差し'||t==='まくり';
+        return t==='まくり'||t==='まくり差し';
+      })
+      .sort((a,b)=>N(b.raceProb)-N(a.raceProb)||N(b.rate)-N(a.rate));
+
+    const top=ms[0];
+    return{
+      boat:c.boat,
+      course:c.course,
+      method:top?.type||'攻め',
+      prob:N(top?.raceProb),
+      behind:c.behind,
+      leadGap:c.behind-lead,
+      reason:`先頭グループ内の最内側（先頭差 ${Math.max(0,c.behind-lead).toFixed(2)}艇身）`
+    };
+  }catch(e){
+    return{boat:1,course:1,method:'逃げ',prob:0,reason:''};
+  }
+}
+window.bhMainAttackInfo=mainAttack;
+
+/* 全体見通しの表示も同じ主攻め判定を使用 */
+function repaintAttack(){
+  const graph=document.querySelector('.attackBox .outlookGraphBox')||document.querySelector('.outlookGraphBox');
+  if(!graph)return;
+  graph.parentElement?.querySelectorAll('.bhV64AttackFocus,.bhV65AttackFocus,.bhV66AttackFocus').forEach(x=>x.remove());
+  const a=mainAttack();
+  graph.insertAdjacentHTML('beforebegin',
+    `<div class="bhV65AttackFocus bhV66AttackFocus">
+      <div class="ttl">⚡ このレースの攻め</div>
+      <div class="boat">${a.boat}号艇</div>
+      <div class="method">${a.method}</div>
+      <div class="reason">${a.reason}${a.prob?` / 展開評価 ${a.prob.toFixed(1)}%`:''}</div>
+    </div>`);
+}
+
+/* 買い目も同じ主攻め・決まり手へ紐付ける */
+const prevGen=V46.generate;
+V46.generate=function(outlook){
+  const o=outlook||window.BH_VOL41?.outlook?.()||{};
+  const raw=prevGen.call(this,o)||[];
+  const a=mainAttack();
+
+  // 1号艇逃げ判定なら既存構成をそのまま。
+  if(a.boat===1)return V46.normalize(raw.slice(0,13));
+
+  const pool=[],seenPool=new Set();
+  try{V46.buildNonIn?.(pool,o,seenPool)}catch(_){}
+  try{V46.buildIn?.(pool,o,seenPool)}catch(_){}
+
+  const attackPool=pool
+    .filter(t=>Array.isArray(t?.legs)&&t.legs.length>=2)
+    .filter(t=>Number(t.legs[0])===a.boat)
+    .filter(t=>methodMatch(t.method,a.method))
+    .filter(t=>!isForbiddenSashi(t))
+    .sort((x,y)=>
+      (isConfirmed(y)?1:0)-(isConfirmed(x)?1:0) ||
+      N(y.score)-N(x.score) ||
+      K(x).localeCompare(K(y),'ja')
+    );
+
+  const confirmed=[...pool,...raw]
+    .filter(isConfirmed)
+    .filter(t=>!isForbiddenSashi(t));
+
+  const out=[],seen=new Set();
+  const add=t=>{
+    if(!t||!Array.isArray(t.legs)||!t.legs.length||isForbiddenSashi(t))return;
+    const k=K(t);if(!k||seen.has(k)||out.length>=13)return;
+    seen.add(k);out.push({...t,bhConfirmed:isConfirmed(t),mandatory:isConfirmed(t)});
+  };
+
+  // ① 確定は必ず最初に確保
+  confirmed.forEach(add);
+
+  // ② 表示している主攻め艇＋決まり手の買い目を優先
+  // 少なくとも候補上位3点まで先に確保
+  attackPool.slice(0,3).forEach(add);
+
+  // ③ その後に全体見通し帯で作られた元の買い目を順番通り補充
+  raw.forEach(add);
+
+  // ④ まだ不足なら主攻め候補の残りから補充
+  attackPool.slice(3).forEach(add);
+
+  return V46.normalize(out.slice(0,13));
+};
+window.bhV3Generate=o=>V46.generate(o);
+
+/* 描画後に必ず再表示 */
+const oldPattern=window.renderPatternBets;
+if(typeof oldPattern==='function'){
+  window.renderPatternBets=function(){
+    const r=oldPattern.apply(this,arguments);
+    setTimeout(repaintAttack,0);
+    return r;
+  };
+}
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function'){
+  window.runAnalysis=async function(){
+    const r=await oldRun.apply(this,arguments);
+    setTimeout(repaintAttack,0);
+    return r;
+  };
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(repaintAttack,80));
+
+window.BH_VOL66={
+  version:66,
+  attackRule:'leadGroupWithin0.30_innerPriority',
+  attackAndBetsSameSource:true,
+  attackBetPriorityTop3:true,
+  confirmedFirst:true,
+  maxTickets:13
+};
+})();
+</script>
+
+
+<style id="bh-vol67-class-patch-style">
+.bhClassPatch{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:1000;line-height:1.15;border:1px solid rgba(255,255,255,.25);vertical-align:middle;white-space:nowrap}
+.bhClassA1{background:linear-gradient(135deg,#6f5200,#d4af37);color:#111;border-color:#ffe27a}
+.bhClassA2{background:linear-gradient(135deg,#17365f,#2f73c7);color:#fff;border-color:#6db2ff}
+.bhClassB1{background:linear-gradient(135deg,#194726,#2f8a49);color:#fff;border-color:#69d58a}
+.bhClassB2{background:linear-gradient(135deg,#5a2020,#9a3737);color:#fff;border-color:#ff7a7a}
+.bhClassOther{background:#35363a;color:#eee;border-color:#777}
+</style>
+<script id="bh-vol67-racer-class-patch">
+(()=>{
+'use strict';
+function normalizeClass(v){
+  const x=String(v||'').toUpperCase().replace(/\s+/g,'');
+  if(x.includes('A1'))return 'A1';
+  if(x.includes('A2'))return 'A2';
+  if(x.includes('B1'))return 'B1';
+  if(x.includes('B2'))return 'B2';
+  return x||'';
+}
+function classOfRacer(r){
+  return normalizeClass(r?.class??r?.grade??r?.racer_class??r?.racerClass??r?.rank_class??r?.rankClass??r?.current_class);
+}
+function classCss(c){
+  if(c==='A1')return 'bhClassA1';
+  if(c==='A2')return 'bhClassA2';
+  if(c==='B1')return 'bhClassB1';
+  if(c==='B2')return 'bhClassB2';
+  return 'bhClassOther';
+}
+function patchHTML(r){
+  const c=classOfRacer(r);
+  return c?`<span class="bhClassPatch ${classCss(c)}">${c}</span>`:'';
+}
+function applyClassPatches(){
+  const list=Array.isArray(window.racers)?window.racers:[];
+  document.querySelectorAll('.racer').forEach((row,i)=>{
+    const name=row.querySelector('.racerName');
+    if(!name)return;
+    name.querySelector('.bhClassPatch')?.remove();
+    const html=patchHTML(list[i]);
+    if(html)name.insertAdjacentHTML('beforeend',html);
+  });
+}
+const oldRenderRace=window.renderRace;
+if(typeof oldRenderRace==='function'){
+  window.renderRace=function(){
+    const r=oldRenderRace.apply(this,arguments);
+    setTimeout(applyClassPatches,0);
+    return r;
+  };
+}
+const oldRun=window.runAnalysis;
+if(typeof oldRun==='function'){
+  window.runAnalysis=async function(){
+    const r=await oldRun.apply(this,arguments);
+    setTimeout(applyClassPatches,0);
+    return r;
+  };
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(applyClassPatches,80));
+window.BH_VOL67={version:67,racerClassPatch:true};
 })();
 </script>
 

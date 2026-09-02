@@ -165,6 +165,24 @@ window.bhClassPatchCore=function(v){
 var bhClassPatchCore=window.bhClassPatchCore;
 })();
 </script>
+
+<style id="bh-vol84-beforeinfo-rank-action-style">
+#bhBeforeInfoRows .bhBeforeRank1{background:linear-gradient(180deg,#ff3b45,#a80f19)!important;color:#fff!important;font-weight:1000!important;border:2px solid #ff8b91!important;border-radius:6px;padding:5px 3px;display:block;box-shadow:0 0 12px rgba(255,42,54,.48)!important}
+#bhBeforeInfoRows .bhBeforeRank2{background:linear-gradient(180deg,#ffe248,#cd9a08)!important;color:#171000!important;font-weight:1000!important;border:2px solid #fff09b!important;border-radius:6px;padding:5px 3px;display:block;box-shadow:0 0 11px rgba(255,215,40,.40)!important}
+.bhBeforeRankMark{display:block;font-size:9px;line-height:1.05;font-weight:1000;margin-bottom:2px}
+#loadRaceBtn,#analysisBtn{position:relative!important;overflow:visible!important}
+#loadRaceBtn::before,#analysisBtn::before{display:block;position:absolute;left:8px;top:-12px;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:1000;box-shadow:0 3px 9px rgba(0,0,0,.34)}
+#loadRaceBtn::before{content:"STEP 1";background:#dff5ff;color:#00456c;border:1px solid #7bd2ff}
+#analysisBtn::before{content:"STEP 2";background:#fff2a8;color:#5b3d00;border:1px solid #ffd949}
+#loadRaceBtn.bhLoadCurrent{animation:bhLoadPulse84 1.25s ease-in-out infinite!important;box-shadow:0 0 0 3px rgba(97,204,255,.45),0 0 28px rgba(43,172,240,.68)!important}
+#loadRaceBtn.bhLoadDone{background:linear-gradient(180deg,#68d99b,#1f9c62 55%,#12623f)!important;color:#04150d!important;border-color:#a6f4c6!important;animation:none!important}
+#analysisBtn.bhAiNotReady{background:linear-gradient(180deg,#343434,#181818)!important;color:#777!important;border-color:#4c4c4c!important;box-shadow:none!important;opacity:.62!important;filter:saturate(.2)!important}
+#analysisBtn.bhAiReady{background:linear-gradient(180deg,#fff18c,#efbd2e 54%,#9e6808)!important;color:#171000!important;border-color:#fff4a8!important;opacity:1!important;animation:bhAiPulse84 1.15s ease-in-out infinite!important;box-shadow:0 0 0 3px rgba(255,232,88,.55),0 0 30px rgba(255,192,31,.76)!important}
+@keyframes bhLoadPulse84{0%,100%{filter:brightness(1)}50%{filter:brightness(1.22)}}
+@keyframes bhAiPulse84{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-1px);filter:brightness(1.18)}}
+.bhVolBadge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.20);font-size:10px;font-weight:900;color:#9db0bd;vertical-align:middle;background:rgba(0,0,0,.25)}
+</style>
+
 </head>
 <body>
 
@@ -186,7 +204,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER</h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.85</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -601,9 +619,7 @@ window.classification=classification;
 <h2>🤖 AI期待値ランキング</h2>
 <div id="ranking">
 </div>
-<h3>🔥 このレースの攻め手</h3>
-<div id="attack">
-</div>
+<div id="attack" style="display:none"></div>
 <div id="exclusions" style="display:none">
 </div>
 </div>
@@ -3921,9 +3937,19 @@ function bhBeforeRow(b){
 function bhRenderBeforeInfo(){
  let card=document.getElementById("bhBeforeInfoCard"),box=document.getElementById("bhBeforeInfoRows");if(!card||!box)return;
  let rows=[1,2,3,4,5,6].map(bhBeforeRow),has=rows.some(x=>[x.st,x.ex,x.straight,x.lap,x.turn,x.tilt,x.weight,x.adjust,x.parts].some(v=>v!==null));
+ const mkRanks=(key,lower=true)=>{
+  let a=rows.map(x=>({b:x.b,v:Number(x[key])})).filter(x=>x[key]!==null&&x[key]!==undefined&&String(x[key]).trim()!==""&&Number.isFinite(x.v));
+  a.sort((p,q)=>lower?(p.v-q.v||p.b-q.b):(q.v-p.v||p.b-q.b));
+  let out={},last=null,rank=0;a.forEach((x,i)=>{if(last===null||Math.abs(x.v-last)>1e-9)rank=i+1;out[x.b]=rank;last=x.v});return out;
+ };
+ let ranks={st:mkRanks('st'),straight:mkRanks('straight'),ex:mkRanks('ex'),lap:mkRanks('lap'),turn:mkRanks('turn')};
+ const ranked=(value,key,b,fmt)=>{
+  if(value==null)return '－';let r=ranks[key]?.[b],cls=r===1?'bhBeforeRank1':r===2?'bhBeforeRank2':'',mark=r===1?'1位':r===2?'2位':'';
+  return `<span class="${cls}">${mark?`<span class="bhBeforeRankMark">${mark}</span>`:''}${fmt?fmt(value):value}</span>`;
+ };
  card.style.display="block";
  let wind="";try{let w=weatherSource()||{};wind=`<div class="bhVerifyNote">🌬️ 気象：風速 ${bhPickFirst(w,["wind_speed","windSpeed"])??"－"}m / 風向 ${bhPickFirst(w,["wind_direction","windDirection","wind_name"])??"－"} / 波高 ${bhPickFirst(w,["wave_height","waveHeight"])??"－"}cm / 水温 ${bhPickFirst(w,["water_temperature","waterTemperature"])??"－"}℃</div>`}catch(e){}
- box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${x.st==null?'－':bhFmtBefore(x.st)}</td><td>${x.straight==null?'－':bhFmtBefore(x.straight)}</td><td>${x.ex==null?'－':bhFmtBefore(x.ex)}</td><td>${x.lap==null?'－':bhFmtBefore(x.lap)}</td><td>${x.turn==null?'－':bhFmtBefore(x.turn)}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">直前情報スナップショットは締切1〜10分前（通常約5分前）に公開されます。公開後に再取得してください。</div>':''}`;
+ box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${ranked(x.st,'st',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.straight,'straight',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.ex,'ex',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.lap,'lap',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.turn,'turn',x.b,v=>bhFmtBefore(v))}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">直前情報スナップショットは締切1〜10分前（通常約5分前）に公開されます。公開後に再取得してください。</div>':''}`;
 }
 </script>
 
@@ -6662,6 +6688,22 @@ const retryAttach=()=>{
 };
 if(!retryAttach())setTimeout(retryAttach,0);
 })();
+</script>
+
+
+<script id="bh-vol84-action-state-js">
+window.bhSetAiReady=function(ready){
+ const ai=document.getElementById('analysisBtn'),load=document.getElementById('loadRaceBtn');
+ if(ai){
+  ai.classList.toggle('bhAiReady',!!ready);ai.classList.toggle('bhAiNotReady',!ready);
+  ai.textContent=ready?'🤖 STEP 2：AI解析開始':'🤖 STEP 2：出走表取得後にAI解析';
+ }
+ if(load){
+  load.classList.toggle('bhLoadCurrent',!ready);load.classList.toggle('bhLoadDone',!!ready);
+  load.textContent=ready?'✅ STEP 1：出走表取得済み':'📋 STEP 1：出走表を取得';
+ }
+};
+document.addEventListener('DOMContentLoaded',function(){window.bhSetAiReady(false)});
 </script>
 
 </body>

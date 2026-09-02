@@ -183,6 +183,65 @@ var bhClassPatchCore=window.bhClassPatchCore;
 .bhVolBadge{display:inline-flex;align-items:center;margin-left:8px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.20);font-size:10px;font-weight:900;color:#9db0bd;vertical-align:middle;background:rgba(0,0,0,.25)}
 </style>
 
+
+<style id="bh-vol86-beforeinfo-rank-fix-style">
+#bhBeforeInfoRows td.bhBeforeRank1Cell{background:#d7192d!important;color:#fff!important;font-weight:1000!important;box-shadow:inset 0 0 0 2px #ff8b91,0 0 10px rgba(255,45,55,.42)!important}
+#bhBeforeInfoRows td.bhBeforeRank2Cell{background:#ffd928!important;color:#171000!important;font-weight:1000!important;box-shadow:inset 0 0 0 2px #fff09b,0 0 9px rgba(255,218,42,.34)!important}
+#bhBeforeInfoRows .bhBeforeCellRankLabel{display:block;font-size:9px;font-weight:1000;line-height:1;margin-bottom:3px}
+</style>
+
+
+<style id="bh-vol87-step-button-balance-style">
+#loadRaceBtn,#analysisBtn{
+  min-height:118px!important;
+  padding:22px 12px 16px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  line-height:1.24!important;
+  font-size:clamp(20px,4.5vw,27px)!important;
+  font-weight:1000!important;
+  letter-spacing:.2px!important;
+  white-space:normal!important;
+}
+#loadRaceBtn::before,#analysisBtn::before{
+  top:-11px!important;
+  left:16px!important;
+  padding:4px 12px!important;
+  font-size:12px!important;
+  line-height:1!important;
+}
+#loadRaceBtn .bhStepMain,#analysisBtn .bhStepMain{
+  display:block!important;
+  width:100%!important;
+}
+@media(max-width:520px){
+  #loadRaceBtn,#analysisBtn{
+    min-height:110px!important;
+    padding:21px 9px 14px!important;
+    font-size:22px!important;
+    line-height:1.22!important;
+  }
+}
+</style>
+
+
+<style id="bh-vol88-negative-head-style">
+#bhNegativeHeadCard{border-color:#6b5a25!important}
+.bhNegSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.bhNegBox{padding:10px;border:1px solid #3d4652;border-radius:10px;background:#10161d;text-align:center}
+.bhNegBox small{display:block;color:#9aa6b2;font-size:10px}.bhNegBox b{display:block;font-size:18px;margin-top:3px}
+.bhNegPass{color:#76ef9f}.bhNegFail{color:#ff8585}.bhNegPending{color:#ffd85d}
+.bhNegCandidates{font-size:12px;line-height:1.7;padding:9px 10px;border:1px solid #37414d;border-radius:10px;background:#0e141b;margin-bottom:10px}
+.bhNegChecks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.bhNegCheck{padding:8px;border-radius:9px;border:1px solid #3b4651;background:#121820;font-size:11px;line-height:1.45}
+.bhNegCheck.ok{border-color:#277d4a;background:#10291b}.bhNegCheck.ng{border-color:#79343a;background:#2b1417}.bhNegCheck.na{opacity:.55}
+.bhNegCheck strong{display:block;font-size:12px;margin-bottom:2px}
+.bhNegNote{margin-top:9px;font-size:10px;color:#9ca6b0;line-height:1.55}
+@media(max-width:520px){.bhNegChecks{grid-template-columns:1fr}.bhNegSummary{grid-template-columns:1fr 1fr}.bhNegSummary .bhNegBox:last-child{grid-column:1/-1}}
+</style>
+
 </head>
 <body>
 
@@ -204,7 +263,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.85</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.88</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -630,6 +689,12 @@ window.classification=classification;
 <div id="bhOddsPopularityContent"><div class="bhOddsPopularityEmpty">オッズ取得待ち</div></div>
 </div>
 </div>
+
+<div id="bhNegativeHeadCard" class="card" style="display:none">
+<h2>🧪 否定型・1着候補検証 <span class="bhVolBadge">Vol.88</span></h2>
+<div id="bhNegativeHeadContent"></div>
+</div>
+
 
 <div id="bhNewBetCard" class="card">
 <h2>🎫 新・買い目 / 資金評価</h2>
@@ -6695,15 +6760,142 @@ if(!retryAttach())setTimeout(retryAttach,0);
 window.bhSetAiReady=function(ready){
  const ai=document.getElementById('analysisBtn'),load=document.getElementById('loadRaceBtn');
  if(ai){
-  ai.classList.toggle('bhAiReady',!!ready);ai.classList.toggle('bhAiNotReady',!ready);
-  ai.textContent=ready?'🤖 STEP 2：AI解析開始':'🤖 STEP 2：出走表取得後にAI解析';
+  ai.classList.toggle('bhAiReady',!!ready);
+  ai.classList.toggle('bhAiNotReady',!ready);
+  ai.innerHTML=ready
+    ?'<span class="bhStepMain">🤖 AI解析開始</span>'
+    :'<span class="bhStepMain">🤖 出走表取得後に<br>AI解析</span>';
  }
  if(load){
-  load.classList.toggle('bhLoadCurrent',!ready);load.classList.toggle('bhLoadDone',!!ready);
-  load.textContent=ready?'✅ STEP 1：出走表取得済み':'📋 STEP 1：出走表を取得';
+  load.classList.toggle('bhLoadCurrent',!ready);
+  load.classList.toggle('bhLoadDone',!!ready);
+  load.innerHTML=ready
+    ?'<span class="bhStepMain">✅ 出走表取得済み</span>'
+    :'<span class="bhStepMain">📋 出走表を取得</span>';
  }
 };
 document.addEventListener('DOMContentLoaded',function(){window.bhSetAiReady(false)});
+</script>
+
+
+<script id="bh-vol86-beforeinfo-rank-fix-js">
+(function(){
+'use strict';
+function n86(s){
+ var n=parseFloat(String(s==null?'':s).replace(/[^0-9+\-.]/g,''));
+ return Number.isFinite(n)?n:null;
+}
+window.bhHighlightBeforeInfoRanks=function(){
+ var box=document.getElementById('bhBeforeInfoRows');
+ var table=box&&box.querySelector('table'); if(!table)return;
+ var trs=Array.from(table.querySelectorAll('tbody tr'));
+ [2,3,4,5,6].forEach(function(col){
+   var cells=trs.map(function(tr,i){return {cell:tr.children[col],boat:i+1};})
+     .map(function(x){x.value=n86(x.cell&&x.cell.textContent);return x;})
+     .filter(function(x){return x.cell&&x.value!==null;});
+   cells.sort(function(a,b){return a.value-b.value||a.boat-b.boat;});
+   var last=null,rank=0;
+   cells.forEach(function(x,i){
+     if(last===null||Math.abs(x.value-last)>1e-9)rank=i+1;
+     last=x.value;
+     x.cell.classList.remove('bhBeforeRank1Cell','bhBeforeRank2Cell');
+     Array.from(x.cell.querySelectorAll('.bhBeforeCellRankLabel')).forEach(function(el){el.remove();});
+     if(rank===1||rank===2){
+       x.cell.classList.add(rank===1?'bhBeforeRank1Cell':'bhBeforeRank2Cell');
+       var lab=document.createElement('span');
+       lab.className='bhBeforeCellRankLabel';lab.textContent=rank+'位';x.cell.prepend(lab);
+     }
+   });
+ });
+};
+var base86=window.bhRenderBeforeInfo;
+if(typeof base86==='function'){
+ window.bhRenderBeforeInfo=function(){
+   var r=base86.apply(this,arguments);
+   window.bhHighlightBeforeInfoRanks();
+   return r;
+ };
+ try{bhRenderBeforeInfo=window.bhRenderBeforeInfo}catch(e){}
+}
+})();
+</script>
+
+
+<script id="bh-vol88-negative-head-js">
+(function(){
+'use strict';
+function oddsRows88(){
+ var src=(window.bhRealtimeOdds&&typeof window.bhRealtimeOdds==='object')?window.bhRealtimeOdds:(typeof bhRealtimeOdds!=='undefined'?bhRealtimeOdds:{});
+ return Object.entries(src||{}).map(function(kv){
+  var legs=String(kv[0]).split('-').map(Number),o=Number(kv[1]);
+  return legs.length===3&&new Set(legs).size===3&&Number.isFinite(o)&&o>0?{legs:legs,odds:o}:null;
+ }).filter(Boolean).sort(function(a,b){return a.odds-b.odds});
+}
+function heads88(){
+ var c={1:0,2:0,3:0,4:0,5:0,6:0};
+ oddsRows88().slice(0,50).forEach(function(x){c[x.legs[0]]++});
+ return [1,2,3,4,5,6].sort(function(a,b){return c[b]-c[a]||a-b}).map(function(b,i){return {boat:b,count:c[b],rank:i+1}});
+}
+function motor88(b){
+ var r=racer(b)||{};return num(r.motor_top_2_percent||r.motor_2ren_rate||r.motor_2ren);
+}
+function cls88(b){
+ var r=racer(b)||{},x=typeof bhNormalizeClassCore==='function'?bhNormalizeClassCore(r):String(r.rank_number||r.class_number||r.rank||r.class||'');
+ return String(x||'').toUpperCase();
+}
+function start88(){
+ try{return [1,2,3,4,5,6].map(bhStartStats)}catch(e){return []}
+}
+function oneM88(){
+ try{return bhOneMModel(start88())}catch(e){return []}
+}
+function lap88(b){try{var x=bhBeforeRow(b);return Number(x.lap)}catch(e){return NaN}}
+function ex88(b){try{var x=bhBeforeRow(b);return Number(x.ex)}catch(e){return NaN}}
+function rankLow88(vals,b){
+ var a=vals.filter(function(x){return Number.isFinite(x.v)}).sort(function(x,y){return x.v-y.v||x.b-y.b});
+ var i=a.findIndex(function(x){return x.b===b});return i<0?99:i+1;
+}
+function evaluate88(b){
+ var r=racer(b)||{},rr=ranking(),ai=rr.findIndex(function(x){return x.boat===b})+1;
+ var st=start88(),mine=st.find(function(x){return x.boat===b}),usable=st.filter(function(x){return Number.isFinite(x.predict)});
+ var bestST=usable.length?Math.min.apply(null,usable.map(function(x){return x.predict})):NaN;
+ var om=oneM88(),me1=om.find(function(x){return x.boat===b}),best1=om.filter(function(x){return Number.isFinite(x.boatBehind)}).sort(function(x,y){return x.boatBehind-y.boatBehind})[0];
+ var exvals=[1,2,3,4,5,6].map(function(z){return {b:z,v:ex88(z)}}),lapvals=[1,2,3,4,5,6].map(function(z){return {b:z,v:lap88(z)}});
+ var d=decisions(r)||{},c=course(b),nat=num(r.national_win_rate||r.win_rate_national),loc=num(r.local_win_rate||r.win_rate_local),mot=motor88(b),cl=cls88(b);
+ // Motor provisional: current app's "strongMotor" threshold is 35; 30+ is treated as ordinary-or-better for this first test.
+ var motorOK=mot>=30;
+ var items=[
+  ['階級 A級',cl==='A1'||cl==='A2',cl||'－',true],
+  ['全国勝率 5.00以上',nat>=5,nat.toFixed(2),true],
+  ['当地勝率 5.00以上',loc>=5,loc.toFixed(2),true],
+  ['モーター 普通以上',motorOK,mot.toFixed(1)+'%',true],
+  ['AI期待値 2位以内',ai>0&&ai<=2,ai?ai+'位':'－',true],
+  ['スタートスリット 1位 or 0.03以内',Number.isFinite(mine&&mine.predict)&&Number.isFinite(bestST)&&(mine.predict-bestST)<=.030,Number.isFinite(mine&&mine.predict)?mine.predict.toFixed(3):'－',true],
+  ['1Mまでの伸び 1位 or 0.4艇身以内',me1&&Number.isFinite(me1.boatBehind)&&me1.boatBehind<=.40,me1&&Number.isFinite(me1.boatBehind)?me1.boatBehind.toFixed(2)+'艇身':'－',true],
+  ['展示タイム 2位以内',rankLow88(exvals,b)<=2,rankLow88(exvals,b)<=6?rankLow88(exvals,b)+'位':'－',true],
+  ['1コース：一周タイム 1位',c===1?rankLow88(lapvals,b)===1:false,c===1?(rankLow88(lapvals,b)<=6?rankLow88(lapvals,b)+'位':'－'):'対象外',c===1],
+  ['1コース：逃げ率 50%以上',c===1?num(d.escape)>=50:false,c===1?num(d.escape).toFixed(1)+'%':'対象外',c===1],
+  ['1コース：差され率 15%以上',c===1?num(d.sasareRate)>=15:false,c===1?num(d.sasareRate).toFixed(1)+'%':'対象外',c===1],
+  ['1コース以外：差し10 / まくり15 / まくり差し20',c!==1?(num(d.sashi)>=10||num(d.maki)>=15||num(d.makiSashi)>=20):false,c!==1?('差'+num(d.sashi).toFixed(1)+' / ま'+num(d.maki).toFixed(1)+' / ま差'+num(d.makiSashi).toFixed(1)):'対象外',c!==1]
+ ];
+ var pass=items.filter(function(x){return x[3]&&x[1]}).length;
+ return {items:items,pass:pass,course:c,ai:ai,motor:mot};
+}
+window.bhRenderNegativeHead88=function(){
+ var card=document.getElementById('bhNegativeHeadCard'),box=document.getElementById('bhNegativeHeadContent');if(!card||!box)return;
+ var hs=heads88();if(!hs.length||hs.every(function(x){return x.count===0})){card.style.display='block';box.innerHTML='<div class="bhNegNote">オッズ取得後に頭候補を判定します。</div>';return}
+ var h=hs[0],ev=evaluate88(h.boat),pass=ev.pass>=7;
+ card.style.display='block';
+ var headLine=hs.slice(0,4).map(function(x){return '頭候補'+x.rank+'：'+x.boat+'号艇（1着 '+x.count+'回）'}).join('　/　');
+ var checks=ev.items.map(function(x,i){var cls=!x[3]?'na':x[1]?'ok':'ng';return '<div class="bhNegCheck '+cls+'"><strong>'+(x[3]?(x[1]?'✅ ':'❌ '):'－ ')+(i+1)+'. '+x[0]+'</strong>'+x[2]+'</div>'}).join('');
+ box.innerHTML='<div class="bhNegCandidates">'+headLine+'</div><div class="bhNegSummary"><div class="bhNegBox"><small>頭候補1</small><b>'+h.boat+'号艇</b></div><div class="bhNegBox"><small>クリア</small><b class="'+(pass?'bhNegPass':'bhNegFail')+'">'+ev.pass+'項目</b></div><div class="bhNegBox"><small>判定</small><b class="'+(pass?'bhNegPass':'bhNegPending')+'">'+(pass?'7項目以上 → 人気側':'その他')+'</b></div></div><div class="bhNegChecks">'+checks+'</div><div class="bhNegNote">Vol.88 初回検証。頭候補はオッズ上位50通りの1着出現回数順。同数は艇番順。モーター「普通以上」は初回集計用に2連対率30%以上を暫定基準。コース限定項目は対象コースだけ判定し、対象外はクリア数に含めません。</div>';
+};
+var baseRun88=window.runAnalysis;
+if(typeof baseRun88==='function'){
+ window.runAnalysis=async function(){var r=await baseRun88.apply(this,arguments);try{window.bhRenderNegativeHead88()}catch(e){console.warn(e)}return r};
+ try{runAnalysis=window.runAnalysis}catch(e){}
+}
+})();
 </script>
 
 </body>

@@ -166,6 +166,19 @@ var bhClassPatchCore=window.bhClassPatchCore;
 })();
 </script>
 
+
+<script id="bh-classification-neutral-stub">
+(()=>{
+'use strict';
+// 旧「切り候補 / 3着まで」判定は白紙化済み。
+// AI解析・表示互換のため、現時点では全艇 normal を返す。
+window.classification=function(boat,rankings){
+  return {type:'normal',reason:'',diff:0,rankGap:0};
+};
+var classification=window.classification;
+})();
+</script>
+
 </head>
 <body>
 <div class="bhVol">vol.83</div>

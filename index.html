@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.80</div>
+<div class="bhVol">vol.82</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -10024,6 +10024,154 @@ window.BH_VOL80_RESULT={
   venueOnlyInitially:true,
   clickToExpand:true,
   perVenueReset:true
+};
+})();
+</script>
+
+
+<script id="bh-vol82-unclear-method-composite-selection">
+(()=>{
+'use strict';
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const boats=[1,2,3,4,5,6];
+
+function rr(b){
+  try{return racers.find(x=>Number(x?.entry_number)===Number(b))||racers[Number(b)-1]||{}}catch(e){return{}}
+}
+function hs(b){try{return typeof history==='function'?(history(b)||[]):[]}catch(e){return[]}}
+function val(obj,keys){
+  for(const k of keys){
+    const n=Number(obj?.[k]);
+    if(Number.isFinite(n))return n;
+  }
+  return 0;
+}
+function clsScore(b){
+  let c='';
+  try{c=window.bhNormalizeClassCore?.(rr(b))||''}catch(e){}
+  if(!c){
+    for(const h of hs(b)){
+      try{c=window.bhNormalizeClassCore?.(h)||''}catch(e){}
+      if(c)break;
+    }
+  }
+  return ({A1:4,A2:3,B1:2,B2:1})[c]||0;
+}
+function methodRates(b){
+  try{
+    const x=window.BH_VOL41?.methodRates?.(b);
+    if(x)return x;
+  }catch(e){}
+  const r=rr(b);
+  return{
+    sashi:val(r,['sashi_rate','sashiRate','rate_sashi']),
+    makuri:val(r,['makuri_rate','makuriRate','rate_makuri']),
+    makuriSashi:val(r,['makuri_sashi_rate','makuriSashiRate','makurizashi_rate'])
+  };
+}
+function preferredMethod(b){
+  const c=Number(window.course?.(b)||b),m=methodRates(b);
+  if(c===1)return {method:'逃げ',rate:0};
+  const a=c===2
+    ?[{method:'差し',rate:N(m.sashi)},{method:'まくり',rate:N(m.makuri)}]
+    :[{method:'まくり',rate:N(m.makuri)},{method:'まくり差し',rate:N(m.makuriSashi)}];
+  a.sort((x,y)=>y.rate-x.rate);
+  return a[0]||{method:c===2?'差し':'まくり',rate:0};
+}
+function norm100(v){
+  v=N(v); return v>0&&v<=1?v*100:v;
+}
+function racerComposite(b){
+  const r=rr(b);
+  const national=val(r,['win_rate','national_win_rate','racer_win_rate','rate']);
+  const motor2=norm100(val(r,['motor_2rate','motor2_rate','motor_2nd_rate','motor_second_rate','motor2Rate']));
+  const two=norm100(val(r,['second_rate','two_rate','2ren_rate','secondRate','twoRate']));
+  const local=val(r,['local_win_rate','local_rate','localWinRate']);
+  /* 階級・全国勝率・モーター・2連対率・当地勝率 */
+  return clsScore(b)*12 + national*5 + motor2*.22 + two*.18 + local*3;
+}
+function innerAdvantage(b){
+  const c=Number(window.course?.(b)||b);
+  return Math.max(0,7-c)*1.8;
+}
+function oneDefense(){
+  const r=rr(1);
+  const escape=norm100(val(r,['escape_rate','nige_rate','escapeRate']));
+  const makurare=norm100(val(r,['makurare_rate','rate_makurare','outside_makurare_rate']));
+  const sashare=norm100(val(r,['sashare_rate','rate_sashare','sashi_lost_rate']));
+  return {escape,makurare,sashare};
+}
+function weatherMethodBonus(b,method){
+  let p=0;
+  try{
+    const w=window.bhLiveWind||{};
+    const speed=N(w.speed??w.wind_speed??w.windSpeed);
+    /* 状況情報は既存の風/潮データがある時だけ弱く加点。 */
+    if(speed>=5&&method==='まくり')p+=2;
+    if(speed>=5&&method==='差し')p+=1;
+  }catch(e){}
+  return p;
+}
+function fallbackRank(){
+  const def=oneDefense();
+  return boats.filter(b=>Number(window.course?.(b)||b)>=2).map(b=>{
+    const pm=preferredMethod(b);
+    let score=racerComposite(b)+innerAdvantage(b)+N(pm.rate)*.35+weatherMethodBonus(b,pm.method);
+    /* 1Cの負け方と候補艇の得意決まり手を対応 */
+    if(pm.method==='まくり')score+=def.makurare*.22;
+    if(pm.method==='差し')score+=def.sashare*.22;
+    if(pm.method==='まくり差し')score+=(def.makurare+def.sashare)*.11;
+    return {boat:b,method:pm.method,methodRate:N(pm.rate),score};
+  }).sort((a,b)=>b.score-a.score||Number(window.course?.(a.boat)||a.boat)-Number(window.course?.(b.boat)||b.boat));
+}
+window.bhUnclearMethodCompositeRank=fallbackRank;
+
+/* 明確な攻め手が無い時だけ、総合評価で「軸候補＋決まり手候補」を選び直す。
+   明確な物理攻めがある時は既存判定を変更しない。 */
+const prevScenario=window.bhRaceScenario;
+window.bhRaceScenario=function(){
+  let sc={};
+  try{sc=prevScenario?.()||{}}catch(e){}
+  if(sc?.physicalAttack)return sc;
+
+  const ranked=fallbackRank();
+  const top=ranked[0];
+  if(!top)return sc;
+
+  /* 1号艇が相対的に強い場合は1軸を維持。外艇を無理に頭にしない */
+  const esc=N(sc.escape);
+  const oneStrong=Number(sc.axis)===1 && esc>=45;
+  if(oneStrong){
+    return {...sc,mode:'axis',head:null,axis:1,method:'軸候補',
+      methodCandidate:'逃げ候補',
+      fallbackComposite:true,
+      fallbackRank:ranked,
+      reason:'明確な攻め手なし。階級・全国勝率・モーター・2連対率・当地勝率・内側有利・コース得意決まり手・1C防御力・状況情報で総合判定'};
+  }
+  return {...sc,mode:'axis',head:null,axis:top.boat,method:'軸候補',
+    methodCandidate:`${top.method}候補`,
+    fallbackComposite:true,
+    fallbackRank:ranked,
+    reason:'明確な攻め手なし。階級・全国勝率・モーター・2連対率・当地勝率・内側有利・コース得意決まり手・1Cの負け方・状況情報で総合判定'};
+};
+
+window.bhMainAttackInfo=()=>{
+  const sc=window.bhRaceScenario?.()||{};
+  return{
+    boat:sc.axis||sc.head||1,
+    method:sc.physicalAttack?sc.method:'軸候補',
+    methodCandidate:sc.methodCandidate||'',
+    mode:sc.mode,axis:sc.axis,head:sc.head,
+    physicalAttack:!!sc.physicalAttack,
+    reason:sc.reason||''
+  };
+};
+
+window.BH_VOL82={
+  version:82,
+  unclearMethod:'composite',
+  factors:['階級','全国勝率','モーター','2連対率','当地勝率','内側有利','コース得意決まり手','1C負け方/防御力','風・潮位等の状況情報'],
+  onlyWhenNoClearAttack:true
 };
 })();
 </script>

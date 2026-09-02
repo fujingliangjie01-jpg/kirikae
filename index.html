@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.78</div>
+<div class="bhVol">vol.79</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -9747,6 +9747,58 @@ window.BH_VOL78={
   currentDataPriority:true,
   historyFallback:true
 };
+})();
+</script>
+
+
+<script id="bh-vol79-axis-escape-distribution-fix">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;if(!V46)return;
+const prev=V46.generate,N=v=>Number.isFinite(Number(v))?Number(v):0,K=t=>(t?.legs||[]).join('-');
+const conf=t=>t?.confirmed===true||t?.bhConfirmed===true||(((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).includes('買い目確定'));
+const scen=()=>{try{return window.bhRaceScenario?.()||{}}catch(e){return{}}};
+function erate(sc,o){for(const v of [sc?.escape,sc?.escapeRate,o?.escape,o?.escapeRate,window.bhCurrentEscapeRate,window.currentEscapeRate]){const n=Number(v);if(Number.isFinite(n))return n}return null}
+function ranks(){const m=new Map();for(const k of ['currentRankings','lastRankings','aiRankings']){const a=window[k];if(Array.isArray(a))a.forEach((x,i)=>{const b=Number(x?.boat??x?.entry_number??x?.number??x?.b);if(b>=1&&b<=6&&!m.has(b))m.set(b,i+1)})}return m}
+function pool(){const a=[];for(let h=1;h<=6;h++)for(let b=1;b<=6;b++)for(let c=1;c<=6;c++){if(h===b||h===c||b===c)continue;let q=0;try{q=N(V46.legScore?.(h,1,h))+N(V46.legScore?.(b,2,h))+N(V46.legScore?.(c,3,h))}catch(e){}a.push(V46.ticket?V46.ticket([h,b,c],h===1?'逃げ':'',q,false,''):{legs:[h,b,c],score:q})}return a}
+function score(t,r){const h=Number(t?.legs?.[0]),x=N(r.get(h)||99);return N(t?.score)+(conf(t)?100000:0)+(x===1?5000:x===2?3600:x===3?2400:x===4?900:0)}
+
+V46.generate=function(outlook){
+ const raw=prev.call(this,outlook)||[],sc=scen(),er=erate(sc,outlook),r=ranks();
+ const budget=Math.max(100,Math.floor((N(window.bhRaceBudget?.())||1200)/100)*100);
+ const target=Math.max(1,Math.min(13,Math.floor(Math.min(1300,budget)/100)));
+ const oneAxis=Number(sc?.axis)===1&&!(sc?.physicalAttack&&Number(sc?.head)===1);
+ const range80=er!=null&&er>=80&&er<90;
+ if(!oneAxis&&!range80)return raw;
+
+ const u=new Map();for(const t of [...raw,...pool()]){if(!t?.legs||t.legs.length<3)continue;const k=K(t),o=u.get(k);if(!o||score(t,r)>score(o,r))u.set(k,t)}
+ const all=[...u.values()].sort((a,b)=>score(b,r)-score(a,r)),out=[],seen=new Set();
+ const add=t=>{if(!t||out.length>=target||seen.has(K(t)))return false;seen.add(K(t));out.push(t);return true};
+ all.filter(conf).forEach(add);
+ const normal=all.filter(t=>!conf(t));
+
+ if(oneAxis){
+   // 1号艇が「軸候補」なら逃げとは分離。1頭は少数、中心は2・3着。
+   const maxHead=Math.max(1,Math.floor(target*.30));
+   const needSecond=Math.max(2,Math.floor(target*.30));
+   const needThird=Math.max(2,Math.floor(target*.25));
+   let h=out.filter(t=>+t.legs[0]===1).length,s=out.filter(t=>+t.legs[1]===1).length,d=out.filter(t=>+t.legs[2]===1).length;
+   for(const t of normal.filter(t=>+t.legs[1]===1)){if(s>=needSecond)break;if(add(t))s++}
+   for(const t of normal.filter(t=>+t.legs[2]===1)){if(d>=needThird)break;if(add(t))d++}
+   for(const t of normal.filter(t=>+t.legs[0]===1)){if(h>=maxHead)break;if(add(t))h++}
+   for(const t of normal){if(out.length>=target)break;if(+t.legs[0]===1&&h>=maxHead)continue;if(add(t)&&+t.legs[0]===1)h++}
+ }else{
+   // 80〜89.9%は設定どおり「イン逃げ85%・中穴15%」。イン頭100%は禁止。
+   const needNon1=Math.max(1,Math.ceil(target*.15));
+   let n=out.filter(t=>+t.legs[0]!==1).length;
+   for(const t of normal.filter(t=>+t.legs[0]!==1)){if(n>=needNon1)break;if(add(t))n++}
+   for(const t of normal.filter(t=>+t.legs[0]===1))add(t);
+   for(const t of normal)add(t);
+ }
+ return V46.normalize(out.slice(0,target));
+};
+window.bhV3Generate=o=>V46.generate(o);
+window.BH_VOL79={version:79,oneAxisHeadMax:.30,oneAxisMain:'2nd/3rd',escape80to89:'85/15',rule:'軸候補≠逃げ'};
 })();
 </script>
 

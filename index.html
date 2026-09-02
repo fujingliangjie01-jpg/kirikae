@@ -106,6 +106,49 @@
 }
 </style>
 
+
+<script id="bh-class-normalizer-core">
+(()=>{
+'use strict';
+// 出走表取得・階級表示用の共通正規化。
+// 全体見通し / 1着選定 / 買い目ロジックとは独立。
+window.bhNormalizeClassCore=function(v){
+  if(v==null)return '';
+  if(typeof v==='object'){
+    v=
+      v.rank_number??v.class_number??v.racer_rank_number??v.racer_class_number??
+      v.rank??v.class??v.grade??v.classification??v.current_class??
+      v.rank_name??v.class_name??v.grade_name??v.racer_rank_name??v.racer_class_name??
+      '';
+  }
+
+  let s=String(v).trim().toUpperCase();
+  if(!s)return '';
+
+  // 数値コード
+  if(/^\d+(?:\.0+)?$/.test(s)){
+    const n=parseInt(s,10);
+    return ({1:'A1',2:'A2',3:'B1',4:'B2'})[n]||'';
+  }
+
+  // 表記ゆれを吸収
+  s=s
+    .replace(/\s+/g,'')
+    .replace(/[ＡＡ]/g,'A')
+    .replace(/[ＢＢ]/g,'B')
+    .replace(/[１２]/g,m=>m==='１'?'1':'2');
+
+  const m=s.match(/\b(A1|A2|B1|B2)\b/) || s.match(/(A1|A2|B1|B2)/);
+  if(m)return m[1];
+
+  return '';
+};
+
+// 既存コードが裸の関数名として参照しても動くようにグローバルへ公開。
+var bhNormalizeClassCore=window.bhNormalizeClassCore;
+})();
+</script>
+
 </head>
 <body>
 <div class="bhVol">vol.83</div>

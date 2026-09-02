@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.82</div>
+<div class="bhVol">vol.83</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -833,6 +833,7 @@ $("message").innerHTML=
 '<span class="success">🔄 進入入力をリセットしました</span>'
 }
 async function loadRaceData(){
+try{window.bhSetAiReady?.(false)}catch(e){}
 $("message").innerHTML=
 '<span class="loading">⏳ 出走表を取得中...</span>';
 $("raceCard").style.display="none";
@@ -870,6 +871,7 @@ try{await bhLoadRealtimePreviewAndOdds()}catch(e){console.warn("直前情報/オ
 renderRace();
 try{bhRenderBeforeInfo()}catch(e){}
 $("raceCard").style.display="block";
+try{window.bhSetAiReady?.(true)}catch(e){}
 $("message").innerHTML=
 '<span class="success">✅ 出走表取得成功<br>AI解析用の過去30走を先読みしています</span>';
 
@@ -883,6 +885,7 @@ if(m&&m.textContent.includes("先読み"))m.innerHTML='<span class="success">✅
 }).catch(()=>{})
 },0);
 }catch(e){
+try{window.bhSetAiReady?.(false)}catch(_e){}
 console.error(e);
 $("message").innerHTML=
 '<span class="error">❌ 出走表取得失敗<br>'+
@@ -9933,17 +9936,34 @@ V46.generate=function(outlook){
   /* 確定→優先候補。別シートの確定は routeOK で除外済み */
   all.filter(confirmed).forEach(add);
 
+  /* 全体見通しと基本買い目を直結。
+     45%以上は必ずイン逃げ基本買い目を先に確保。
+     85%以上は画像ルールどおりイン頭のみ。 */
+  const oneHead=all.filter(t=>!confirmed(t)&&Number(t.legs[0])===1);
+  if(escape>=85){
+    for(const t of oneHead){ if(out.length>=target)break; add(t); }
+    return V46.normalize(out.filter(t=>Number(t.legs[0])===1).slice(0,target));
+  }
+  if(escape>=45){
+    const needIn=Math.min(4,target);
+    let have=out.filter(t=>Number(t.legs[0])===1).length;
+    for(const t of oneHead){
+      if(have>=needIn)break;
+      if(add(t))have++;
+    }
+  }
+
   if(!physical&&axis){
     const maxAxisHead=Math.max(1,Math.floor(target*.30));
     let axisHead=out.filter(t=>Number(t.legs[0])===axis).length;
 
-    /* 軸候補は2・3着を先に */
+    /* 軸候補は2・3着を先に。ただし45%以上のイン頭基本買い目は既に確保済み */
     all.filter(t=>!confirmed(t)&&Number(t.legs[1])===axis).forEach(add);
     all.filter(t=>!confirmed(t)&&Number(t.legs[2])===axis).forEach(add);
     for(const t of all){
       if(out.length>=target)break;
       if(confirmed(t))continue;
-      if(Number(t.legs[0])===axis&&axisHead>=maxAxisHead)continue;
+      if(Number(t.legs[0])===axis&&axisHead>=maxAxisHead&&axis!==1)continue;
       if(add(t)&&Number(t.legs[0])===axis)axisHead++;
     }
   }else{
@@ -10173,6 +10193,74 @@ window.BH_VOL82={
   factors:['階級','全国勝率','モーター','2連対率','当地勝率','内側有利','コース得意決まり手','1C負け方/防御力','風・潮位等の状況情報'],
   onlyWhenNoClearAttack:true
 };
+})();
+</script>
+
+
+<style id="bh-vol83-ai-ready-style">
+#analysisBtn.bhAiNotReady{
+  background:linear-gradient(180deg,#343434,#181818)!important;
+  color:#858585!important;
+  border-color:#4c4c4c!important;
+  box-shadow:none!important;
+  opacity:.72!important;
+  filter:saturate(.35)!important;
+}
+#analysisBtn.bhAiReady{
+  opacity:1!important;
+  filter:none!important;
+  animation:bhV83AiReadyGlow 1.35s ease-in-out infinite!important;
+  box-shadow:0 0 0 2px rgba(255,235,115,.65),0 0 24px rgba(255,211,54,.72),0 0 46px rgba(255,176,0,.35)!important;
+}
+@keyframes bhV83AiReadyGlow{
+  0%,100%{transform:translateY(0);filter:brightness(1)}
+  50%{transform:translateY(-1px);filter:brightness(1.18)}
+}
+</style>
+<script id="bh-vol83-ai-ready-and-axis-label">
+(()=>{
+'use strict';
+window.bhSetAiReady=function(ready){
+  const b=document.getElementById('analysisBtn');if(!b)return;
+  b.classList.toggle('bhAiReady',!!ready);
+  b.classList.toggle('bhAiNotReady',!ready);
+  b.setAttribute('aria-disabled',ready?'false':'true');
+};
+function ticketHasOneHead(){
+  try{
+    const pools=[
+      window.currentBets,
+      window.BH_VOL46?.lastTickets,
+      window.bhCurrentTickets
+    ];
+    for(const p of pools){
+      const a=Array.isArray(p)?p:Array.isArray(p?.tickets)?p.tickets:[];
+      if(a.some(t=>Number(t?.legs?.[0]??t?.head)===1))return true;
+    }
+  }catch(e){}
+  const box=document.getElementById('bettingPatterns');
+  if(box && /(^|[^0-9])1\s*-\s*[2-6]/m.test(box.innerText||''))return true;
+  return false;
+}
+function fixOneAxisLabel(){
+  if(!ticketHasOneHead())return;
+  document.querySelectorAll('.bhV69AttackFocus .main,.bhV72Attack .main,.bhV73Attack .main').forEach(el=>{
+    const t=(el.textContent||'').trim();
+    if(/^1号艇\s*軸候補$/.test(t))el.textContent='1号艇 頭・軸候補';
+  });
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  window.bhSetAiReady(false);
+  setTimeout(fixOneAxisLabel,120);
+});
+const mo=new MutationObserver(()=>fixOneAxisLabel());
+document.addEventListener('DOMContentLoaded',()=>{
+  const b=document.getElementById('bettingPatterns');
+  const a=document.getElementById('analysisCard');
+  if(b)mo.observe(b,{childList:true,subtree:true,characterData:true});
+  if(a)mo.observe(a,{childList:true,subtree:true,characterData:true});
+});
+window.BH_VOL83={version:83,outlookBetSync:true,oneHeadAxisLabel:true,analysisReadyLight:true};
 })();
 </script>
 

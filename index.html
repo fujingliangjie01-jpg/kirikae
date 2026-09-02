@@ -165,22 +165,16 @@ window.bhClassPatchCore=function(v){
 var bhClassPatchCore=window.bhClassPatchCore;
 })();
 </script>
-
-
-<script id="bh-classification-neutral-stub">
-(()=>{
-'use strict';
-// 旧「切り候補 / 3着まで」判定は白紙化済み。
-// AI解析・表示互換のため、現時点では全艇 normal を返す。
-window.classification=function(boat,rankings){
-  return {type:'normal',reason:'',diff:0,rankGap:0};
-};
-var classification=window.classification;
-})();
-</script>
-
 </head>
 <body>
+
+<script id="bh-classification-neutral-stub">
+function classification(boat, rankings){
+  return {type:'normal', reason:'', diff:0, rankGap:0};
+}
+window.classification=classification;
+</script>
+
 <div class="bhVol">vol.83</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
@@ -3890,7 +3884,20 @@ async function bhLoadRealtimePreviewAndOdds(){
  bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);bhRealtimeOdds=bhExtractOddsFromCsvRow(got.od3);window.bhRealtimeOdds=bhRealtimeOdds;bhRealtimeOdds2=bhExtractOdds2FromCsvRow(got.od2);bhRealtimePreviewLoaded=!!(got.tkz||got.stt||got.sui||got.original_exhibition);return got;
 }
 function bhGetOdds(key){let parts=String(key).split('-');return Number((parts.length===2?bhRealtimeOdds2:bhRealtimeOdds)?.[key])||null}
-async function bhReloadRealtimeVol4(){let btn=document.activeElement;try{if(btn)btn.disabled=true;await bhLoadRealtimePreviewAndOdds();bhRenderBeforeInfo();if(window.bhLastOutlook){let t=bhV3Generate(window.bhLastOutlook);window.bhLastTickets=t;currentBets=t;bhV3Render(t,window.bhLastOutlook)}}finally{if(btn)btn.disabled=false}}
+async function bhReloadRealtimeVol4(){
+ let btn=document.activeElement;
+ try{
+  if(btn)btn.disabled=true;
+  await bhLoadRealtimePreviewAndOdds();
+  bhRenderBeforeInfo();
+  if(typeof window.bhRenderOddsPopularity==='function' &&
+     document.getElementById('bhOddsPopularityPanel')?.classList.contains('open')){
+    window.bhRenderOddsPopularity();
+  }
+ }finally{
+  if(btn)btn.disabled=false;
+ }
+}
 </script>
 
 <script id="bh-beforeinfo-vol2-js">
@@ -4561,90 +4568,6 @@ document.addEventListener("DOMContentLoaded",bhV15TrimAttackExplanation);
 window.BH_STATS_START_DATE="2026-08-30";
 try{localStorage.setItem("boat_hunter_stats_start_date","2026-08-30")}catch(e){}
 </script>
-
-<script id="bh-vol17-1m-leader-reverse-js">
-/*
- vol.17 1M隊形優先の外頭・裏展開
- - 全体見通しがイン逃げ高率でも、1M直前予測で外艇が実際に先頭なら別枠で外頭を残す。
- - 全体見通し自体は下げない。本線10点の確率・資金配分にも混ぜない。
- - 「決まり手率が高いから攻め艇にする」は行わず、1M物理隊形が先。
-*/
-function bhV17OneMPhysicalLeader(){
- try{
-  const sig=bhOneMOutlookSignal(),rows=sig?.theory?.rows||[];
-  if(!rows.length)return null;
-  const usable=rows.filter(x=>Number.isFinite(x.boatBehind));
-  if(!usable.length)return null;
-  const lead=[...usable].sort((a,b)=>num(a.boatBehind)-num(b.boatBehind)||a.boat-b.boat)[0];
-  const one=usable.find(x=>x.boat===1);
-  if(!lead||lead.boat===1||!one)return null;
-
-  // 1号艇より実際に前へ出ている予測が必要。僅差でも1M先頭なら候補にする。
-  const edge=num(one.boatBehind)-num(lead.boatBehind);
-  if(edge<0.01)return null;
-
-  // STも大崩れではないこと。今回の予測ST順位3位以内、または1Mまでの前進補正が明確なら通す。
-  const stats=[1,2,3,4,5,6].map(bhStartStats).filter(x=>Number.isFinite(x.predict))
-    .sort((a,b)=>a.predict-b.predict||a.boat-b.boat);
-  const stRank=stats.findIndex(x=>x.boat===lead.boat)+1;
-  const moved=Number.isFinite(lead.moveForwardBody)?lead.moveForwardBody:
-              (Number.isFinite(lead.startBoatBehind)&&Number.isFinite(lead.boatBehind)?lead.startBoatBehind-lead.boatBehind:0);
-  if(stRank>3 && moved<0.20)return null;
-
-  // AIが極端な最下位なら保険乱発を避ける。6艇中5位以内なら許可。
-  const ai=ranking().slice().sort((a,b)=>num(b.score)-num(a.score));
-  const aiRank=ai.findIndex(x=>x.boat===lead.boat)+1;
-  if(aiRank<1||aiRank>5)return null;
-
-  return {sig,rows,lead,one,edge,stRank,aiRank};
- }catch(e){return null}
-}
-
-function bhV17PhysicalReverseTickets(mainTickets,outlook){
- const p=bhV17OneMPhysicalLeader();if(!p)return[];
- const escape=num(outlook?.escape ?? window.bhLastOutlook?.escape);
- // 高イン逃げ時の取りこぼし救済が主目的。75%以上で発動。
- if(escape<75)return[];
-
- const head=p.lead.boat;
- // 1号艇は「内残り」として2着を最優先。
- // 3着候補は1Mで前に残る艇 + AI/3着評価。head/1を除く。
- const thirds=[2,3,4,5,6].filter(b=>b!==head).sort((a,b)=>{
-   const ra=p.rows.find(x=>x.boat===a),rb=p.rows.find(x=>x.boat===b);
-   let sa=bhV3LegScore(a,3,head),sb=bhV3LegScore(b,3,head);
-   if(ra)sa-=num(ra.boatBehind)*55;
-   if(rb)sb-=num(rb.boatBehind)*55;
-   return sb-sa;
- });
- const out=[],push=(legs,label)=>{
-   const key=legs.join('-');if(out.some(x=>x.key===key))return;
-   out.push({key,legs,odds:bhGetOdds(key),method:bhV3MethodForHead(head),head,
-     edge:p.edge,stRank:p.stRank,aiRank:p.aiRank,label});
- };
- // まず「外頭-1-残り」を2点。今回の4-1-3型をここで拾う。
- thirds.slice(0,2).forEach(th=>push([head,1,th],'1号艇内残り'));
- // 次に1を3着へ残す反転を2点。
- thirds.slice(0,2).forEach(sec=>push([head,sec,1],'1号艇3着残り'));
- return out.slice(0,4);
-}
-
-function bhV17PhysicalReverseHTML(list,outlook){
- if(!list.length)return '';
- const x=list[0],escape=num(outlook?.escape ?? window.bhLastOutlook?.escape);
- return `<div class="bhV17PhysicalReverse"><div class="bhV17PhysicalReverseTitle">⚡ 1M隊形優先・外頭保険 ${list.length}点</div><div class="bhV17PhysicalReverseNote">イン逃げ ${escape.toFixed(1)}%でも、${x.head}号艇が1M先頭予測。1号艇より${x.edge.toFixed(2)}艇身前、予測ST ${x.stRank}位、AI ${x.aiRank}位のため、全体見通しを崩さず別枠で外頭を残します。本線10点の％・資金配分には含めません。</div>
- ${list.map((t,i)=>`<div class="bhV17PhysicalReverseRow"><b>${i+1}</b><span class="bhV17PhysicalReverseTicket">${t.key}</span><span class="bhV17PhysicalReverseOdds">${num(t.odds)>0?num(t.odds).toFixed(1)+'倍':'取得待ち'}</span><span class="bhV17PhysicalReverseMethod"><span class="bhBetPatch bhPatchPhysical">⚡ 1M外頭</span><span class="bhBetPatch bhPatchReverse">裏展開</span><span class="bhBetPatch bhPatchMethod">決まり手：${t.method}</span>　${t.label}</span></div>`).join('')}</div>`;
-}
-
-// 現行の裏展開表示を残したまま、さらに物理的1M先頭の外頭保険を追加。
-const bhV17BaseRender=bhV3Render;
-bhV3Render=function(tickets,outlook){
- bhV17BaseRender(tickets,outlook);
- const extra=bhV17PhysicalReverseTickets(tickets,outlook),box=document.getElementById('bhNewBetRows');
- if(box&&extra.length)box.insertAdjacentHTML('beforeend',bhV17PhysicalReverseHTML(extra,outlook));
- window.bhV17PhysicalReverseTicketList=extra;
-};
-</script>
-
 <script id="bh-vol18-st-1m-link-js">
 /*
  vol.18: スタートスリット→1Mスリットを同一艇ID＋今回の実進入コースで完全連結。

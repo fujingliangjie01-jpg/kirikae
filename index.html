@@ -266,8 +266,35 @@ var bhClassPatchCore=window.bhClassPatchCore;
 @media(min-width:760px){.bhEnvBigWrap{grid-template-columns:repeat(3,1fr)}.bhEnvBigMain{font-size:22px}}
 </style>
 
+
+<style id="bh-vol91-top-version-style">
+#bhTopVersion{position:fixed;top:max(5px,env(safe-area-inset-top));right:8px;z-index:99999;padding:2px 6px;border-radius:7px;background:rgba(10,12,15,.58);border:1px solid rgba(255,255,255,.10);color:rgba(255,255,255,.42);font-size:9px;font-weight:800;letter-spacing:.35px;pointer-events:none;backdrop-filter:blur(4px)}
+</style>
+
+
+<style id="bh-vol91-hunter-ranking-style">
+.bhHunterCompare{margin-top:14px;border-top:1px solid #39414a;padding-top:12px}
+.bhHunterCompareTitle{font-size:18px;font-weight:1000;margin-bottom:8px}
+.bhHunterCompareHead,.bhHunterCompareRow{display:grid;grid-template-columns:54px 76px 92px 1fr 70px;gap:5px;align-items:center}
+.bhHunterCompareHead{font-size:9px;color:#98a3ae;font-weight:900;padding:0 5px 5px}
+.bhHunterCompareRow{padding:8px 5px;border-top:1px solid rgba(255,255,255,.07);font-size:11px}
+.bhHunterBoat{font-size:14px;font-weight:1000}.bhHunterMarket,.bhHunterRank{text-align:center;font-weight:900}
+.bhHunterScore{font-weight:1000}.bhHunterScore small{display:block;color:#9da7b1;font-size:8px;margin-top:2px}
+.bhHunterMove{text-align:right;font-weight:1000}.bhHunterUp{color:#ffbf5a}.bhHunterDown{color:#8db7d7}.bhHunterSame{color:#aeb7bf}
+.bhHunterGap{display:inline-block;margin-top:3px;padding:2px 5px;border-radius:6px;background:#1c252e;color:#d8e5ee;font-size:9px;font-weight:900}
+.bhHunterDataNote{margin-top:9px;font-size:9px;line-height:1.55;color:#8e99a4}
+@media(max-width:520px){.bhHunterCompareHead,.bhHunterCompareRow{grid-template-columns:46px 62px 78px 1fr 54px}.bhHunterCompareRow{font-size:10px}.bhHunterScore{font-size:10px}}
+</style>
+
+
+<style id="bh-vol92-ai-ranking-toggle-style">
+.bhAiRankingToggle{width:100%;margin-top:4px;font-weight:1000}
+#bhAiRankingPanel{margin-top:10px}
+</style>
+
 </head>
 <body>
+<div id="bhTopVersion">Vol.92</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -287,7 +314,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.90</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.92</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -700,7 +727,10 @@ window.classification=classification;
 </div>
 <div id="analysisCard" class="card analysisCardFlash" style="display:none">
 <h2>🤖 AI期待値ランキング</h2>
+<button id="bhAiRankingToggle" type="button" class="subBtn bhAiRankingToggle" onclick="bhToggleAiRanking92()">🤖 AI期待値ランキングを表示</button>
+<div id="bhAiRankingPanel" style="display:none">
 <div id="ranking">
+</div>
 </div>
 <div id="attack" style="display:none"></div>
 <div id="exclusions" style="display:none">
@@ -6929,7 +6959,7 @@ function motor88(b){
  var r=racer(b)||{};return num(r.motor_top_2_percent||r.motor_2ren_rate||r.motor_2ren);
 }
 function cls88(b){
- var r=racer(b)||{},x=typeof bhNormalizeClassCore==='function'?bhNormalizeClassCore(r):String(r.rank_number||r.class_number||r.rank||r.class||'');
+ var r=racer(b)||{},raw=r.rank_number||r.class_number||r.rank||r.class||'',x=typeof bhNormalizeClassCore==='function'?bhNormalizeClassCore(raw):String(raw);
  return String(x||'').toUpperCase();
 }
 function start88(){
@@ -6966,19 +6996,49 @@ function evaluate88(b){
   ['1コース：一周タイム 1位',c===1?rankLow88(lapvals,b)===1:false,c===1?(rankLow88(lapvals,b)<=6?rankLow88(lapvals,b)+'位':'－'):'対象外',c===1],
   ['1コース：逃げ率 50%以上',c===1?num(d.escape)>=50:false,c===1?num(d.escape).toFixed(1)+'%':'対象外',c===1],
   ['1コース：差され率 15%以上',c===1?num(d.sasareRate)>=15:false,c===1?num(d.sasareRate).toFixed(1)+'%':'対象外',c===1],
-  ['1コース以外：差し10 / まくり15 / まくり差し20',c!==1?(num(d.sashi)>=10||num(d.maki)>=15||num(d.makiSashi)>=20):false,c!==1?('差'+num(d.sashi).toFixed(1)+' / ま'+num(d.maki).toFixed(1)+' / ま差'+num(d.makiSashi).toFixed(1)):'対象外',c!==1]
+  ['1コース以外：差し10 / まくり15 / まくり差し20',c!==1?(num(d.sashi)>=10&&num(d.maki)>=15&&num(d.makiSashi)>=20):false,c!==1?('差'+num(d.sashi).toFixed(1)+' / ま'+num(d.maki).toFixed(1)+' / ま差'+num(d.makiSashi).toFixed(1)):'対象外',c!==1]
  ];
  var pass=items.filter(function(x){return x[3]&&x[1]}).length;
  return {items:items,pass:pass,course:c,ai:ai,motor:mot};
 }
+window.bhEvaluateAllHeads91=function(){
+ var hs=heads88(),market={};
+ hs.forEach(function(x){market[x.boat]=x});
+ var rows=[1,2,3,4,5,6].map(function(b){
+   var ev=evaluate88(b),app=ev.items.filter(function(x){return x[3]}).length;
+   var score=app?ev.pass/app*100:0;
+   return {boat:b,marketRank:market[b]?market[b].rank:99,marketCount:market[b]?market[b].count:0,pass:ev.pass,applicable:app,score:score,ev:ev};
+ });
+ rows.sort(function(a,b){return b.score-a.score||b.pass-a.pass||a.marketRank-b.marketRank||a.boat-b.boat});
+ rows.forEach(function(x,i){x.hunterRank=i+1;x.gapAbove=i===0?0:Math.max(0,rows[i-1].score-x.score);x.gapTop=Math.max(0,rows[0].score-x.score);x.rankMove=x.marketRank-x.hunterRank});
+ return rows;
+};
+window.bhSaveHunterEvaluation91=function(rows){
+ try{
+  if(!Array.isArray(rows)||!rows.length||typeof bhRaceKey!=='function')return;
+  var day=typeof bhTodayKey==='function'?bhTodayKey():'',v=Number(document.getElementById('venue')?.value||0),r=Number(document.getElementById('race')?.value||0),key=bhRaceKey(day,v,r);
+  if(!key)return;
+  var K='BOAT_HUNTER_HUNTER_EVAL_VOL91_V1',store=JSON.parse(localStorage.getItem(K)||'{}');
+  store[key]={day:day,venue:v,race:r,updatedAt:Date.now(),boats:rows.map(function(x){return {boat:x.boat,marketRank:x.marketRank,marketCount:x.marketCount,hunterRank:x.hunterRank,pass:x.pass,applicable:x.applicable,score:Number(x.score.toFixed(2)),gapAbove:Number(x.gapAbove.toFixed(2)),gapTop:Number(x.gapTop.toFixed(2)),rankMove:x.rankMove}}),result:store[key]?.result||'',winner:store[key]?.winner||0};
+  localStorage.setItem(K,JSON.stringify(store));
+ }catch(e){console.warn('hunter eval save',e)}
+};
 window.bhRenderNegativeHead88=function(){
  var card=document.getElementById('bhNegativeHeadCard'),box=document.getElementById('bhNegativeHeadContent');if(!card||!box)return;
  var hs=heads88();if(!hs.length||hs.every(function(x){return x.count===0})){card.style.display='block';box.innerHTML='<div class="bhNegNote">オッズ取得後に頭候補を判定します。</div>';return}
- var h=hs[0],ev=evaluate88(h.boat),pass=ev.pass>=7;
+ var all=window.bhEvaluateAllHeads91(),h=hs[0],lead=all.find(function(x){return x.boat===h.boat}),ev=lead?lead.ev:evaluate88(h.boat),pass=ev.pass>=7;
  card.style.display='block';
  var headLine=hs.slice(0,4).map(function(x){return '頭候補'+x.rank+'：'+x.boat+'号艇（1着 '+x.count+'回）'}).join('　/　');
  var checks=ev.items.map(function(x,i){var cls=!x[3]?'na':x[1]?'ok':'ng';return '<div class="bhNegCheck '+cls+'"><strong>'+(x[3]?(x[1]?'✅ ':'❌ '):'－ ')+(i+1)+'. '+x[0]+'</strong>'+x[2]+'</div>'}).join('');
- box.innerHTML='<div class="bhNegCandidates">'+headLine+'</div><div class="bhNegSummary"><div class="bhNegBox"><small>頭候補1</small><b>'+h.boat+'号艇</b></div><div class="bhNegBox"><small>クリア</small><b class="'+(pass?'bhNegPass':'bhNegFail')+'">'+ev.pass+'項目</b></div><div class="bhNegBox"><small>判定</small><b class="'+(pass?'bhNegPass':'bhNegPending')+'">'+(pass?'7項目以上 → 人気側':'その他')+'</b></div></div><div class="bhNegChecks">'+checks+'</div><div class="bhNegNote">Vol.88 初回検証。頭候補はオッズ上位50通りの1着出現回数順。同数は艇番順。モーター「普通以上」は2連対率30%以上。評価は 扇風機 / 下位 / 普通 / 上位 / エース / レジェンド の6段階。コース限定項目は対象コースだけ判定し、対象外はクリア数に含めません。</div>';
+ var compare=all.map(function(x){
+   var move=x.rankMove>0?'<span class="bhHunterUp">⬆️'+x.rankMove+'</span>':x.rankMove<0?'<span class="bhHunterDown">⬇️'+Math.abs(x.rankMove)+'</span>':'<span class="bhHunterSame">➡️</span>';
+   var gap=x.hunterRank===1?'TOP':'上との差 '+x.gapAbove.toFixed(1);
+   return '<div class="bhHunterCompareRow"><div class="bhHunterBoat">'+x.boat+'号艇</div><div class="bhHunterMarket">世間 '+x.marketRank+'位</div><div class="bhHunterRank">HUNTER '+x.hunterRank+'位</div><div class="bhHunterScore">'+x.score.toFixed(1)+'<small>'+x.pass+'/'+x.applicable+'項目</small><span class="bhHunterGap">'+gap+'</span></div><div class="bhHunterMove">'+move+'</div></div>';
+ }).join('');
+ box.innerHTML='<div class="bhNegCandidates">'+headLine+'</div><div class="bhNegSummary"><div class="bhNegBox"><small>頭候補1</small><b>'+h.boat+'号艇</b></div><div class="bhNegBox"><small>クリア</small><b class="'+(pass?'bhNegPass':'bhNegFail')+'">'+ev.pass+'項目</b></div><div class="bhNegBox"><small>判定</small><b class="'+(pass?'bhNegPass':'bhNegPending')+'">'+(pass?'7項目以上 → 人気側':'その他')+'</b></div></div><div class="bhNegChecks">'+checks+'</div>'+
+ '<div class="bhHunterCompare"><div class="bhHunterCompareTitle">⚔️ 世間評価 vs BOAT HUNTER評価</div><div class="bhHunterCompareHead"><span>艇</span><span>世間</span><span>HUNTER</span><span>評価値 / 上との差</span><span>変化</span></div>'+compare+'<div class="bhHunterDataNote">HUNTER評価値＝各艇の対象項目に対するクリア率。順位だけでなく「1つ上との差」「TOPとの差」をレース前に保存し、確定結果と結び付けて、将来「何点差なら評価順位以上の着まで来るか」を実測します。現時点では境界値を決め打ちしません。</div></div>'+
+ '<div class="bhNegNote">Vol.91。世間順位はオッズ上位50通りの1着出現回数順。同数は艇番順。モーター「普通以上」は2連対率30%以上。コース限定項目は対象コースだけ判定。12番は差し10%以上・まくり15%以上・まくり差し20%以上の3条件すべてを満たした時にクリア。</div>';
+ window.bhSaveHunterEvaluation91(all);
 };
 var baseRun88=window.runAnalysis;
 if(typeof baseRun88==='function'){
@@ -7007,6 +7067,55 @@ window.bhMotorPatchHTML=function(b){
  return '<span class="bhMotorPatch '+x.cls+'" title="モーター2連対率 '+x.rate.toFixed(1)+'%">'+x.label+'</span>';
 };
 try{bhMotorPatchHTML=window.bhMotorPatchHTML}catch(e){}
+})();
+</script>
+
+
+<script id="bh-vol91-hunter-result-link">
+(function(){
+'use strict';
+const K='BOAT_HUNTER_HUNTER_EVAL_VOL91_V1';
+function attach(key,result){
+ try{
+  var s=JSON.parse(localStorage.getItem(K)||'{}');if(!s[key])return;
+  var winner=Number(String(result||'').split('-')[0])||0;
+  s[key].result=String(result||'');s[key].winner=winner;s[key].resultAt=Date.now();
+  var w=(s[key].boats||[]).find(function(x){return Number(x.boat)===winner});
+  if(w)s[key].winnerSnapshot={marketRank:w.marketRank,hunterRank:w.hunterRank,score:w.score,gapAbove:w.gapAbove,gapTop:w.gapTop,rankMove:w.rankMove};
+  localStorage.setItem(K,JSON.stringify(s));
+ }catch(e){console.warn('hunter result link',e)}
+}
+var base=window.bhMarkRaceRecorded;
+if(typeof base==='function'){
+ window.bhMarkRaceRecorded=function(k,result,source,detail){var r=base.apply(this,arguments);attach(k,result);return r};
+ try{bhMarkRaceRecorded=window.bhMarkRaceRecorded}catch(e){}
+}
+window.BH_VOL91={version:91,hunterAllBoats:true,hunterGapStored:true,topVersion:true};
+})();
+</script>
+
+
+<script id="bh-vol92-ai-ranking-toggle-js">
+function bhToggleAiRanking92(){
+ var p=document.getElementById('bhAiRankingPanel'),b=document.getElementById('bhAiRankingToggle');if(!p||!b)return;
+ var open=p.style.display==='block';p.style.display=open?'none':'block';
+ b.textContent=open?'🤖 AI期待値ランキングを表示':'📉 AI期待値ランキングを隠す';
+}
+window.bhToggleAiRanking92=bhToggleAiRanking92;
+window.BH_VOL92={version:92,aiRankingCollapsedByDefault:true};
+</script>
+
+
+<script id="bh-vol92-ai-ranking-reset-js">
+(function(){
+ const old=window.runAnalysis;
+ if(typeof old==='function')window.runAnalysis=async function(){
+   var p=document.getElementById('bhAiRankingPanel'),b=document.getElementById('bhAiRankingToggle');
+   if(p)p.style.display='none';
+   if(b)b.textContent='🤖 AI期待値ランキングを表示';
+   return await old.apply(this,arguments);
+ };
+ try{runAnalysis=window.runAnalysis}catch(e){}
 })();
 </script>
 

@@ -242,6 +242,30 @@ var bhClassPatchCore=window.bhClassPatchCore;
 @media(max-width:520px){.bhNegChecks{grid-template-columns:1fr}.bhNegSummary{grid-template-columns:1fr 1fr}.bhNegSummary .bhNegBox:last-child{grid-column:1/-1}}
 </style>
 
+
+<style id="bh-vol89-motor-patch-style">
+.bhMotorPatch{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:2px 7px;border-radius:999px;font-size:9px;font-weight:1000;line-height:1.35;white-space:nowrap;vertical-align:middle;border:1px solid rgba(255,255,255,.22)}
+.bhMotorPatch.legend{background:#3a2410;border-color:#ffd86a;color:#ffe89d;box-shadow:0 0 8px rgba(255,215,90,.28)}
+.bhMotorPatch.ace{background:#3b1515;border-color:#ff7f72;color:#ffd1ca}
+.bhMotorPatch.high{background:#172f47;border-color:#62b8ff;color:#cdeaff}
+.bhMotorPatch.normal{background:#17351f;border-color:#62d77b;color:#caffd3}
+.bhMotorPatch.low{background:#332a16;border-color:#caa74d;color:#f0d995}
+.bhMotorPatch.fan{background:#2e1717;border-color:#cf5555;color:#ffb1b1}
+</style>
+
+
+<style id="bh-vol90-environment-big-style">
+.bhEnvBigWrap{margin-top:12px;display:grid;grid-template-columns:1fr;gap:10px}
+.bhEnvBigCard{padding:15px 14px;border-radius:15px;border:2px solid #46525f;background:linear-gradient(180deg,#151c25,#0d131a);box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.bhEnvBigLabel{font-size:12px;font-weight:1000;letter-spacing:.5px;color:#aebac7;margin-bottom:5px}
+.bhEnvBigMain{font-size:24px;font-weight:1000;line-height:1.25;color:#fff}
+.bhEnvBigSub{font-size:12px;line-height:1.55;color:#c6ced7;margin-top:6px}
+.bhEnvWind{border-color:#5a94c7}.bhEnvTide{border-color:#4da0a9}.bhEnvVenue{border-color:#b79242}
+.bhEnvWind .bhEnvBigMain{color:#bfe5ff}.bhEnvTide .bhEnvBigMain{color:#bff6f4}.bhEnvVenue .bhEnvBigMain{color:#ffe096}
+.bhEnvNoData .bhEnvBigMain{color:#a7adb4;font-size:19px}
+@media(min-width:760px){.bhEnvBigWrap{grid-template-columns:repeat(3,1fr)}.bhEnvBigMain{font-size:22px}}
+</style>
+
 </head>
 <body>
 
@@ -263,7 +287,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.88</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.90</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2307,6 +2331,70 @@ function applyEventTheme(){
   if(lv)lv.textContent=globalEventState.ladiesVenue?`開催場：${globalEventState.ladiesVenue} • BOAT HUNTER LADIES FESTIVAL`:"BOAT HUNTER • LADIES FESTIVAL";
 }
 function applySGFestival(){applyEventTheme()}
+
+function bhWindMainDevelopment(){
+ let wi=windInfo(),s=num(wi.speed);
+ if(s<1)return {main:"ほぼ無風 → 水面条件の風影響は小さい",sub:`${wi.label} ${s.toFixed(1)}m/s`,none:false};
+ if(wi.mode==="head"){
+   return s>=3
+    ?{main:"センター〜アウトの まくり・まくり差し",sub:`向かい風 ${s.toFixed(1)}m/s。1コース逃げは下げ、3〜6コースの攻めを強く警戒。`,none:false}
+    :{main:"外の攻めを軽く警戒",sub:`弱い向かい風 ${s.toFixed(1)}m/s。センター勢のまくり・まくり差し方向。`,none:false};
+ }
+ if(wi.mode==="tail"){
+   return s>=3
+    ?{main:"1コース逃げ ＋ 2コース差し",sub:`追い風 ${s.toFixed(1)}m/s。イン・差し方向が現在の風条件では優位。`,none:false}
+    :{main:"イン逃げ・2コース差しを軽く評価",sub:`弱い追い風 ${s.toFixed(1)}m/s。`,none:false};
+ }
+ if(wi.mode==="cross")return {main:"スタート・ターンの乱れを警戒",sub:`横風 ${s.toFixed(1)}m/s。左右差の場別補正は未接続。`,none:false};
+ return {main:"風による展開判定データ不足",sub:`風向：${wi.direction||"－"} / ${s.toFixed(1)}m/s`,none:true};
+}
+function bhTideMainDevelopment(){
+ let ti=bhTideInfo(),vt=venueTrait(),wi=windInfo(),name=String(vt.name||"");
+ if(!ti.available)return {main:"潮位データなし",sub:"潮位・潮流を取得できた時だけ判定します。",none:true};
+ let txt=(String(ti.raw||"")+" "+String(ti.flow||"")).toLowerCase();
+ let high=txt.includes("満")||txt.includes("上げ"),low=txt.includes("干")||txt.includes("下げ");
+ let tideLabel=[ti.raw,ti.level>0?`${ti.level}cm`:"",ti.flow].filter(Boolean).join(" / ")||"潮位取得済み";
+ if(name.includes("若松")){
+   if(high)return {main:"イン逃げ方向",sub:`${tideLabel}。若松は満潮・上げ側でイン寄り。`,none:false};
+   if(low)return {main:"アウト攻め方向",sub:`${tideLabel}。若松は干潮・下げ側で外攻め寄り。`,none:false};
+ }
+ if(name.includes("丸亀")){
+   if(low&&wi.mode==="head")return {main:"アウト攻め方向",sub:`${tideLabel} ＋ 向かい風。丸亀の現行補正では外攻めを強める。`,none:false};
+   if(high)return {main:"イン逃げをわずかに評価",sub:`${tideLabel}。丸亀の現行補正は小さめ。`,none:false};
+ }
+ if(name.includes("児島")&&high&&wi.mode==="tail")return {main:"センター・外展開を軽く警戒",sub:`${tideLabel} ＋ 追い風。`,none:false};
+ if(name.includes("徳山")){
+   if(high)return {main:"イン逃げをわずかに評価",sub:`${tideLabel}。`,none:false};
+   if(low)return {main:"アウト攻めを軽く評価",sub:`${tideLabel}。`,none:false};
+ }
+ if(name.includes("宮島")){
+   if(high)return {main:"アウト攻めを軽く評価",sub:`${tideLabel}。宮島は満潮・上げ側で現行補正が外寄り。`,none:false};
+   if(low)return {main:"イン逃げをわずかに評価",sub:`${tideLabel}。`,none:false};
+ }
+ return {main:"この場の潮位別展開ルールは未設定",sub:`${tideLabel}。潮位データ自体は取得済み。`,none:true};
+}
+function bhVenueStrongDevelopment(){
+ let vt=venueTrait();
+ let methods=[
+   {key:"escape",label:"1コース 逃げ",v:num(vt.escape)},
+   {key:"sashi",label:"2コース 差し",v:num(vt.sashi)},
+   {key:"maki",label:"3〜4コース まくり",v:num(vt.maki)},
+   {key:"makiSashi",label:"3〜4コース まくり差し",v:num(vt.makiSashi)}
+ ];
+ methods.sort((a,b)=>b.v-a.v);
+ let top=methods[0],ties=methods.filter(x=>Math.abs(x.v-top.v)<0.0001);
+ let label=ties.map(x=>x.label).join(" / ");
+ return {main:`${label} が場特性上もっとも強い`,sub:`${vt.name}：${vt.note}　倍率 ${top.v.toFixed(2)}`,none:false};
+}
+function bhEnvironmentBigHTML(){
+ let w=bhWindMainDevelopment(),t=bhTideMainDevelopment(),v=bhVenueStrongDevelopment();
+ return `<div class="bhEnvBigWrap">
+  <div class="bhEnvBigCard bhEnvWind ${w.none?"bhEnvNoData":""}"><div class="bhEnvBigLabel">🌬️ 風で今いちばん起こりやすい展開</div><div class="bhEnvBigMain">${esc(w.main)}</div><div class="bhEnvBigSub">${esc(w.sub)}</div></div>
+  <div class="bhEnvBigCard bhEnvTide ${t.none?"bhEnvNoData":""}"><div class="bhEnvBigLabel">🌊 潮位で今いちばん起こりやすい展開</div><div class="bhEnvBigMain">${esc(t.main)}</div><div class="bhEnvBigSub">${esc(t.sub)}</div></div>
+  <div class="bhEnvBigCard bhEnvVenue"><div class="bhEnvBigLabel">🏟️ 場特性で強いコース・決まり手</div><div class="bhEnvBigMain">${esc(v.main)}</div><div class="bhEnvBigSub">${esc(v.sub)}</div></div>
+ </div>`;
+}
+
 function renderRace(){
 applySGFestival();
 $("raceInfo").innerHTML=
@@ -2317,7 +2405,7 @@ API：boatraceopenapi
 </div>`;
 $("racers").innerHTML=racers.map(r=>{
 let b=num(r.entry_number),hasHistory=history(b).length>0;
-return`<div class="racer"><div class="racerTop"><div class="number n${b}">${b}</div><div class="racerName">${esc(r.name||r.racer_name||r.player_name||"-")}${bhClassPatchCore(r)}${typeof bhV23ExhibitPatchHTML==="function"?bhV23ExhibitPatchHTML(b):""}</div></div><button type="button" class="detailToggleBtn" data-detail-target="racerDetail${b}" ${hasHistory?"":"disabled"}>${hasHistory?"📊 過去30走・決まり手を見る":"📊 過去30走・決まり手（AI解析後に表示）"}</button><div id="racerDetail${b}" class="detailPanel" style="display:none">${hasHistory?decisionTrendHTML(b,decisions(r))+renderHistory(b):'<div class="noPick">AI解析を実行すると、今回と同コースの過去30走と決まり手率を表示します。</div>'}</div></div>`
+return`<div class="racer"><div class="racerTop"><div class="number n${b}">${b}</div><div class="racerName">${esc(r.name||r.racer_name||r.player_name||"-")}${bhClassPatchCore(r)}${bhMotorPatchHTML(b)}${typeof bhV23ExhibitPatchHTML==="function"?bhV23ExhibitPatchHTML(b):""}</div></div><button type="button" class="detailToggleBtn" data-detail-target="racerDetail${b}" ${hasHistory?"":"disabled"}>${hasHistory?"📊 過去30走・決まり手を見る":"📊 過去30走・決まり手（AI解析後に表示）"}</button><div id="racerDetail${b}" class="detailPanel" style="display:none">${hasHistory?decisionTrendHTML(b,decisions(r))+renderHistory(b):'<div class="noPick">AI解析を実行すると、今回と同コースの過去30走と決まり手率を表示します。</div>'}</div></div>`
 }).join("");
 document.querySelectorAll('[data-detail-target]').forEach(btn=>{
 btn.addEventListener('click',()=>{
@@ -2339,7 +2427,8 @@ $("raceInfo").innerHTML+=
 風評価：${esc(bhWindImpactText())}<br>
 波高：${num(w.wave_height||w.wave||w.waveHeight)}cm　/　気温：${num(w.air_temperature||w.temperature||w.airTemperature).toFixed(1)}℃　/　水温：${num(w.water_temperature||w.waterTemperature).toFixed(1)}℃<br>
 ${bhLiveWind?`風向補助データ：${esc(bhLiveWind.source)} ${esc(bhLiveWind.time||"")}`:"風向補助データ：取得できませんでした"}
-</div></div>`
+</div></div>`+
+bhEnvironmentBigHTML()
 }
 function recentForm(b){
 let a=history(b);
@@ -3690,7 +3779,7 @@ c?.type==="cut"?
 c?.type==="third"?
 "<br><span style='color:#ffd84d;font-size:9px;font-weight:900'>△3着まで！展開2着</span>":
 "";
-return`<tr><td>${i+1}</td><td><strong>${x.boat}</strong>${status}</td><td>${esc(r?.name||r?.racer_name||r?.player_name||"-")}</td><td><strong>${x.score.toFixed(1)}</strong></td><td>${course(x.boat)}</td><td>${num(r?.national_win_rate||r?.win_rate_national).toFixed(2)}</td><td>${num(r?.local_win_rate||r?.win_rate_local).toFixed(2)}</td><td>${num(r?.motor_top_2_percent||r?.motor_2ren_rate||r?.motor_2ren).toFixed(1)}%</td><td>${s.count?s.rate.toFixed(1)+"%":"-"}</td><td><span style="color:${
+return`<tr><td>${i+1}</td><td><strong>${x.boat}</strong>${status}</td><td>${esc(r?.name||r?.racer_name||r?.player_name||"-")}${bhMotorPatchHTML(x.boat)}</td><td><strong>${x.score.toFixed(1)}</strong></td><td>${course(x.boat)}</td><td>${num(r?.national_win_rate||r?.win_rate_national).toFixed(2)}</td><td>${num(r?.local_win_rate||r?.win_rate_local).toFixed(2)}</td><td>${num(r?.motor_top_2_percent||r?.motor_2ren_rate||r?.motor_2ren).toFixed(1)}%</td><td>${s.count?s.rate.toFixed(1)+"%":"-"}</td><td><span style="color:${
 f.score>=3?"#4cd964":
 f.score<=-2?"#ff5555":"#aaa"
 }">
@@ -6863,12 +6952,13 @@ function evaluate88(b){
  var exvals=[1,2,3,4,5,6].map(function(z){return {b:z,v:ex88(z)}}),lapvals=[1,2,3,4,5,6].map(function(z){return {b:z,v:lap88(z)}});
  var d=decisions(r)||{},c=course(b),nat=num(r.national_win_rate||r.win_rate_national),loc=num(r.local_win_rate||r.win_rate_local),mot=motor88(b),cl=cls88(b);
  // Motor provisional: current app's "strongMotor" threshold is 35; 30+ is treated as ordinary-or-better for this first test.
+ var motorEval=window.bhMotorEvaluation?window.bhMotorEvaluation(b):{label:(mot>=30?'普通':'下位')};
  var motorOK=mot>=30;
  var items=[
   ['階級 A級',cl==='A1'||cl==='A2',cl||'－',true],
   ['全国勝率 5.00以上',nat>=5,nat.toFixed(2),true],
   ['当地勝率 5.00以上',loc>=5,loc.toFixed(2),true],
-  ['モーター 普通以上',motorOK,mot.toFixed(1)+'%',true],
+  ['モーター 普通以上',motorOK,motorEval.label+' '+mot.toFixed(1)+'%',true],
   ['AI期待値 2位以内',ai>0&&ai<=2,ai?ai+'位':'－',true],
   ['スタートスリット 1位 or 0.03以内',Number.isFinite(mine&&mine.predict)&&Number.isFinite(bestST)&&(mine.predict-bestST)<=.030,Number.isFinite(mine&&mine.predict)?mine.predict.toFixed(3):'－',true],
   ['1Mまでの伸び 1位 or 0.4艇身以内',me1&&Number.isFinite(me1.boatBehind)&&me1.boatBehind<=.40,me1&&Number.isFinite(me1.boatBehind)?me1.boatBehind.toFixed(2)+'艇身':'－',true],
@@ -6888,13 +6978,35 @@ window.bhRenderNegativeHead88=function(){
  card.style.display='block';
  var headLine=hs.slice(0,4).map(function(x){return '頭候補'+x.rank+'：'+x.boat+'号艇（1着 '+x.count+'回）'}).join('　/　');
  var checks=ev.items.map(function(x,i){var cls=!x[3]?'na':x[1]?'ok':'ng';return '<div class="bhNegCheck '+cls+'"><strong>'+(x[3]?(x[1]?'✅ ':'❌ '):'－ ')+(i+1)+'. '+x[0]+'</strong>'+x[2]+'</div>'}).join('');
- box.innerHTML='<div class="bhNegCandidates">'+headLine+'</div><div class="bhNegSummary"><div class="bhNegBox"><small>頭候補1</small><b>'+h.boat+'号艇</b></div><div class="bhNegBox"><small>クリア</small><b class="'+(pass?'bhNegPass':'bhNegFail')+'">'+ev.pass+'項目</b></div><div class="bhNegBox"><small>判定</small><b class="'+(pass?'bhNegPass':'bhNegPending')+'">'+(pass?'7項目以上 → 人気側':'その他')+'</b></div></div><div class="bhNegChecks">'+checks+'</div><div class="bhNegNote">Vol.88 初回検証。頭候補はオッズ上位50通りの1着出現回数順。同数は艇番順。モーター「普通以上」は初回集計用に2連対率30%以上を暫定基準。コース限定項目は対象コースだけ判定し、対象外はクリア数に含めません。</div>';
+ box.innerHTML='<div class="bhNegCandidates">'+headLine+'</div><div class="bhNegSummary"><div class="bhNegBox"><small>頭候補1</small><b>'+h.boat+'号艇</b></div><div class="bhNegBox"><small>クリア</small><b class="'+(pass?'bhNegPass':'bhNegFail')+'">'+ev.pass+'項目</b></div><div class="bhNegBox"><small>判定</small><b class="'+(pass?'bhNegPass':'bhNegPending')+'">'+(pass?'7項目以上 → 人気側':'その他')+'</b></div></div><div class="bhNegChecks">'+checks+'</div><div class="bhNegNote">Vol.88 初回検証。頭候補はオッズ上位50通りの1着出現回数順。同数は艇番順。モーター「普通以上」は2連対率30%以上。評価は 扇風機 / 下位 / 普通 / 上位 / エース / レジェンド の6段階。コース限定項目は対象コースだけ判定し、対象外はクリア数に含めません。</div>';
 };
 var baseRun88=window.runAnalysis;
 if(typeof baseRun88==='function'){
  window.runAnalysis=async function(){var r=await baseRun88.apply(this,arguments);try{window.bhRenderNegativeHead88()}catch(e){console.warn(e)}return r};
  try{runAnalysis=window.runAnalysis}catch(e){}
 }
+})();
+</script>
+
+
+<script id="bh-vol89-motor-patch-js">
+(function(){
+'use strict';
+window.bhMotorEvaluation=function(b){
+ var r=typeof racer==='function'?(racer(b)||{}):{};
+ var rate=typeof num==='function'?num(r.motor_top_2_percent||r.motor_2ren_rate||r.motor_2ren):Number(r.motor_top_2_percent||r.motor_2ren_rate||r.motor_2ren||0);
+ if(rate>=65)return {label:'レジェンド',cls:'legend',rate:rate};
+ if(rate>=52)return {label:'エース',cls:'ace',rate:rate};
+ if(rate>=42)return {label:'上位',cls:'high',rate:rate};
+ if(rate>=30)return {label:'普通',cls:'normal',rate:rate};
+ if(rate>20)return {label:'下位',cls:'low',rate:rate};
+ return {label:'扇風機',cls:'fan',rate:rate};
+};
+window.bhMotorPatchHTML=function(b){
+ var x=window.bhMotorEvaluation(b);
+ return '<span class="bhMotorPatch '+x.cls+'" title="モーター2連対率 '+x.rate.toFixed(1)+'%">'+x.label+'</span>';
+};
+try{bhMotorPatchHTML=window.bhMotorPatchHTML}catch(e){}
 })();
 </script>
 

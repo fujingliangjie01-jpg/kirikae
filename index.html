@@ -78,7 +78,7 @@
 <style id="bh-vol50-no-explanations">.bhStartLead,.bhSlipRule,.exhibitNote,.bhV41LogicNote,.bhV3DefenseNote,.bhV5ReverseNote,.hint,.help,.description,.explain,.explanation,.logic-description,.bhLogicNote,.bhExplanation,.bhExplainText{display:none!important}</style>
 </head>
 <body>
-<div class="bhVol">vol.79</div>
+<div class="bhVol">vol.80</div>
 <div id="betJumpWrap" style="display:none!important">
 <button id="betJumpBtn" type="button">
 </button>
@@ -9799,6 +9799,232 @@ V46.generate=function(outlook){
 };
 window.bhV3Generate=o=>V46.generate(o);
 window.BH_VOL79={version:79,oneAxisHeadMax:.30,oneAxisMain:'2nd/3rd',escape80to89:'85/15',rule:'軸候補≠逃げ'};
+})();
+</script>
+
+
+<style id="bh-vol80-result-fold-style">
+.bhResultDashVenue{overflow:hidden!important}
+.bhResultDashVenueHead{cursor:pointer!important}
+.bhResultDashVenue:not(.bhV80Open)>:not(.bhResultDashVenueHead){display:none!important}
+.bhV80VenueHint{font-size:11px;color:#8fb3c5;margin-left:auto;white-space:nowrap}
+.bhVenueResetBtn{position:relative!important;z-index:30!important}
+</style>
+
+<script id="bh-vol80-authoritative-bets-and-result-fold">
+(()=>{
+'use strict';
+const V46=window.BH_VOL46;
+if(!V46)return;
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+const K=t=>(t?.legs||[]).join('-');
+const boats=[1,2,3,4,5,6];
+
+function normMethod(m){
+  m=String(m||'');
+  if(m==='maki'||m==='makuri')return 'まくり';
+  if(m==='makiSashi'||m==='makurizashi')return 'まくり差し';
+  if(m==='sashi')return '差し';
+  if(m==='escape')return '逃げ';
+  return m.replace('候補','');
+}
+function scenario(){try{return window.bhRaceScenario?.()||{}}catch(e){return{}}}
+function confirmed(t){
+  const z=((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||''));
+  return t?.confirmed===true||t?.bhConfirmed===true||z.includes('買い目確定');
+}
+function isBasic(t){
+  return (((t?.label||'')+' '+(t?.note||'')+' '+(t?.pattern||'')).includes('基本買い目'));
+}
+function aiRankMap(){
+  const m=new Map();
+  for(const key of ['currentRankings','lastRankings','aiRankings']){
+    const a=window[key];
+    if(Array.isArray(a))a.forEach((x,i)=>{
+      const b=Number(x?.boat??x?.entry_number??x?.number??x?.b);
+      if(b>=1&&b<=6&&!m.has(b))m.set(b,i+1);
+    });
+  }
+  return m;
+}
+function permPool(){
+  const a=[];
+  for(const h of boats)for(const b of boats)for(const c of boats){
+    if(h===b||h===c||b===c)continue;
+    let score=0;
+    try{score=N(V46.legScore?.(h,1,h))+N(V46.legScore?.(b,2,h))+N(V46.legScore?.(c,3,h))}catch(e){}
+    a.push(V46.ticket?V46.ticket([h,b,c],h===1?'逃げ':'',score,false,''):{legs:[h,b,c],score});
+  }
+  return a;
+}
+
+/* 最新画像を使う唯一の入口。
+   旧generateは呼ばない。buildIn/buildNonInは「候補作成」だけに限定し、
+   最終採用はここで scenario 1本に絞る。 */
+V46.generate=function(outlook){
+  const sc=scenario();
+  const built=[],seen=new Set();
+  try{V46.buildIn?.(built,outlook||{},seen)}catch(e){}
+  try{V46.buildNonIn?.(built,outlook||{},seen)}catch(e){}
+  try{(V46.exactaPool?.(outlook||{})||[]).forEach(t=>built.push(t))}catch(e){}
+
+  const ranks=aiRankMap();
+  const axis=Number(sc.axis||0), head=Number(sc.head||0);
+  const sm=normMethod(sc.method||sc.methodCandidate||'');
+  const physical=!!sc.physicalAttack && head>=1;
+  const escape=N(sc.escape??outlook?.escape??outlook?.escapeRate);
+  const budget=Math.max(100,Math.floor((N(window.bhRaceBudget?.())||1200)/100)*100);
+  const target=Math.max(1,Math.min(escape>=85?10:13,Math.floor(Math.min(1300,budget)/100)));
+
+  function routeOK(t){
+    if(!Array.isArray(t?.legs)||t.legs.length<2)return false;
+    const h=Number(t.legs[0]),tm=normMethod(t.method||'');
+    /* 3〜6コースの「差し」は今回の基本買い目シートに無い */
+    if(h>=3&&h<=6&&tm==='差し')return false;
+
+    if(isBasic(t)||confirmed(t)){
+      if(physical){
+        if(h!==head)return false;
+        if(sm&&tm&&sm!==tm)return false;
+      }else{
+        /* 明確な攻め手なしでは決まり手別シートを混ぜない */
+        if(tm && tm!=='逃げ')return false;
+      }
+    }
+    return true;
+  }
+
+  let all=[...built,...permPool()].filter(routeOK);
+  const uniq=new Map();
+  for(const t of all){
+    const k=K(t);if(!k)continue;
+    if(!uniq.has(k))uniq.set(k,t);
+  }
+  all=[...uniq.values()];
+
+  function score(t){
+    const l=t.legs||[],h=Number(l[0]),s=Number(l[1]),d=Number(l[2]);
+    const r=N(ranks.get(h)||99);
+    let p=N(t.score)+(confirmed(t)?50000:0)+(isBasic(t)?4000:0);
+    if(r===1)p+=3000;else if(r===2)p+=2200;else if(r===3)p+=1500;
+
+    if(physical){
+      if(h===head)p+=7000;
+      if(normMethod(t.method)===sm)p+=1200;
+    }else if(axis){
+      /* 軸候補は頭固定にしない */
+      if(s===axis)p+=1600;
+      if(d===axis)p+=1450;
+      if(h===axis)p+=350;
+    }
+    if(escape>=85&&h===1)p+=5000;
+    return p;
+  }
+  all.sort((a,b)=>score(b)-score(a)||K(a).localeCompare(K(b),'ja'));
+
+  const out=[],used=new Set();
+  const add=t=>{
+    if(!t||out.length>=target||used.has(K(t)))return false;
+    const od=Number(window.bhGetOdds?.(K(t)))||Number(t.odds)||0;
+    if(!confirmed(t)&&od>0&&od<=8)return false;
+    used.add(K(t));out.push({...t,bhConfirmed:confirmed(t),mandatory:confirmed(t)});return true;
+  };
+
+  /* 確定→優先候補。別シートの確定は routeOK で除外済み */
+  all.filter(confirmed).forEach(add);
+
+  if(!physical&&axis){
+    const maxAxisHead=Math.max(1,Math.floor(target*.30));
+    let axisHead=out.filter(t=>Number(t.legs[0])===axis).length;
+
+    /* 軸候補は2・3着を先に */
+    all.filter(t=>!confirmed(t)&&Number(t.legs[1])===axis).forEach(add);
+    all.filter(t=>!confirmed(t)&&Number(t.legs[2])===axis).forEach(add);
+    for(const t of all){
+      if(out.length>=target)break;
+      if(confirmed(t))continue;
+      if(Number(t.legs[0])===axis&&axisHead>=maxAxisHead)continue;
+      if(add(t)&&Number(t.legs[0])===axis)axisHead++;
+    }
+  }else{
+    all.filter(t=>!confirmed(t)).forEach(add);
+  }
+
+  return V46.normalize(out.slice(0,target));
+};
+window.bhV3Generate=o=>V46.generate(o);
+window.BH_VOL80_BUY={
+  authoritative:true,
+  callsPreviousGenerate:false,
+  singleScenarioRoute:true,
+  basicSheetMixing:false,
+  axisNotHeadLock:true
+};
+
+/* ===== 結果確認：最初は場名だけ / 押した場だけ展開 ===== */
+const openVenues=new Set();
+function venueNo(card){return Number(card?.dataset?.bhVenue||0)}
+function decorateResultVenues(){
+  document.querySelectorAll('#bhResultDashGrid .bhResultDashVenue').forEach(card=>{
+    const venue=venueNo(card),headEl=card.querySelector('.bhResultDashVenueHead');
+    if(!headEl)return;
+
+    /* vol70側で消えた場合もリセットボタンを必ず復元 */
+    let btn=headEl.querySelector('.bhVenueResetBtn');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.type='button';
+      btn.className='bhVenueResetBtn';
+      btn.dataset.bhResetVenue=String(venue);
+      btn.textContent='この場をリセット';
+      headEl.querySelector('.bhResultDashVenueTitle')?.appendChild(btn);
+    }
+
+    let hint=headEl.querySelector('.bhV80VenueHint');
+    if(!hint){
+      hint=document.createElement('span');
+      hint.className='bhV80VenueHint';
+      headEl.appendChild(hint);
+    }
+    const open=openVenues.has(venue);
+    card.classList.toggle('bhV80Open',open);
+    hint.textContent=open?'▲ 閉じる':'▼ 押して結果を見る';
+  });
+}
+document.addEventListener('click',e=>{
+  if(e.target?.closest?.('.bhVenueResetBtn'))return;
+  const head=e.target?.closest?.('#bhResultDashGrid .bhResultDashVenueHead');
+  if(!head)return;
+  const card=head.closest('.bhResultDashVenue'),v=venueNo(card);
+  if(!v)return;
+  if(openVenues.has(v))openVenues.delete(v);else openVenues.add(v);
+  decorateResultVenues();
+},true);
+
+const oldRender=window.bhRenderResultDashboard;
+if(typeof oldRender==='function'){
+  window.bhRenderResultDashboard=function(){
+    const r=oldRender.apply(this,arguments);
+    setTimeout(decorateResultVenues,0);
+    return r;
+  };
+}
+const oldOpen=window.bhOpenResultDashboard;
+if(typeof oldOpen==='function'){
+  window.bhOpenResultDashboard=function(){
+    openVenues.clear(); // 開くたび最初は「場だけ」
+    const r=oldOpen.apply(this,arguments);
+    setTimeout(decorateResultVenues,30);
+    return r;
+  };
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(decorateResultVenues,100));
+
+window.BH_VOL80_RESULT={
+  venueOnlyInitially:true,
+  clickToExpand:true,
+  perVenueReset:true
+};
 })();
 </script>
 

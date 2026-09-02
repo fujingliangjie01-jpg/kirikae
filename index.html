@@ -149,6 +149,23 @@ var bhNormalizeClassCore=window.bhNormalizeClassCore;
 })();
 </script>
 
+
+<script id="bh-class-patch-core">
+(()=>{
+'use strict';
+// 出走表の階級表示専用。予想ロジックとは独立。
+window.bhClassPatchCore=function(v){
+  const cls=typeof window.bhNormalizeClassCore==='function'
+    ?window.bhNormalizeClassCore(v)
+    :'';
+  if(!cls)return '';
+  const c=cls==='A1'?'a1':cls==='A2'?'a2':cls==='B1'?'b1':'b2';
+  return `<span class="bhClassPatch ${c}">${cls}</span>`;
+};
+var bhClassPatchCore=window.bhClassPatchCore;
+})();
+</script>
+
 </head>
 <body>
 <div class="bhVol">vol.83</div>

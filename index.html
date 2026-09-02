@@ -292,9 +292,15 @@ var bhClassPatchCore=window.bhClassPatchCore;
 #bhAiRankingPanel{margin-top:10px}
 </style>
 
+
+<style id="bh-vol94-left-st-style">
+.bhLeftST94{margin-top:8px;padding:8px 9px;border-radius:9px;background:rgba(76,125,154,.12);border:1px solid rgba(117,177,211,.24);font-size:10px;line-height:1.55;color:#b9d8e8}
+.bhSTContradiction94{color:#ffd274;font-weight:900}
+</style>
+
 </head>
 <body>
-<div id="bhTopVersion">Vol.92</div>
+<div id="bhTopVersion">Vol.94</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -314,7 +320,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.92</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.94</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -745,7 +751,7 @@ window.classification=classification;
 </div>
 
 <div id="bhNegativeHeadCard" class="card" style="display:none">
-<h2>🧪 否定型・1着候補検証 <span class="bhVolBadge">Vol.88</span></h2>
+<h2>🧪 否定型・1着候補検証 <span class="bhVolBadge">Vol.94</span></h2>
 <div id="bhNegativeHeadContent"></div>
 </div>
 
@@ -1607,6 +1613,11 @@ normalized.forEach(x=>{
  if(!Number.isFinite(x.exhibitionTime)){x.exhibitionRank=null;return;}
  x.exhibitionRank=1+exOrder.filter(y=>y.exhibitionTime<x.exhibitionTime-1e-9).length;
 });
+// Vol.94: 同一過去レースの左隣コース艇STを保存（進入コース基準）。
+normalized.forEach(x=>{
+  const left=normalized.find(y=>Number(y.c)===Number(x.c)-1);
+  x.leftNeighborST=left&&Number.isFinite(Number(left.st))?Number(left.st):null;
+});
 let winner=normalized.find(x=>x.place===1);
 let winningDecision=winner?.technique||null;
 let winningBoat=num(winner?.raw?.entry_number||winner?.raw?.boat_number||winner?.raw?.boat||winner?.raw?.waku||winner?.raw?.frame_number||winner?.c);
@@ -1624,6 +1635,7 @@ course:c,
 decision:x.technique&&x.technique!=="-"?x.technique:null,
 st:x.st,
 stRank:x.stRank,
+leftNeighborST:x.leftNeighborST,
 exhibitionTime:x.exhibitionTime,
 exhibitionRank:x.exhibitionRank,
 againstDecision:null
@@ -1637,6 +1649,7 @@ course:c,
 decision:null,
 st:x.st,
 stRank:x.stRank,
+leftNeighborST:x.leftNeighborST,
 exhibitionTime:x.exhibitionTime,
 exhibitionRank:x.exhibitionRank,
 againstDecision:
@@ -1829,6 +1842,65 @@ function bhStartStats(b){
  let stable=sd<=.025,label=sd<=.018?"かなり安定":sd<=.025?"安定":sd<=.040?"標準":"ばらつき大";
  return{boat:b,count:n,avg,median,min:Math.min(...vals),max:Math.max(...vals),sd,cv:avg?sd/avg:0,fast10:vals.filter(v=>v<=.10).length/n*100,fast15:vals.filter(v=>v<=.15).length/n*100,recentAvg,predict,stable,label,rows,avgRank,firstRate,top2Rate,rankCount,rankAdj};
 }
+
+function bhLeftNeighborST94(b){
+ const c=course(b),rows=bhStartRows(b);
+ const base={boat:b,course:c,count:0,fastCount:0,normalCount:0,slowCount:0,fastAvg:null,normalAvg:null,slowAvg:null,deltaFast:null,deltaSlow:null,type:"データ不足",confidence:"low",currentLeftBoat:c>1?Array.from({length:6},(_,i)=>i+1).find(x=>course(x)===c-1)||null:null};
+ if(c<=1)return{...base,type:"左隣なし",confidence:"na"};
+ const paired=rows.filter(r=>Number.isFinite(Number(r.leftNeighborST))&&Number.isFinite(Number(r.st)));
+ if(paired.length<4)return{...base,count:paired.length};
+ // 左隣のST帯: 0.14以下=速い / 0.15〜0.17=普通 / 0.18以上=遅い
+ const fast=paired.filter(r=>Number(r.leftNeighborST)<=.14);
+ const normal=paired.filter(r=>Number(r.leftNeighborST)>=.15&&Number(r.leftNeighborST)<=.17);
+ const slow=paired.filter(r=>Number(r.leftNeighborST)>=.18);
+ const avg=a=>a.length?a.reduce((s,r)=>s+Number(r.st),0)/a.length:null;
+ const fastAvg=avg(fast),normalAvg=avg(normal),slowAvg=avg(slow);
+ let deltaFast=fastAvg!=null&&normalAvg!=null?fastAvg-normalAvg:null;
+ let deltaSlow=slowAvg!=null&&normalAvg!=null?slowAvg-normalAvg:null;
+ let type="連動未判定";
+ if(deltaFast!=null&&deltaSlow!=null){
+   if(deltaFast<=-.01&&deltaSlow>=.01)type="左隣追従型";
+   else if(deltaFast<=-.01)type="左隣が速いと踏み込む";
+   else if(deltaSlow>=.01)type="左隣が遅いと慎重";
+   else type="左隣影響小";
+ }
+ const usable=Math.min(fast.length,normal.length,slow.length);
+ const confidence=paired.length>=15&&usable>=3?"high":paired.length>=8?"mid":"low";
+ return{...base,count:paired.length,fastCount:fast.length,normalCount:normal.length,slowCount:slow.length,fastAvg,normalAvg,slowAvg,deltaFast,deltaSlow,type,confidence};
+}
+function bhStartCourseBaseline94(c){return c===1?.15:c>=2&&c<=4?.16:.17}
+function bhStartContradiction94(x){
+ if(!x||!Number.isFinite(x.avg)||!Number.isFinite(x.avgRank))return"";
+ const base=bhStartCourseBaseline94(course(x.boat));
+ // 「順位が遅い/速い」は6艇内の平均ST順位を使用。3.5を中間点とする。
+ if(x.avg<base&&x.avgRank>3.5)return"⚠️ STは基準より速いのに平均ST順位は遅め";
+ if(x.avg>base&&x.avgRank<3.5)return"⚠️ STは基準より遅いのに平均ST順位は速め";
+ return"";
+}
+function bhApplyLeftNeighbor94(stats){
+ if(!Array.isArray(stats))return stats;
+ const byCourse={};stats.forEach(x=>{byCourse[course(x.boat)]=x});
+ stats.forEach(x=>{
+   const link=bhLeftNeighborST94(x.boat);
+   x.leftNeighbor94=link;
+   x.courseBaseline94=bhStartCourseBaseline94(course(x.boat));
+   x.stContradiction94=bhStartContradiction94(x);
+   if(course(x.boat)<=1||!Number.isFinite(x.predict))return;
+   const left=byCourse[course(x.boat)-1];
+   if(!left||!Number.isFinite(left.predict))return;
+   let adj=0,reason="";
+   // 実測ペア履歴が8走以上ある時だけ予測へ反映。最大±0.015秒に制限。
+   if(link.count>=8&&link.normalAvg!=null){
+     if(left.predict<=.14&&link.fastAvg!=null){adj=bhClamp(link.fastAvg-link.normalAvg,-.015,.015);reason="左隣が速い";}
+     else if(left.predict>=.18&&link.slowAvg!=null){adj=bhClamp(link.slowAvg-link.normalAvg,-.015,.015);reason="左隣が遅い";}
+   }
+   x.leftNeighborAdj94=adj;
+   x.leftNeighborReason94=reason;
+   x.predict=bhClamp(x.predict+adj,.01,.30);
+ });
+ return stats;
+}
+
 function bhFmtST(v){return Number.isFinite(v)?Number(v).toFixed(2):"－"}
 function bhBoatLabel(b){let r=racer(b);return `${b}号艇 ${esc(r?.name||"")}`.trim()}
 function bhStartCardHTML(x){
@@ -1839,7 +1911,9 @@ function bhStartCardHTML(x){
   if(x.fast10>=25)tags.push(`<span class="bhStartTag good">🔥 0.10以内 ${x.fast10.toFixed(0)}%</span>`);
   if(x.sd>.04)tags.push(`<span class="bhStartTag warn">⚠️ ST幅大</span>`);
  }
- return `<div class="bhStartBoatCard"><div class="bhStartBoatHead"><div><div class="bhStartBoatName">${bhBoatLabel(x.boat)}</div><div class="bhStartBoatCourse">今回 ${c}コース / 同コース ${x.count}走</div></div><div class="bhStartAvg">${x.count?bhFmtST(x.predict):'－'}</div></div>${x.count?`<div class="bhStartTags">${tags.join('')}</div><div style="font-size:11px;color:#a7aebb">平均 ${bhFmtST(x.avg)}　中央値 ${bhFmtST(x.median)}　最速 ${bhFmtST(x.min)}　最遅 ${bhFmtST(x.max)}　σ ${x.sd.toFixed(3)}${x.rankCount?`<br><b style="color:#7ee6ff">ST順位 平均${x.avgRank.toFixed(2)}位 / 1st ${x.firstRate.toFixed(0)}% / 2nd以内 ${x.top2Rate.toFixed(0)}%</b>`:''}</div><div class="bhStartSeries">${x.rows.map((r,i)=>`<span class="bhStartChip ${r.st<=.10?'fast':r.st>=.20?'slow':''}">${i+1}:${bhFmtST(r.st)}${num(r.stRank)>0?` / ${num(r.stRank)}位`:``}</span>`).join('')}</div>`:`<div class="bhStartNone">今回と同じ${c}コースのSTを取得できていません。データ元にSTが無いレースは集計から除外します。</div>`}</div>`;
+ let l=x.leftNeighbor94||bhLeftNeighborST94(x.boat),contra=x.stContradiction94||bhStartContradiction94(x);
+ let linkHtml=course(x.boat)>1?`<div class="bhLeftST94"><b>👀 左隣ST連動：</b>${l.type}　過去ペア ${l.count}走<br>左隣速い時 ${bhFmtST(l.fastAvg)} / 普通 ${bhFmtST(l.normalAvg)} / 遅い時 ${bhFmtST(l.slowAvg)}${Number.isFinite(x.leftNeighborAdj94)&&x.leftNeighborAdj94!==0?`<br><b>今回補正 ${x.leftNeighborAdj94>0?'+':''}${x.leftNeighborAdj94.toFixed(3)}秒</b>（${x.leftNeighborReason94}）`:''}${contra?`<br><span class="bhSTContradiction94">${contra}</span>`:''}</div>`:(contra?`<div class="bhLeftST94"><span class="bhSTContradiction94">${contra}</span></div>`:'');
+ return `<div class="bhStartBoatCard"><div class="bhStartBoatHead"><div><div class="bhStartBoatName">${bhBoatLabel(x.boat)}</div><div class="bhStartBoatCourse">今回 ${c}コース / 同コース ${x.count}走</div></div><div class="bhStartAvg">${x.count?bhFmtST(x.predict):'－'}</div></div>${x.count?`<div class="bhStartTags">${tags.join('')}</div><div style="font-size:11px;color:#a7aebb">平均 ${bhFmtST(x.avg)}　中央値 ${bhFmtST(x.median)}　最速 ${bhFmtST(x.min)}　最遅 ${bhFmtST(x.max)}　σ ${x.sd.toFixed(3)}${x.rankCount?`<br><b style="color:#7ee6ff">ST順位 平均${x.avgRank.toFixed(2)}位 / 1st ${x.firstRate.toFixed(0)}% / 2nd以内 ${x.top2Rate.toFixed(0)}%</b>`:''}</div><div class="bhStartSeries">${x.rows.map((r,i)=>`<span class="bhStartChip ${r.st<=.10?'fast':r.st>=.20?'slow':''}">${i+1}:${bhFmtST(r.st)}${num(r.stRank)>0?` / ${num(r.stRank)}位`:``}</span>`).join('')}</div>`:`<div class="bhStartNone">今回と同じ${c}コースのSTを取得できていません。データ元にSTが無いレースは集計から除外します。</div>`}${linkHtml}</div>`;
 }
 function bhSlipBoatSvg(b){
  const colors={1:["#f7f7f7","#c6c9cc","#111"],2:["#15171b","#050505","#fff"],3:["#e63b36","#8f0f0f","#fff"],4:["#2d7eea","#0c3f9d","#fff"],5:["#f2d21b","#a47f00","#111"],6:["#35a853","#0f6d25","#fff"]};
@@ -1984,7 +2058,7 @@ function bhOneMSlipHTML(rows){
  let ordered=[...usable].sort((a,b)=>a.arrival-b.arrival||a.boat-b.boat),leader=ordered[0];
  let rankMap=new Map(ordered.map((x,i)=>[x.boat,i+1]));
  const ord=n=>n===1?"1st":n===2?"2nd":n===3?"3rd":`${n}th`;
- return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。150mの距離蓄積型で行き足・伸び差を反映。位置変化は最大±1.60艇身。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
+ return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。展示タイム150mから平均速度(km/h)を算出し、全速区間を135〜140mとして両方計算。1M予測は中間の137.5m換算を使用。STARTスリットの位置差＋137.5mの実時間差で1M直前を推定。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
   let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
   let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';
@@ -1997,7 +2071,7 @@ function bhOneMDetailHTML(rows){
  let usable=rows.filter(x=>Number.isFinite(x.arrival)); if(!usable.length)return '';
  let leader=[...usable].sort((a,b)=>a.arrival-b.arrival)[0];
  let sq=bhSqueezeSignals(rows),sqTxt=sq.length?`<br><b>🎯 絞り判定：</b>${sq.map(x=>`${x.attacker}号艇→${x.victim}号艇 ${x.gap.toFixed(2)}艇身 / ${x.cls} ${x.probability.toFixed(0)}%${x.mandatoryHead?' / 1着必須':''}`).join('　')}`:'<br><b>🎯 絞り判定：</b>0.60艇身以上の対象なし';
- return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論</b>${sqTxt}<br><b>直前タイム＝行き足（加速）</b>、<b>展示タイム＝伸び足（最高速側）</b>として別々に計算。予測STの隊形を土台に、直前タイムはスリット後の加速区間、展示タイムは加速後〜1M手前の伸び区間へ反映します。実測タイムがある場合は手入力評価より優先し、150mを走る間の差として蓄積し、両補正を合わせてスタート隊形から最大±1.60艇身まで反映。<b>階級は艇速ではなく予測の再現性（信頼度）</b>へ使います。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';let preTxt=Number.isFinite(x.pre)?`直前 ${x.pre.toFixed(2)} / 行き足 ${x.accelBody>=0?'+':''}${x.accelBody.toFixed(2)}艇`:'直前 未取得';let exTxt=Number.isFinite(x.ex)?`展示 ${x.ex.toFixed(2)} / 伸び ${x.stretchBody>=0?'+':''}${x.stretchBody.toFixed(2)}艇`:'展示 未取得';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span><br>${preTxt}<br>${exTxt}${x.fCount?`<br>F${x.fCount}（ST側で慎重補正）`:''}</div>`}).join('')}</div></div>`;
+ return `<div class="bhTheoryBox"><b>🧮 1マーク到達理論</b>${sqTxt}<br><b>直前タイム＝行き足（加速）</b>、<b>展示タイム＝伸び足（最高速側）</b>として別々に計算。予測STの隊形を土台に、直前タイムはスリット後の加速区間、展示タイムは加速後〜1M手前の伸び区間へ反映します。実測タイムがある場合は手入力評価より優先し、150mを走る間の差として蓄積し、両補正を合わせてスタート隊形から最大±1.60艇身まで反映。<b>階級は艇速ではなく予測の再現性（信頼度）</b>へ使います。<div class="bhArrivalTable">${rows.map(x=>{if(!Number.isFinite(x.arrival))return `<div class="bhArrivalCell">${x.boat}号艇<b>データなし</b></div>`;let cls=x.boat===leader.boat?' leader':x.boatBehind>=.7?' warn':'';let preTxt=Number.isFinite(x.pre)?`直前 ${x.pre.toFixed(2)} / 行き足 ${x.accelBody>=0?'+':''}${x.accelBody.toFixed(2)}艇`:'直前 未取得';let exTxt=Number.isFinite(x.ex)?`展示 ${x.ex.toFixed(2)} / 伸び ${x.stretchBody>=0?'+':''}${x.stretchBody.toFixed(2)}艇`:'展示 未取得';let physTxt=Number.isFinite(x.exhibitionSpeedKmh)?`<br>展示換算 <b>${x.exhibitionSpeedKmh.toFixed(1)} km/h</b> / 135m ${x.fullSpeedTime135.toFixed(3)}秒 / 140m ${x.fullSpeedTime140.toFixed(3)}秒`:'';return `<div class="bhArrivalCell${cls}">${x.boat}号艇 ${x.cls||''}　信頼${x.confidence}%<b>${x.speed.toFixed(1)} km/h</b><span class="${x.boat===leader.boat?'bhOneMLead':x.boatBehind>=.7?'bhOneMWarn':''}">${x.boat===leader.boat?'1M先頭予測':'先頭から '+x.boatBehind.toFixed(2)+'艇身後'}</span><br>${preTxt}<br>${exTxt}${physTxt}${x.fCount?`<br>F${x.fCount}（ST側で慎重補正）`:''}</div>`}).join('')}</div></div>`;
 }
 
 function bhRacerByBoat(b){return racers.find((r,i)=>num(r?.boat||r?.entry_number||r?.boat_number||r?.waku||r?.frame_number)==b)||racers[b-1]||null}
@@ -7116,6 +7190,117 @@ window.BH_VOL92={version:92,aiRankingCollapsedByDefault:true};
    return await old.apply(this,arguments);
  };
  try{runAnalysis=window.runAnalysis}catch(e){}
+})();
+</script>
+
+
+<style id="bh-vol93-1m-physical-speed-style">
+.bhV93Physics{margin-top:8px;padding:9px 10px;border-radius:11px;background:rgba(39,105,138,.13);border:1px solid rgba(100,190,230,.28);font-size:10px;line-height:1.55;color:#bfe8f8}
+.bhV93Physics b{color:#fff}
+</style>
+<script id="bh-vol93-1m-physical-speed-js">
+(function(){
+'use strict';
+const old=window.bhOneMModel;
+if(typeof old!=='function')return;
+
+const N=v=>Number.isFinite(Number(v))?Number(v):null;
+const AVG_METERS=137.5;
+const D135=135;
+const D140=140;
+const EX_METERS=150;
+
+function beforeRow(b){
+  try{return typeof window.bhBeforeRow==='function'?(window.bhBeforeRow(b)||{}):{}}catch(e){return{}}
+}
+function exhibitionTime(b,row){
+  let v=N(beforeRow(b).ex);
+  if(v==null)v=N(row?.currentExhibitionTime);
+  if(v==null&&typeof window.bhExTime==='function'){
+    try{v=N(window.bhExTime(b))}catch(e){}
+  }
+  return v!=null&&v>0?v:null;
+}
+function speedKmh(ex){
+  return ex>0 ? (EX_METERS/ex)*3.6 : null;
+}
+function travelSeconds(ex,meters){
+  // 展示150mの平均速度が同じと仮定した時の指定距離所要時間。
+  return ex>0 ? ex*(meters/EX_METERS) : null;
+}
+
+window.bhOneMModel=function(stats){
+  const rows=old.call(this,stats);
+  if(!Array.isArray(rows)||!rows.length)return rows;
+
+  const usable=rows.filter(x=>Number.isFinite(Number(x.predict)));
+  if(!usable.length)return rows;
+
+  const startLead=Math.min(...usable.map(x=>Number(x.predict)));
+  const physical=[];
+
+  for(const x of usable){
+    const ex=exhibitionTime(Number(x.boat),x);
+    if(ex==null)continue;
+    const kmh=speedKmh(ex);
+    const t135=travelSeconds(ex,D135);
+    const t140=travelSeconds(ex,D140);
+    const tAvg=travelSeconds(ex,AVG_METERS);
+
+    x.exhibitionSpeedKmh=kmh;
+    x.fullSpeedTime135=t135;
+    x.fullSpeedTime140=t140;
+    x.fullSpeedTime137_5=tAvg;
+    x.fullSpeedModelMeters=AVG_METERS;
+    x.fullSpeedRangeMeters=[D135,D140];
+
+    physical.push({x,t135,t140,tAvg});
+  }
+
+  // 6艇すべてに今回展示タイムが揃った時だけ、物理モデルを本採用。
+  // 欠損がある場合は従来1Mモデルを保持し、無理な補完はしない。
+  if(physical.length===usable.length){
+    const best135=Math.min(...physical.map(o=>o.t135));
+    const best140=Math.min(...physical.map(o=>o.t140));
+    const bestAvg=Math.min(...physical.map(o=>o.tAvg));
+
+    for(const o of physical){
+      const x=o.x;
+      const startDelay=Number(x.predict)-startLead;
+      const speedDelay=o.tAvg-bestAvg;
+
+      // STARTスリットの位置差 + 展示150mから換算した137.5mの実時間差。
+      // 135m/140mも同時保存し、後で結果との相関を比較可能にする。
+      x.startDelay=startDelay;
+      x.startBoatBehind=startDelay/.15;
+      x.physicalSpeedDelaySeconds=speedDelay;
+      x.physicalGain135Body=-(o.t135-best135)/.15;
+      x.physicalGain140Body=-(o.t140-best140)/.15;
+      x.physicalGain137_5Body=-speedDelay/.15;
+      x.arrivalScore=startDelay+speedDelay;
+      x.arrival=x.arrivalScore;
+      x.oneMPhysicalModel='展示150m→135/140m換算（判定137.5m）';
+    }
+
+    const finalLead=Math.min(...usable.map(x=>Number(x.arrivalScore)));
+    for(const x of usable){
+      x.delay=Number(x.arrivalScore)-finalLead;
+      x.boatBehind=x.delay/.15;
+      x.moveBody=x.boatBehind-x.startBoatBehind;
+    }
+  }
+
+  return rows;
+};
+
+window.BH_VOL93={
+  version:93,
+  exhibitionMeasuredMeters:150,
+  fullSpeedRangeMeters:[135,140],
+  predictionMeters:137.5,
+  formula:'km/h = 150 / 展示タイム秒 × 3.6',
+  resultComparisonReady:true
+};
 })();
 </script>
 

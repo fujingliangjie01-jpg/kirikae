@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.139</div>
+<div id="bhTopVersion">Vol.140</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.139</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.140</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -877,7 +877,8 @@ window.classification=classification;
 <div id="bhResultConfirmCard" class="card bhResultConfirmCard">
 <h2>🏁 結果確認</h2>
 <button id="bhResultDashOpen" class="bhVerifyBtn bhResultConfirmMainBtn" type="button">🏁 結果確認を開く</button>
-<div class="bhResultConfirmNote">レース終了後、確定結果・買い目・見通し・確定オッズ・収支を確認します。</div>
+<div id="bhAutoResultStatus" class="bhAutoResultStatus"><span>🤖 自動結果確認 ON（90秒ごと）</span><button type="button" onclick="bhAutoCheckResults(true)">今すぐ確認</button></div>
+<div class="bhResultConfirmNote">レース終了後は自動で結果を取得し、保存済みの本命・穴目と照合します。結果確認画面を開かなくても判定を更新します。</div>
 </div>
 <div id="bhResultDashPanel" class="card bhResultDashPanel">
 <div class="bhResultDashTop">
@@ -7255,7 +7256,7 @@ window.bhRenderOddsPopularity=function(){
     const hs=(7-h1)*3+(7-h2)*2+(7-h3);
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
-  // Vol.139: ねじれ判定艇は本命・穴目とも1着（頭）へ絶対に採用しない。
+  // Vol.140: ねじれ判定艇は本命・穴目とも1着（頭）へ絶対に採用しない。
   // 2着・3着での採用は許可する。
   const twistHeadBlocked139=new Set(
     [...holes,...overs].map(x=>Number(x.boat)).filter(Boolean)
@@ -7288,7 +7289,7 @@ window.bhRenderOddsPopularity=function(){
 
   // Vol.137 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
   // 前付け/進入変更時は艇番ではなく進入コースへ置換して同じ並び判定を行う。
-  const impossiblePattern122=new Set(['2-4-5','2-4-6','2-5-3','2-5-4','2-5-6','2-6-3','2-6-4','2-6-5','3-5-6','3-6-2','3-6-4','3-6-5','4-2-6','4-3-6','4-6-2','4-6-3','5-2-6','5-3-4','5-3-6','5-6-3','6-3-2','6-3-4','6-3-5','6-4-2','6-4-3','6-4-5','6-5-2','6-5-3','6-5-4']);
+  const impossiblePattern122=new Set(['2-4-5','2-5-3','2-5-4','2-5-6','2-6-5','3-6-2','3-6-4','3-6-5','4-2-6','4-3-6','4-6-2','4-6-3','5-2-6','5-3-4','5-3-6','5-6-3','6-3-2','6-3-4','6-3-5','6-4-2','6-4-3','6-5-2','6-5-3']);
   const coursePatternKey122=(legs)=>{
     try{return (legs||[]).map(b=>Number(window.course?.(Number(b))||Number(b))).join('-')}
     catch(e){return (legs||[]).map(Number).join('-')}
@@ -7304,7 +7305,7 @@ window.bhRenderOddsPopularity=function(){
   }
   main10=main10.filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))).slice(0,10);
 
-  // Vol.139 本命不足補充。ねじれ艇を頭から除外した通常評価順だけで最大10点まで補充。
+  // Vol.140 本命不足補充。ねじれ艇を頭から除外した通常評価順だけで最大10点まで補充。
   const mainUsed128=new Set(main10.map(x=>x.key));
   const normalFill128=[...scored]
     .filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))&&headAllowed139(x)&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
@@ -7366,6 +7367,39 @@ window.bhRenderOddsPopularity=function(){
 
   const holePool113=[];
   const used113=new Set(mainKeys);
+
+  // Vol.140 追加出目理論。条件が本命内に成立した場合は穴目の最優先候補として入れる。
+  // ねじれ頭禁止・固定除外は最優先で維持。本命に同じ目が既にある場合は重複追加しない。
+  const extraTheory140=[
+    {match:'2-1',keys:['2-1-3','2-1-4','2-1-5','2-1-6'],label:'2-1展開'},
+    {match:'2-4',keys:['2-4-6','2-6-4'],label:'2-4展開'},
+    {match:'3-4',keys:['3-4-5','3-4-6'],label:'3-4展開'},
+    {match:'3-2',keys:['3-2-5','3-5-6'],label:'3-2展開'}
+  ];
+  const mainPairs140=new Set(main10.map(m=>`${m.legs?.[0]}-${m.legs?.[1]}`));
+  const mainHeads140=new Set(main10.map(m=>Number(m.legs?.[0])).filter(Boolean));
+  let extraPriority140=-3000;
+  const addMandatoryTheory140=(key,reason)=>{
+    if(mainKeys.has(key)||used113.has(key))return;
+    const row=rowMap113.get(key);
+    if(!row||!headAllowed139(row)||isBlockedPattern122(row))return;
+    used113.add(key);
+    holePool113.push({
+      ...row,
+      holeType:'追加出目理論',
+      holeReason:reason,
+      sourceRank:extraPriority140++,
+      mandatory121:true,
+      mandatoryTheory140:true
+    });
+  };
+  extraTheory140.forEach(rule=>{
+    if(!mainPairs140.has(rule.match))return;
+    rule.keys.forEach(key=>addMandatoryTheory140(key,`${rule.label}｜${rule.match}成立 → ${key}`));
+  });
+  if(mainHeads140.has(5)){
+    ['5-1-3','5-3-1'].forEach(key=>addMandatoryTheory140(key,`5号艇頭 出目理論 → ${key}`));
+  }
 
   // Vol.137 穴目ロジックの最優先固定目。
   // 本命の「1着-2着」の並びが指定ペアなら、対応する3着を必ず穴候補へ入れる。

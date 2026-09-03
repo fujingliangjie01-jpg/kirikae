@@ -377,7 +377,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.106</div>
+<div id="bhTopVersion">Vol.108</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -397,7 +397,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.106</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.108</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -4381,7 +4381,14 @@ function bhRenderBeforeInfo(){
     return true;
   });
   a.sort((p,q)=>lower?(p.v-q.v||p.b-q.b):(q.v-p.v||p.b-q.b));
-  let out={},last=null,rank=0;a.forEach((x,i)=>{if(last===null||Math.abs(x.v-last)>1e-9)rank=i+1;out[x.b]=rank;last=x.v});return out;
+  let out={},last=null,rank=0;
+  a.forEach((x,i)=>{
+    if(last===null||Math.abs(x.v-last)>1e-9)rank=i+1;
+    // 直前情報はFを除外したうえで1位・2位だけ順位表示する。
+    if(rank<=2)out[x.b]=rank;
+    last=x.v;
+  });
+  return out;
  };
  let ranks={st:mkRanks('st'),straight:mkRanks('straight'),ex:mkRanks('ex'),lap:mkRanks('lap'),turn:mkRanks('turn')};
  const ranked=(value,key,b,fmt)=>{
@@ -4694,10 +4701,21 @@ function bhSavePredictionSnapshot(tickets,outlook){
     amount:num(t.amount),
     method:String(t.method||"")
   }));
+  let oddsDecision108=null;
+  try{
+    oddsDecision108=window.BH_ODDS_DECISION_V108||JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_V108')||'null');
+    if(oddsDecision108){
+      oddsDecision108={...oddsDecision108,buy:!finance.watch,watch:!!finance.watch,savedAt:Date.now()};
+      const oa=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
+      oa[[day,v,r].join('|')]=oddsDecision108;
+      localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(oa));
+    }
+  }catch(e){}
   let store=bhSnapshotStore();store[key]={
     day,venue:v,race:r,pct:num(outlook?.escape||0),alerts:bhAlertNames(),
     band:bhBandName(num(outlook?.escape||0)),expanded,tickets:ticketDetails,
     finance:{budget:num(finance.budget||window.bhRaceBudget?.()||0),used:num(finance.used),watch:!!finance.watch,expectedReturn:num(finance.expectedReturn),multiple:num(finance.multiple)},
+    oddsDecision:oddsDecision108,
     scored:false,updatedAt:Date.now()
   };
   bhSaveSnapshotStore(store);setTimeout(()=>bhAutoCheckResults(false),1200)
@@ -4951,7 +4969,8 @@ function bhToggleStartHistory(){
  function bh106Band(p){return p<=3?"1-3":p<=10?"4-10":p<=20?"11-20":p<=50?"21-50":"51-120"}
  function bh106DecisionFor(x){
    try{
-     const store=JSON.parse(localStorage.getItem("BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V106")||"{}");
+     const snap=snapFor(x.key);if(snap?.oddsDecision)return snap.oddsDecision;
+     const store=JSON.parse(localStorage.getItem("BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108")||"{}");
      const day=String(x?.day||x?.date||"");
      const k=[day,Number(x?.venue??""),Number(x?.race??"")].join("|");
      if(store[k])return store[k];
@@ -4959,7 +4978,7 @@ function bhToggleStartHistory(){
      const vals=Object.values(store).filter(d=>Number(d?.venue)===Number(x?.venue)&&Number(d?.race)===Number(x?.race));
      if(vals.length)return vals[vals.length-1];
    }catch(e){}
-   return window.BH_ODDS_DECISION_V106||null;
+   return window.BH_ODDS_DECISION_V108||null;
  }
  function bh106ListHas(list,key){return (list||[]).some(v=>(typeof v==="string"?v:v?.key)===key)}
  function bh106RankOf(list,key){
@@ -4969,6 +4988,9 @@ function bhToggleStartHistory(){
  function bh106EvalResult(x){
    if(!x?.result)return null;
    const d=bh106DecisionFor(x);if(!d)return null;
+   const snap108=snapFor(x.key);
+   const isBuy108=d.buy===true||(d.buy==null&&snap108?.finance&&!snap108.finance.watch);
+   if(!isBuy108)return {excluded:true,kind:'見・買わない',pop:null,odds:null};
    if(d.venue!=null&&Number(d.venue)!==Number(x.venue))return null;
    if(d.race!=null&&Number(d.race)!==Number(x.race))return null;
    const o=(d.odds||[]).find(z=>z.key===x.result);if(!o)return null;
@@ -5004,7 +5026,7 @@ function bhToggleStartHistory(){
      const hits=bh106TopNCumulative(st,i+1),rate=st.total?hits/st.total*100:0;
      return `本命${i+1}まで ${st.total?rate.toFixed(1):"-"}%`;
    }).join(" / ");
-   return `<div class="bh105ResultSummary"><b>📊 世間人気 × HUNTER結果検証</b><br>
+   return `<div class="bh105ResultSummary"><b>📊 買うレース限定｜世間人気 × HUNTER結果検証</b><br>
    累計 ${st.total}R｜本命的中 ${st.main}R｜穴目期待的中 ${st.hole}R｜切り候補が来た ${st.cut}R<br>
    実際に来た人気：1〜3番 ${b["1-3"]}R / 4〜10番 ${b["4-10"]}R / 11〜20番 ${b["11-20"]}R / 21〜50番 ${b["21-50"]}R / 51〜120番 ${b["51-120"]}R<br>
    <b>🎯 ${target}</b>${sampleNote}<br><small>${ranks}</small></div>`;
@@ -5015,7 +5037,7 @@ function bhToggleStartHistory(){
    const triResult=x.result||"-";
    const triOd=x.payout>0?(x.payout/100).toFixed(1)+"倍":"-";
    const oe105=bh106EvalResult(x);
-   const oddsJudge105=oe105?`<small>${oe105.pop}番人気・予想時 ${Number(oe105.odds).toFixed(1)}倍・HUNTER ${oe105.kind}</small>`:"";
+   const oddsJudge105=oe105?.excluded?'<small>HUNTER検証：見・買わないため本集計から除外</small>':oe105?`<small>${oe105.pop}番人気・予想時 ${Number(oe105.odds).toFixed(1)}倍・HUNTER ${oe105.kind}</small>`:"";
 
    // 2連単を買っているレースは、的中/不的中を必ず表示。
    const top2=x.result?x.result.split("-").slice(0,2).join("-"):"";
@@ -7122,7 +7144,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.106: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.108: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7175,7 +7197,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.106: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.108: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7184,24 +7206,50 @@ window.bhRenderOddsPopularity=function(){
   });
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
   const mainKeys=new Set(main10.map(x=>x.key));
-  const hole10=[...scored].filter(x=>!mainKeys.has(x.key)&&x.pop>10).sort((a,b)=>b.holeScore-a.holeScore||a.pop-b.pop).slice(0,10);
+
+  // Vol.108 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
+  let sc108=null;try{sc108=window.bhRaceScenario?.()||null}catch(e){}
+  const atk108=Number(sc108?.head||0),method108=String(sc108?.method||sc108?.methodCandidate||'');
+  const atkCourse108=atk108?Number(window.course?.(atk108)||atk108):0;
+  const boatAtCourse108=(c)=>[1,2,3,4,5,6].find(b=>Number(window.course?.(b)||b)===c)||0;
+  let flow108=0,reason108='';
+  if(sc108?.physicalAttack&&/まくり/.test(method108)&&!/まくり差し/.test(method108)){
+    flow108=boatAtCourse108(atkCourse108+1);
+    if(flow108)reason108=`${atk108}号艇まくり → ${flow108}号艇に展開`;
+  }else if(sc108?.physicalAttack&&/まくり差し/.test(method108)){
+    flow108=boatAtCourse108(1);
+    if(flow108)reason108=`${atk108}号艇まくり差し → 1号艇残りを相手軸`;
+  }else if(sc108?.physicalAttack&&/差し/.test(method108)){
+    flow108=boatAtCourse108(1);
+    if(flow108)reason108=`${atk108}号艇差し → 1号艇残りを相手軸`;
+  }
+  const hole10=flow108?[...scored].filter(x=>{
+      if(mainKeys.has(x.key)||x.pop<=10)return false;
+      const hasAttack=x.legs.includes(atk108);
+      const flowAxis=x.legs[0]===flow108||x.legs[1]===flow108;
+      return hasAttack&&flowAxis;
+    }).sort((a,b)=>b.hunterStrength-a.hunterStrength||a.pop-b.pop).slice(0,10)
+      .map(x=>({...x,holeReason:reason108})):[];
+
   const holeKeys=new Set(hole10.map(x=>x.key));
   const cutKeys=new Set(scored.filter(x=>x.pop<=30&&!mainKeys.has(x.key)&&!holeKeys.has(x.key)&&x.hs<=18).map(x=>x.key));
-  const decision={day:(typeof selectedDate!=='undefined'?selectedDate:''),venue:(typeof selectedVenue!=='undefined'?selectedVenue:null),race:(typeof selectedRace!=='undefined'?selectedRace:null),odds:scored.map(x=>({key:x.key,pop:x.pop,odds:x.odds})),main:main10.map((x,i)=>({key:x.key,rank:i+1})),hole:hole10.map((x,i)=>({key:x.key,rank:i+1})),cut:[...cutKeys]};
-  window.BH_ODDS_DECISION_V106=decision;
+  const decision={day:(typeof selectedDate!=='undefined'?selectedDate:''),venue:(typeof selectedVenue!=='undefined'?selectedVenue:null),race:(typeof selectedRace!=='undefined'?selectedRace:null),odds:scored.map(x=>({key:x.key,pop:x.pop,odds:x.odds})),main:main10.map((x,i)=>({key:x.key,rank:i+1})),hole:hole10.map((x,i)=>({key:x.key,rank:i+1,reason:x.holeReason||''})),cut:[...cutKeys],holeBasis:reason108||'',buy:null};
+  window.BH_ODDS_DECISION_V108=decision;
   try{
-    localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_V106',JSON.stringify(decision));
-    const store=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V106')||'{}');
+    localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_V108',JSON.stringify(decision));
+    const store=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
     const dk=[decision.day||'',decision.venue??'',decision.race??''].join('|');
     store[dk]=decision;
     // keep storage light: newest 400 race decisions maximum
     const keys=Object.keys(store);
     if(keys.length>400)keys.slice(0,keys.length-400).forEach(k=>delete store[k]);
-    localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V106',JSON.stringify(store));
+    localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(store));
   }catch(e){}
   const mainRankMap=new Map(main10.map((x,i)=>[x.key,i+1]));
   const mainPickHTML=main10.map((x,i)=>`<span class="bh105Pick">本命${i+1}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍</span>`).join('');
-  const holePickHTML=hole10.map((x,i)=>`<span class="bh105Pick hole">穴${i+1}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍</span>`).join('');
+  const holePickHTML=hole10.length
+    ?hole10.map((x,i)=>`<span class="bh105Pick hole">穴${i+1}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍<br><small>根拠：${x.holeReason}</small></span>`).join('')
+    :'<span class="bh105Pick hole">展開根拠のある穴目なし</span>';
   // 120通り表へ直接ラベルを反映。
   const allRows105=all120.map((x,i)=>{
     const main=mainKeys.has(x.key),hole=holeKeys.has(x.key),cut=cutKeys.has(x.key);
@@ -7231,7 +7279,7 @@ window.bhRenderOddsPopularity=function(){
     </div>
 
     <div class="bh105PickBox"><div class="bh105PickTitle">🎯 本命候補 最大10点</div><div class="bh105Picks">${mainPickHTML}</div></div>
-    <div class="bh105PickBox"><div class="bh105PickTitle">🔥 穴目期待 最大10点</div><div class="bh105Picks">${holePickHTML}</div></div>
+    <div class="bh105PickBox"><div class="bh105PickTitle">🔥 根拠あり穴目 最大10点（無理に10点へ補充しない）</div><div class="bh105Picks">${holePickHTML}</div></div>
     <div class="bhOddsPopularitySection">
       <h3>② 3連単オッズ 1位〜120位</h3>
       <div class="bhOdds120Scroll">

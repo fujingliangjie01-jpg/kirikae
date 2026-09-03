@@ -349,9 +349,20 @@ var bhClassPatchCore=window.bhClassPatchCore;
   .bhStretchTopPatch small{font-size:6px}
 }
 </style>
+
+<style id="bhOdds120VisibleV101Style">
+#bhOdds120VisibleV101{margin:12px 0;padding:12px;border-radius:14px;background:rgba(8,15,28,.94);border:1px solid rgba(91,167,255,.38)}
+#bhOdds120VisibleV101 h3{margin:0 0 10px;font-size:18px}
+.bh101OddsWrap{max-height:560px;overflow:auto;border-radius:10px}
+.bh101OddsTable{width:100%;border-collapse:collapse;font-size:13px}
+.bh101OddsTable th{position:sticky;top:0;background:#16243a;z-index:2;padding:7px 5px}
+.bh101OddsTable td{padding:6px 5px;border-top:1px solid rgba(255,255,255,.07);text-align:center}
+.bh101OddsTable tr:nth-child(-n+10) td{font-weight:800}
+.bh101HeadSummary{margin:8px 0 11px;padding:10px;border-radius:10px;background:rgba(255,216,77,.08);border:1px solid rgba(255,216,77,.4);font-weight:900}
+</style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.100</div>
+<div id="bhTopVersion">Vol.101</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -371,7 +382,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.100</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.101</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7503,7 +7514,13 @@ window.BH_VOL93={
    var stats={};for(var n=1;n<=6;n++)stats[n]={n:n,p1:0,p2:0,p3:0,score:0,hr:hRank(n)};
    x.forEach(function(z,i){var w=1/(z.o||999);stats[z.a].p1++;stats[z.b].p2++;stats[z.c].p3++;stats[z.a].score+=w*3;stats[z.b].score+=w*2;stats[z.c].score+=w});
    var arr=Object.values(stats).sort(function(a,b){return b.score-a.score});arr.forEach(function(v,i){v.mr=i+1});
-   var head=Object.values(stats).sort(function(a,b){return b.p1-a.p1})[0];
+   var head=Object.values(stats).sort(function(a,b){
+     // 120通りでは各艇の1着組み合わせ数は20通りで同数になるため、
+     // 1着に置かれた全20通りのオッズ逆数合計（市場の支持強度）で頭候補を決定。
+     var sa=0,sb=0;
+     x.forEach(function(z){if(z.a===a.n)sa+=1/(z.o||999);if(z.a===b.n)sb+=1/(z.o||999)});
+     return sb-sa||a.n-b.n;
+   })[0];
    var hr=head.hr, trust=hr===1?'高':(hr&&hr>=4?'低':'中');
    var holes=arr.filter(function(v){return v.hr&&v.hr+1<v.mr}).sort(function(a,b){return (b.mr-b.hr)-(a.mr-a.hr)});
    var overs=arr.filter(function(v){return v.hr&&v.mr+1<v.hr}).sort(function(a,b){return (b.hr-b.mr)-(a.hr-a.mr)});
@@ -7519,6 +7536,51 @@ window.BH_VOL93={
    var t=target();if(t){var p=t.closest('.card,.panel,section')||t;p.insertAdjacentElement('afterend',box)}
  }
  var timer;new MutationObserver(function(){clearTimeout(timer);timer=setTimeout(render,300)}).observe(document.body,{subtree:true,childList:true,characterData:true});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render();
+})();
+</script><script id="bhOdds120VisibleV101">
+(function(){
+ function getOdds(){
+   var names=['oddsData','trifectaOdds','odds3t','currentOdds','raceOdds','oddsMap'],a=[];
+   for(var ni=0;ni<names.length;ni++){
+     var map=window[names[ni]];
+     if(map&&typeof map==='object'){
+       Object.keys(map).forEach(function(k){
+         var m=String(k).match(/([1-6])\D*([1-6])\D*([1-6])/),o=Number(map[k]);
+         if(m&&Number.isFinite(o)&&o>0&&m[1]!=m[2]&&m[1]!=m[3]&&m[2]!=m[3])a.push({a:+m[1],b:+m[2],c:+m[3],o:o});
+       });
+       if(a.length>=100)break;
+     }
+   }
+   if(a.length<100){
+     a=[];
+     document.querySelectorAll('tr,[data-combo],[data-odds]').forEach(function(e){
+       var t=(e.innerText||'')+' '+((e.getAttribute&&e.getAttribute('data-combo'))||'')+' '+((e.getAttribute&&e.getAttribute('data-odds'))||'');
+       var m=t.match(/([1-6])\s*[-–]\s*([1-6])\s*[-–]\s*([1-6]).*?(\d+(?:\.\d+)?)/);
+       if(m&&+m[4]>0)a.push({a:+m[1],b:+m[2],c:+m[3],o:+m[4]});
+     });
+   }
+   var u={},r=[];a.forEach(function(x){var k=x.a+'-'+x.b+'-'+x.c;if(!u[k]){u[k]=1;r.push(x)}});return r.sort(function(x,y){return x.o-y.o});
+ }
+ function anchor(){
+   var a=document.getElementById('bhOdds120V99Box');
+   if(a)return a;
+   var els=[].slice.call(document.querySelectorAll('h1,h2,h3,h4,div'));
+   return els.find(function(e){return /オッズ人気|オッズ分析/.test(e.textContent||'')})||null;
+ }
+ function render(){
+   var a=getOdds();if(a.length<100)return;
+   var cnt=[0,0,0,0,0,0,0];
+   a.forEach(function(x){cnt[x.a]++});
+   var strength=[0,0,0,0,0,0,0];a.forEach(function(x){strength[x.a]+=1/(x.o||999)});
+   var head=1;for(var n=2;n<=6;n++)if(strength[n]>strength[head])head=n;
+   var old=document.getElementById('bhOdds120VisibleV101');if(old)old.remove();
+   var box=document.createElement('div');box.id='bhOdds120VisibleV101';
+   var rows=a.map(function(x,i){return '<tr><td>'+(i+1)+'</td><td>'+x.a+'-'+x.b+'-'+x.c+'</td><td>'+x.o.toFixed(1)+'</td></tr>'}).join('');
+   box.innerHTML='<h3>📊 3連単オッズ 120通り</h3><div class="bh101HeadSummary">🎯 120通り集計 頭候補1：'+head+'号艇（1着20通りのオッズ支持を総合）</div><div class="bh101OddsWrap"><table class="bh101OddsTable"><thead><tr><th>人気</th><th>組み合わせ</th><th>オッズ</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+   var t=anchor();if(t){(t.closest('.card,.panel,section')||t).insertAdjacentElement('afterend',box)}
+ }
+ var tm;new MutationObserver(function(){clearTimeout(tm);tm=setTimeout(render,350)}).observe(document.body,{subtree:true,childList:true,characterData:true});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render();
 })();
 </script></body>

@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.141</div>
+<div id="bhTopVersion">Vol.142</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.141</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.142</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7548,16 +7548,69 @@ window.bhRenderOddsPopularity=function(){
   const decisionDay126=(typeof bhTodayKey==='function'?bhTodayKey():new Date().toISOString().slice(0,10));
   const decisionVenue126=Number(document.getElementById('venue')?.value||0);
   const decisionRace126=Number(document.getElementById('race')?.value||0);
-  // Vol.141: 資金配分AI。買い目自体は消さず、実投資額だけを0円/100円単位で決定する。
+  // Vol.142: 資金配分AI。6艇すべての「世間 vs HUNTER」を評価し、人気薄のHUNTER高評価も資金へ反映。
+  // 買い目自体は消さず、実投資額だけを0円/100円単位で決定する。
   const fundBudget141=Math.max(100,Math.floor(Number(localStorage.getItem('BOAT_HUNTER_FUND_BUDGET_V141')||1200)/100)*100);
   const hunterRank141=hunterOrder109.map(x=>Number(x.boat));
   const marketHeadRank141=firstRank.map(Number);
   const rankMatch141=[0,1,2].filter(i=>marketHeadRank141[i]&&marketHeadRank141[i]===hunterRank141[i]).length;
-  const targetCount141=rankMatch141>=3?2:rankMatch141===2?3:rankMatch141===1?5:7;
+  const headMarketPos142={};marketHeadRank141.forEach((b,i)=>headMarketPos142[b]=i+1);
+  const hunterPos142={};hunterRank141.forEach((b,i)=>hunterPos142[b]=i+1);
+  const lapRank142={};
+  Object.values(hm).forEach(x=>{if(x&&Number(x.boat))lapRank142[Number(x.boat)]=Number(x.lapRank||x.ev?.lapRank||0)});
+
+  // 世間1番人気（1着支持1位）の信頼度を0〜100で算出。
+  const marketTop142=Number(marketHeadRank141[0]||0);
+  const marketSecond142=Number(marketHeadRank141[1]||0);
+  const topHunterRank142=Number(hunterPos142[marketTop142]||6);
+  const topHunterScore142=Number(hm[marketTop142]?.score||0);
+  const topSupport142=Number(support[marketTop142]?.first||0),secondSupport142=Number(support[marketSecond142]?.first||0);
+  const supportGap142=topSupport142>0?Math.max(0,(topSupport142-secondSupport142)/topSupport142*100):0;
+  let topTrust142=45;
+  topTrust142 += ({1:28,2:18,3:9,4:-4,5:-12,6:-20}[topHunterRank142]||0);
+  topTrust142 += Math.min(12,supportGap142*.35);
+  topTrust142 += (topHunterScore142-50)*.18;
+  const topCourse142=Number(window.course?.(marketTop142)||marketTop142);
+  const topLap142=Number(lapRank142[marketTop142]||0);
+  if(topCourse142===1){topTrust142 += topLap142===1?8:-25;}
+  topTrust142=Math.max(0,Math.min(100,Math.round(topTrust142)));
+  const topTrustLabel142=topTrust142>=75?'高':topTrust142>=55?'中':'低';
+
+  // 6艇のズレ評価。市場よりHUNTER順位が2段以上高い艇は「HUNTER狙い」。
+  const boatEval142=[1,2,3,4,5,6].map(b=>{
+    const m=Number(marketPos[b]||6),mh=Number(headMarketPos142[b]||6),h=Number(hunterPos142[b]||6);
+    const gap=m-h;
+    const courseNo=Number(window.course?.(b)||b),lap=Number(lapRank142[b]||0);
+    let label='評価近い',cls='same';
+    if(gap>=2){label='⭐ HUNTER狙い';cls='hunter'}
+    else if(gap<=-2){label='⚠️ 世間先行';cls='market'}
+    else if(m===h){label='✅ 評価一致';cls='same'}
+    if(courseNo===1&&lap&&lap!==1){label+='・一周'+lap+'位↓';cls=cls==='hunter'?'hunterLap':'lap'}
+    return {boat:b,market:m,headMarket:mh,hunter:h,gap,course:courseNo,lap,label,cls,score:Number(hm[b]?.score||0)};
+  });
+  const boatEvalMap142={};boatEval142.forEach(x=>boatEvalMap142[x.boat]=x);
+
+  // 一致数だけでなく1番人気信頼度でも投資点数を調整。
+  let targetCount141=rankMatch141>=3?2:rankMatch141===2?3:rankMatch141===1?5:7;
+  if(topTrust142<55)targetCount141=Math.max(targetCount141,5);
+  else if(topTrust142>=75&&rankMatch141>=2)targetCount141=Math.min(targetCount141,3);
+
   const fundPool141=[
     ...main10.map((x,i)=>({...x,fundType:'main',fundRank:i+1,fundConfidence:120-i*5})),
     ...hole10.map((x,i)=>({...x,fundType:'hole',fundRank:i+1,fundConfidence:78-i*4}))
-  ].filter((x,i,a)=>a.findIndex(y=>y.key===x.key)===i)
+  ].map(x=>{
+    const legs=(x.legs||String(x.key||'').split('-')).map(Number);
+    const weights=[10,4,2];
+    let edge=0;
+    legs.forEach((b,i)=>{const e=boatEvalMap142[b];if(e)edge+=(e.market-e.hunter)*(weights[i]||1)});
+    const h=legs[0],he=boatEvalMap142[h];
+    let adj=edge;
+    if(he&&he.market-he.hunter>=2)adj+=12;
+    if(he&&he.market-he.hunter<=-2)adj-=10;
+    if(he&&he.course===1&&he.lap&&he.lap!==1)adj-=25;
+    if(h===marketTop142)adj+=(topTrust142-50)*.35;
+    return {...x,fundConfidence:x.fundConfidence+adj,fundEdge142:Math.round(adj)};
+  }).filter((x,i,a)=>a.findIndex(y=>y.key===x.key)===i)
    .sort((a,b)=>b.fundConfidence-a.fundConfidence||a.pop-b.pop||b.odds-a.odds);
   const fundAlloc141={}; let fundUsed141=0;
   // まず「的中時に総予算を上回れる」最低額を上位候補へ配分。
@@ -7590,7 +7643,7 @@ window.bhRenderOddsPopularity=function(){
     twistHoleBoats:twistHoleBoats116,
     twistUpBoats:[...twistUpBoats116],
     cut:[...cutKeys],holeBasis:reason108||'',
-    buy:{version:141,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,items:fundItems141}
+    buy:{version:142,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,topMarketBoat:marketTop142,topTrust:topTrust142,topTrustLabel:topTrustLabel142,items:fundItems141}
   };
   window.BH_ODDS_DECISION_V108=decision;
   try{
@@ -7685,9 +7738,14 @@ window.bhRenderOddsPopularity=function(){
     </div>
 
     ${hunterFinalHTML109}
+    <div class="bh142MarketTrust">
+      <div class="bh142TrustHead"><b>🎯 世間1番人気 ${marketTop142}号艇</b><span class="${topTrust142>=75?'high':topTrust142>=55?'mid':'low'}">信頼度 ${topTrust142}%（${topTrustLabel142}）</span></div>
+      <div class="bh142TrustMeta">HUNTER ${topHunterRank142}位｜HUNTER評価 ${topHunterScore142.toFixed(1)}｜1着支持差 ${supportGap142.toFixed(1)}%${topCourse142===1?`｜一周 ${topLap142&&topLap142<99?topLap142+'位':'未取得'}${topLap142&&topLap142!==1?' → 評価DOWN':''}`:''}</div>
+      <div class="bh142BoatGrid">${boatEval142.map(x=>`<div class="bh142BoatRow ${x.cls}"><b>${x.boat}号艇</b><span>世間 ${x.market}位</span><span>HUNTER ${x.hunter}位</span><em>${x.label}</em></div>`).join('')}</div>
+    </div>
     <div class="bh141FundSummary">
       <div><b>💰 資金配分AI</b><span>予算 ${fundBudget141.toLocaleString()}円</span></div>
-      <div class="bh141FundMeta">世間×HUNTER 頭順位一致 ${rankMatch141}/3｜実投資 ${fundUsed141.toLocaleString()}円｜${Object.values(fundAlloc141).filter(Number).length}点集中${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
+      <div class="bh141FundMeta">世間×HUNTER 頭順位一致 ${rankMatch141}/3｜1番人気信頼度 ${topTrust142}%｜実投資 ${fundUsed141.toLocaleString()}円｜${Object.values(fundAlloc141).filter(Number).length}点集中${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
       <div class="bh141BudgetBtns">${[1000,1200,1500,2000].map(v=>`<button type="button" onclick="localStorage.setItem('BOAT_HUNTER_FUND_BUDGET_V141','${v}');window.bhRenderOddsPopularity()" class="${fundBudget141===v?'active':''}">${v.toLocaleString()}円</button>`).join('')}</div>
     </div>
     <div class="bh123PickColumns">
@@ -7896,7 +7954,8 @@ function evaluate88(b){
   ['1コース以外：差し10 / まくり15 / まくり差し20',c!==1?(num(d.sashi)>=10&&num(d.maki)>=15&&num(d.makiSashi)>=20):false,c!==1?('差'+num(d.sashi).toFixed(1)+' / ま'+num(d.maki).toFixed(1)+' / ま差'+num(d.makiSashi).toFixed(1)):'対象外',c!==1]
  ];
  var pass=items.filter(function(x){return x[3]&&x[1]}).length;
- return {items:items,pass:pass,course:c,ai:ai,motor:mot};
+ var lapRank=c===1?rankLow88(lapvals,b):0;
+ return {items:items,pass:pass,course:c,ai:ai,motor:mot,lapRank:lapRank};
 }
 window.bhEvaluateAllHeads91=function(){
  var hs=heads88(),market={};
@@ -7904,7 +7963,11 @@ window.bhEvaluateAllHeads91=function(){
  var rows=[1,2,3,4,5,6].map(function(b){
    var ev=evaluate88(b),app=ev.items.filter(function(x){return x[3]}).length;
    var score=app?ev.pass/app*100:0;
-   return {boat:b,marketRank:market[b]?market[b].rank:99,marketCount:market[b]?market[b].count:0,pass:ev.pass,applicable:app,score:score,ev:ev};
+   // Vol.142: 1コースだけは一周タイム1位を必須級に扱う。
+   // 1位でない場合は通常の項目未達に加えて20pt減点し、HUNTER順位・資金配分へ反映する。
+   var lapPenalty=(ev.course===1&&ev.lapRank!==1)?20:0;
+   score=Math.max(0,score-lapPenalty);
+   return {boat:b,marketRank:market[b]?market[b].rank:99,marketCount:market[b]?market[b].count:0,pass:ev.pass,applicable:app,score:score,lapRank:ev.lapRank,lapPenalty:lapPenalty,ev:ev};
  });
  rows.sort(function(a,b){return b.score-a.score||b.pass-a.pass||a.marketRank-b.marketRank||a.boat-b.boat});
  rows.forEach(function(x,i){x.hunterRank=i+1;x.gapAbove=i===0?0:Math.max(0,rows[i-1].score-x.score);x.gapTop=Math.max(0,rows[0].score-x.score);x.rankMove=x.marketRank-x.hunterRank});
@@ -9226,5 +9289,9 @@ document.addEventListener('click',e=>{if(e.target?.closest?.('#bhResultDashOpen'
 })();
 </script>
 
+
+<style id="bh-vol142-market-hunter-css">
+.bh142MarketTrust{margin:10px 0 12px;padding:11px;border:1px solid #3b3b3b;border-radius:12px;background:#101214}.bh142TrustHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}.bh142TrustHead span{padding:4px 8px;border-radius:999px;font-size:11px;font-weight:1000}.bh142TrustHead span.high{background:#21391f;color:#8cff85;border:1px solid #477d43}.bh142TrustHead span.mid{background:#3a310f;color:#ffe56d;border:1px solid #746322}.bh142TrustHead span.low{background:#3b1717;color:#ff8d8d;border:1px solid #7a3434}.bh142TrustMeta{margin-top:6px;color:#9ca8af;font-size:10px;line-height:1.5}.bh142BoatGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}.bh142BoatRow{display:grid;grid-template-columns:42px 1fr 1fr;gap:4px;align-items:center;padding:7px;border:1px solid #30343a;border-radius:9px;background:#15171a;font-size:10px}.bh142BoatRow b{font-size:12px}.bh142BoatRow em{grid-column:1/4;font-style:normal;font-weight:900;font-size:10px}.bh142BoatRow.hunter,.bh142BoatRow.hunterLap{border-color:#8a6d1c;background:#211a07}.bh142BoatRow.hunter em,.bh142BoatRow.hunterLap em{color:#ffd84d}.bh142BoatRow.market{border-color:#613636;background:#241414}.bh142BoatRow.market em{color:#ff8b8b}.bh142BoatRow.lap{border-color:#75551d;background:#21180d}.bh142BoatRow.lap em{color:#ffbb62}.bh142BoatRow.same em{color:#78d889}@media(max-width:620px){.bh142BoatGrid{grid-template-columns:1fr}.bh142TrustHead{align-items:flex-start}.bh142BoatRow{grid-template-columns:44px 1fr 1fr}}
+</style>
 </body>
 </html>

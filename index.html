@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.126</div>
+<div id="bhTopVersion">Vol.127</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.126</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.127</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7169,7 +7169,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.126: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.127: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7222,7 +7222,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.126: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.127: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7244,7 +7244,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.126: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.127: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7252,7 +7252,7 @@ window.bhRenderOddsPopularity=function(){
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
-  // Vol.126 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
+  // Vol.127 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
   let mainTheoryExtra118=null;
   const mainBaseKeys118=new Set(main10.map(x=>x.key));
   const rowByKey118=new Map(scored.map(x=>[x.key,x]));
@@ -7275,7 +7275,7 @@ window.bhRenderOddsPopularity=function(){
   }
   if(mainTheoryExtra118)main10.push(mainTheoryExtra118);
 
-  // Vol.126 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
+  // Vol.127 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
   // 前付け/進入変更時は艇番ではなく進入コースへ置換して同じ並び判定を行う。
   const impossiblePattern122=new Set(['2-4-5','2-4-6','2-5-3','2-5-4','2-5-6','2-6-3','2-6-4','2-6-5','3-5-6','3-6-2','3-6-4','3-6-5','4-2-6','4-3-6','4-6-2','4-6-3','5-2-6','5-3-4','5-3-6','5-6-3','6-3-2','6-3-4','6-3-5','6-4-2','6-4-3','6-4-5','6-5-2','6-5-3','6-5-4']);
   const coursePatternKey122=(legs)=>{
@@ -7287,15 +7287,15 @@ window.bhRenderOddsPopularity=function(){
 
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.126 本命側の「切り候補」は穴目へ復活させない。
+  // Vol.127 本命側の「切り候補」は穴目へ復活させない。
   const cutKeys119=new Set(scored.filter(x=>x.pop>Math.ceil(scored.length*0.60)).map(x=>x.key));
-  // Vol.126: 人気上位でも本命選考から落とした目は穴目へ復活させない。
+  // Vol.127: 人気上位でも本命選考から落とした目は穴目へ復活させない。
   const mainRejected120=new Set(scored.filter(x=>
     !mainKeys.has(x.key) && (x.pop<=10 || Number(x.hs||0)>=70 || Number(x.hunterStrength||0)>=70)
   ).map(x=>x.key));
   const holeBlocked120=new Set([...cutKeys119,...mainRejected120]);
 
-  // Vol.126 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
+  // Vol.127 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
   // 出目理論：頭X → 相手軸は「1コース」と「Xの1つ後ろのコース」。
   // 2→3 / 3→4 / 4→5 / 5→6 / 6→2。○は頭候補ランキング上位艇。
   const course113=(b)=>Number(window.course?.(Number(b))||Number(b));
@@ -7337,7 +7337,7 @@ window.bhRenderOddsPopularity=function(){
   const holePool113=[];
   const used113=new Set(mainKeys);
 
-  // Vol.126 穴目ロジックの最優先固定目。
+  // Vol.127 穴目ロジックの最優先固定目。
   // 本命の「1着-2着」の並びが指定ペアなら、対応する3着を必ず穴候補へ入れる。
   // 例：本命1が 2-3-6 なら、2-3-4 を最優先で穴目へ。
   const fixedPair121={
@@ -7416,7 +7416,7 @@ window.bhRenderOddsPopularity=function(){
     });
   }
 
-  // Vol.126 穴目だけの「迷った時の最終補充」。
+  // Vol.127 穴目だけの「迷った時の最終補充」。
   // 本命ロジックには一切触れない。既存の本命/穴と重複した目は入れない。
   if(holePool113.length<10){
     const fallback115=[
@@ -8075,7 +8075,7 @@ function makeTickets111(){
     t=t.map(x=>({...x,legs:Array.isArray(x?.legs)?x.legs.map(Number):[]}));
     if(typeof window.bhV3Allocate==='function')window.bhV3Allocate(t);
     return t;
-  }catch(e){console.warn('Vol126 ticket snapshot',e);return[]}
+  }catch(e){console.warn('Vol127 ticket snapshot',e);return[]}
 }
 
 function saveAnalysis111(){
@@ -8086,7 +8086,7 @@ function saveAnalysis111(){
     const outlook=currentOutlook111();
     window.bhLastOutlook=outlook;
     window.bhSavePredictionSnapshot?.(tickets,outlook);
-  }catch(e){console.warn('Vol126 snapshot save',e)}
+  }catch(e){console.warn('Vol127 snapshot save',e)}
 }
 
 function attachOdds111(){
@@ -8109,7 +8109,7 @@ function attachOdds111(){
     const a=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
     a[[day,v,r].join('|')]=d;
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(a));
-  }catch(e){console.warn('Vol126 odds attach',e)}
+  }catch(e){console.warn('Vol127 odds attach',e)}
 }
 
 // AI解析完了時に、その時点の買い目・買う/見・見通しを必ずレース別保存。
@@ -8218,13 +8218,14 @@ function detailHTML116(v){
       <td>${String(row.day||'').slice(5).replace('-','/')}</td>
       <td>${row.race}R</td>
       <td class="bh125Result">${result}</td>
+      <td class="bh127OddsCell">${confirmedOdds127(row)}</td>
       <td><span class="bh125Judge ${mj.cls}">${mj.mark}</span>${mj.hit?`<small>${mj.hit}</small>`:''}</td>
       <td><span class="bh125Judge ${hj.cls}">${hj.mark}</span>${hj.hit?`<small>${hj.hit}</small>`:''}</td>
     </tr>`;
   }).join('');
   return `<div class="bh125DetailTitle">直近の買い目結果｜この画面で出した本命・穴目を○×確認</div>
     <div class="bh116RaceWrap bh125DetailWrap"><table class="bh116RaceTable bh125DetailTable">
-      <thead><tr><th>日付</th><th>R</th><th>結果</th><th>本命</th><th>穴目</th></tr></thead>
+      <thead><tr><th>日付</th><th>R</th><th>結果</th><th>確定オッズ</th><th>本命</th><th>穴目</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>`;
 }
@@ -8265,12 +8266,36 @@ function metric116(label,h,n,extra=''){
   return `<div class="bh116Metric"><small>${label}</small><b>${pct(h,n)}</b><div class="sub">${n?`${h}/${n}`:'0件'}${extra?`｜${extra}`:''}</div></div>`;
 }
 function raceCell116(h,n){return `<span class="bh116Rate">${pct(h,n)}</span><span class="bh116N">${n?`${h}/${n}`:'0件'}</span>`}
+function latestRaceRow127(v,r){
+  return rows116()
+    .filter(x=>Number(x.venue)===Number(v)&&Number(x.race)===Number(r))
+    .sort((a,b)=>String(b.day||'').localeCompare(String(a.day||''))||Number(b.time||0)-Number(a.time||0))[0]||null;
+}
+function confirmedOdds127(row){
+  const o=Number(row?.odds||0);
+  if(o>0)return `${o.toFixed(1)}倍`;
+  const p=Number(row?.payout||0);
+  return p>0?`${(p/100).toFixed(1)}倍`:'-';
+}
 function venueHTML116(v,g){
   const a=g.all;
   let body='';
   for(let r=1;r<=12;r++){
     const x=g.races.get(r)||freshStat116();
-    body+=`<tr><td>${r}R</td><td>${raceCell116(x.h1,x.h1n)}</td><td>${raceCell116(x.h2,x.h2n)}</td><td>${raceCell116(x.m,x.mn)}</td><td>${raceCell116(x.h,x.hn)}</td><td>${raceCell116(x.t2,x.tn)}</td><td>${raceCell116(x.t3,x.tn)}</td></tr>`;
+    const rr127=latestRaceRow127(v,r);
+    const result127=rr127?.result||'-';
+    const odds127=confirmedOdds127(rr127);
+    body+=`<tr>
+      <td>${r}R</td>
+      <td class="bh127ResultCell">${result127}</td>
+      <td class="bh127OddsCell">${odds127}</td>
+      <td>${raceCell116(x.h1,x.h1n)}</td>
+      <td>${raceCell116(x.h2,x.h2n)}</td>
+      <td>${raceCell116(x.m,x.mn)}</td>
+      <td>${raceCell116(x.h,x.hn)}</td>
+      <td>${raceCell116(x.t2,x.tn)}</td>
+      <td>${raceCell116(x.t3,x.tn)}</td>
+    </tr>`;
   }
   return `<section class="bh116Venue" data-v="${v}">
     <div class="bh116VenueHead">
@@ -8285,7 +8310,7 @@ function venueHTML116(v,g){
       <div class="bh116Metric"><small>ねじれHUNTER上げ穴艇</small><b>2連対 ${pct(a.t2,a.tn)} / 3連対 ${pct(a.t3,a.tn)}</b><div class="sub">${a.tn?`対象 ${a.tn}艇`:'対象なし'}</div></div>
     </div>
     <div class="bh116RaceWrap"><table class="bh116RaceTable">
-      <thead><tr><th>R</th><th>頭候補1</th><th>頭候補2</th><th>本命</th><th>穴目</th><th>ねじれ2連対</th><th>ねじれ3連対</th></tr></thead>
+      <thead><tr><th>R</th><th>結果</th><th>確定オッズ</th><th>頭候補1</th><th>頭候補2</th><th>本命</th><th>穴目</th><th>ねじれ2連対</th><th>ねじれ3連対</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
     ${detailHTML116(v)}
@@ -8295,7 +8320,7 @@ function render116(){
   const grid=$('bhResultDashGrid'), summary=$('bhResultDashSummary');
   if(!grid||!summary)return;
   const g=group116(), venues=[...g.keys()].sort((a,b)=>a-b);
-  summary.innerHTML=`<div class="bh116Intro"><b>現行ロジック専用・累計結果確認</b><br>頭候補1/2＝1着的中率。本命・穴目＝3連単の完全一致。ねじれHUNTER上げ穴艇＝「世間評価よりHUNTER評価が上がり、穴目に実際に使った艇」の2連対率・3連対率。各場のリセットは、その場の現在までの集計だけを0からやり直します。</div>`;
+  summary.innerHTML=`<div class="bh116Intro"><b>現行ロジック専用・累計結果確認</b><br>各Rにレース結果と確定3連単オッズを表示。頭候補1/2＝1着的中率。本命・穴目＝3連単の完全一致。ねじれHUNTER上げ穴艇＝「世間評価よりHUNTER評価が上がり、穴目に実際に使った艇」の2連対率・3連対率。各場のリセットは、その場の現在までの集計だけを0からやり直します。</div>`;
   grid.innerHTML=venues.length?venues.map(v=>venueHTML116(v,g.get(v))).join(''):'<div class="bh116Empty">現行ロジックで結果確定したレースがまだありません。</div>';
 }
 function resetVenue116(v){
@@ -8435,7 +8460,7 @@ function repairCurrentDecision126(){
       window.bhSaveSnapshotStore?.(snaps);
     }
     return true;
-  }catch(e){console.warn('Vol126 decision repair',e);return false}
+  }catch(e){console.warn('Vol127 decision repair',e);return false}
 }
 
 // Every odds render now stores the shortlist against the actual selected race immediately.
@@ -8464,6 +8489,17 @@ window.BH_VOL126={
 };
 })();
 </script>
+
+
+<style id="bh-vol127-result-final-odds-css">
+.bh127ResultCell{font-weight:1000;color:#fff;white-space:nowrap;font-size:12px}
+.bh127OddsCell{font-weight:1000;color:#ffd75d;white-space:nowrap;font-size:11px}
+.bh116RaceTable{min-width:900px}
+.bh125DetailTable{min-width:610px!important}
+@media(max-width:600px){
+  .bh116RaceWrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+</style>
 
 </body>
 </html>

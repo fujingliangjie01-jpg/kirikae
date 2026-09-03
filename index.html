@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.140</div>
+<div id="bhTopVersion">Vol.141</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.140</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.141</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7256,7 +7256,7 @@ window.bhRenderOddsPopularity=function(){
     const hs=(7-h1)*3+(7-h2)*2+(7-h3);
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
-  // Vol.140: ねじれ判定艇は本命・穴目とも1着（頭）へ絶対に採用しない。
+  // Vol.141: ねじれ判定艇は本命・穴目とも1着（頭）へ絶対に採用しない。
   // 2着・3着での採用は許可する。
   const twistHeadBlocked139=new Set(
     [...holes,...overs].map(x=>Number(x.boat)).filter(Boolean)
@@ -7305,7 +7305,7 @@ window.bhRenderOddsPopularity=function(){
   }
   main10=main10.filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))).slice(0,10);
 
-  // Vol.140 本命不足補充。ねじれ艇を頭から除外した通常評価順だけで最大10点まで補充。
+  // Vol.141 本命不足補充。ねじれ艇を頭から除外した通常評価順だけで最大10点まで補充。
   const mainUsed128=new Set(main10.map(x=>x.key));
   const normalFill128=[...scored]
     .filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))&&headAllowed139(x)&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
@@ -7368,7 +7368,7 @@ window.bhRenderOddsPopularity=function(){
   const holePool113=[];
   const used113=new Set(mainKeys);
 
-  // Vol.140 追加出目理論。条件が本命内に成立した場合は穴目の最優先候補として入れる。
+  // Vol.141 追加出目理論。条件が本命内に成立した場合は穴目の最優先候補として入れる。
   // ねじれ頭禁止・固定除外は最優先で維持。本命に同じ目が既にある場合は重複追加しない。
   const extraTheory140=[
     {match:'2-1',keys:['2-1-3','2-1-4','2-1-5','2-1-6'],label:'2-1展開'},
@@ -7548,6 +7548,37 @@ window.bhRenderOddsPopularity=function(){
   const decisionDay126=(typeof bhTodayKey==='function'?bhTodayKey():new Date().toISOString().slice(0,10));
   const decisionVenue126=Number(document.getElementById('venue')?.value||0);
   const decisionRace126=Number(document.getElementById('race')?.value||0);
+  // Vol.141: 資金配分AI。買い目自体は消さず、実投資額だけを0円/100円単位で決定する。
+  const fundBudget141=Math.max(100,Math.floor(Number(localStorage.getItem('BOAT_HUNTER_FUND_BUDGET_V141')||1200)/100)*100);
+  const hunterRank141=hunterOrder109.map(x=>Number(x.boat));
+  const marketHeadRank141=firstRank.map(Number);
+  const rankMatch141=[0,1,2].filter(i=>marketHeadRank141[i]&&marketHeadRank141[i]===hunterRank141[i]).length;
+  const targetCount141=rankMatch141>=3?2:rankMatch141===2?3:rankMatch141===1?5:7;
+  const fundPool141=[
+    ...main10.map((x,i)=>({...x,fundType:'main',fundRank:i+1,fundConfidence:120-i*5})),
+    ...hole10.map((x,i)=>({...x,fundType:'hole',fundRank:i+1,fundConfidence:78-i*4}))
+  ].filter((x,i,a)=>a.findIndex(y=>y.key===x.key)===i)
+   .sort((a,b)=>b.fundConfidence-a.fundConfidence||a.pop-b.pop||b.odds-a.odds);
+  const fundAlloc141={}; let fundUsed141=0;
+  // まず「的中時に総予算を上回れる」最低額を上位候補へ配分。
+  for(const x of fundPool141){
+    if(Object.keys(fundAlloc141).length>=targetCount141)break;
+    const need=Math.max(100,Math.ceil((fundBudget141+100)/(Math.max(.1,Number(x.odds))*100))*100);
+    if(need<=fundBudget141-fundUsed141){fundAlloc141[x.key]=need;fundUsed141+=need;}
+  }
+  // 候補不足時は100円で補い、残金は信頼上位へ100円ずつ厚くする。
+  for(const x of fundPool141){
+    if(Object.keys(fundAlloc141).length>=targetCount141||fundUsed141+100>fundBudget141)break;
+    if(!fundAlloc141[x.key]){fundAlloc141[x.key]=100;fundUsed141+=100;}
+  }
+  const active141=fundPool141.filter(x=>fundAlloc141[x.key]>0).slice(0,targetCount141);
+  let ri141=0;
+  while(active141.length&&fundUsed141+100<=fundBudget141){
+    const x=active141[ri141%active141.length];fundAlloc141[x.key]+=100;fundUsed141+=100;ri141++;
+  }
+  const fundItems141=fundPool141.map(x=>({key:x.key,amount:Number(fundAlloc141[x.key]||0),odds:Number(x.odds||0),type:x.fundType,rank:x.fundRank}));
+  const fundProfit141=(key,odds)=>{const a=Number(fundAlloc141[key]||0);return a?Math.round(a*Number(odds||0)-fundUsed141):0};
+
   const decision={
     day:decisionDay126,
     venue:decisionVenue126,
@@ -7558,7 +7589,8 @@ window.bhRenderOddsPopularity=function(){
     hole:hole10.map((x,i)=>({key:x.key,rank:i+1,type:x.holeType||'',reason:x.holeReason||''})),
     twistHoleBoats:twistHoleBoats116,
     twistUpBoats:[...twistUpBoats116],
-    cut:[...cutKeys],holeBasis:reason108||'',buy:null
+    cut:[...cutKeys],holeBasis:reason108||'',
+    buy:{version:141,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,items:fundItems141}
   };
   window.BH_ODDS_DECISION_V108=decision;
   try{
@@ -7574,6 +7606,7 @@ window.bhRenderOddsPopularity=function(){
         hole:(decision.hole||[]).map(x=>({...x})),
         twistHoleBoats:[...(decision.twistHoleBoats||[])],
         twistUpBoats:[...(decision.twistUpBoats||[])],
+        buy:decision.buy?JSON.parse(JSON.stringify(decision.buy)):null,
         savedAt:Date.now()
       };
       const rk134=Object.keys(resultPickStore134);
@@ -7595,24 +7628,30 @@ window.bhRenderOddsPopularity=function(){
     const reason=x.mainTheoryExtra
       ?String(x.mainTheoryReason||'出目理論による追加')
       :`HUNTER本命評価｜人気${x.pop}位`;
-    return `<div class="bh117Hole bh123MainCard">
+    const amt141=Number(fundAlloc141[x.key]||0),profit141=fundProfit141(x.key,x.odds);
+    return `<div class="bh117Hole bh123MainCard ${amt141?'bh141FundOn':'bh141FundZero'}">
       <div class="bh117HoleTop bh123MainTop">
         <span class="bh117HoleNo bh123MainNo">${label}</span>
         <span class="bh117HoleBet">${x.key}</span>
         <span class="bh117HoleOdds">${x.odds.toFixed(1)}倍</span>
         <span class="bh117HolePop">人気${x.pop}位</span>
+        <span class="bh141Fund ${amt141?'on':'zero'}">${amt141?amt141+'円':'0円'}</span>
+        ${amt141?`<span class="bh141Profit">的中時 ${profit141>=0?'+':''}${profit141.toLocaleString()}円</span>`:''}
       </div>
     </div>`;
   }).join('');
   const holePickHTML=hole10.length
     ?hole10.map((x,i)=>{
       const reason=String(x.holeReason||'').replace(/^固定出目｜/,'').replace(/^[^｜]+｜/,'');
-      return `<div class="bh117Hole">
+      const amt141=Number(fundAlloc141[x.key]||0),profit141=fundProfit141(x.key,x.odds);
+      return `<div class="bh117Hole ${amt141?'bh141FundOn':'bh141FundZero'}">
         <div class="bh117HoleTop">
           <span class="bh117HoleNo">穴${i+1}</span>
           <span class="bh117HoleBet">${x.key}</span>
           <span class="bh117HoleOdds">${x.odds.toFixed(1)}倍</span>
           <span class="bh117HolePop">人気${x.pop}位</span>
+          <span class="bh141Fund ${amt141?'on':'zero'}">${amt141?amt141+'円':'0円'}</span>
+          ${amt141?`<span class="bh141Profit">的中時 ${profit141>=0?'+':''}${profit141.toLocaleString()}円</span>`:''}
         </div>
       </div>`;
     }).join('')
@@ -7646,6 +7685,11 @@ window.bhRenderOddsPopularity=function(){
     </div>
 
     ${hunterFinalHTML109}
+    <div class="bh141FundSummary">
+      <div><b>💰 資金配分AI</b><span>予算 ${fundBudget141.toLocaleString()}円</span></div>
+      <div class="bh141FundMeta">世間×HUNTER 頭順位一致 ${rankMatch141}/3｜実投資 ${fundUsed141.toLocaleString()}円｜${Object.values(fundAlloc141).filter(Number).length}点集中${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
+      <div class="bh141BudgetBtns">${[1000,1200,1500,2000].map(v=>`<button type="button" onclick="localStorage.setItem('BOAT_HUNTER_FUND_BUDGET_V141','${v}');window.bhRenderOddsPopularity()" class="${fundBudget141===v?'active':''}">${v.toLocaleString()}円</button>`).join('')}</div>
+    </div>
     <div class="bh123PickColumns">
       <div class="bh105PickBox bh123PickCol bh123MainCol">
         <div class="bh105PickTitle">🎯 本命候補 最大10点</div>
@@ -8303,6 +8347,12 @@ function judge116(list,result,label=''){
   const item=list[idx],rank=Number((typeof item==='object'&&item?.rank)||idx+1);
   return {mark:label?`${label}${rank}`:'的中',cls:'bh125JudgeHit',hit:(typeof item==='string'?item:item?.key)||result,rank};
 }
+function fundJudge141(d,result){
+  const items=Array.isArray(d?.buy?.items)?d.buy.items:[];
+  if(!items.length)return {mark:'判定なし',cls:'bh125JudgeNone',amount:0};
+  const x=items.find(v=>v?.key===result&&Number(v?.amount)>0);
+  return x?{mark:`🏆 ${Number(x.amount).toLocaleString()}円`,cls:'bh141Gold',amount:Number(x.amount)}:{mark:'外れ',cls:'bh125JudgeMiss',amount:0};
+}
 function detailRows116(v){
   return rows116()
     .filter(row=>String(row.venue)===String(v))
@@ -8314,7 +8364,7 @@ function detailHTML116(v){
   if(!rows.length)return '';
   const body=rows.map(row=>{
     const d=decisionFor116(row),result=String(row.result||'');
-    const mj=judge116(d?.main,result,'本命'),hj=judge116(d?.hole,result,'穴目');
+    const mj=judge116(d?.main,result,'本命'),hj=judge116(d?.hole,result,'穴目'),fj=fundJudge141(d,result);
     return `<tr>
       <td>${String(row.day||'').slice(5).replace('-','/')}</td>
       <td>${row.race}R</td>
@@ -8322,11 +8372,12 @@ function detailHTML116(v){
       <td class="bh127OddsCell">${confirmedOdds127(row)}</td>
       <td><span class="bh125Judge ${mj.cls}">${mj.mark}</span>${mj.hit?`<small>${mj.hit}</small>`:''}</td>
       <td><span class="bh125Judge ${hj.cls}">${hj.mark}</span>${hj.hit?`<small>${hj.hit}</small>`:''}</td>
+      <td><span class="bh125Judge ${fj.cls}">${fj.mark}</span></td>
     </tr>`;
   }).join('');
   return `<div class="bh125DetailTitle">直近の買い目結果｜この画面で出した本命・穴目を○×確認</div>
     <div class="bh116RaceWrap bh125DetailWrap"><table class="bh116RaceTable bh125DetailTable">
-      <thead><tr><th>日付</th><th>R</th><th>結果</th><th>確定オッズ</th><th>本命</th><th>穴目</th></tr></thead>
+      <thead><tr><th>日付</th><th>R</th><th>結果</th><th>確定オッズ</th><th>本命</th><th>穴目</th><th>資金</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>`;
 }
@@ -8406,12 +8457,14 @@ function venueHTML116(v,g){
     const d134=rr127?decisionFor116(rr127):null;
     const mj134=rr127?judge116(d134?.main,result127,'本命'):{mark:'-',cls:'bh125JudgeNone',hit:''};
     const hj134=rr127?judge116(d134?.hole,result127,'穴目'):{mark:'-',cls:'bh125JudgeNone',hit:''};
+    const fj141=rr127?fundJudge141(d134,result127):{mark:'-',cls:'bh125JudgeNone'};
     body+=`<tr>
       <td>${r}R</td>
       <td class="bh127ResultCell">${result127}</td>
       <td class="bh127OddsCell">${odds127}</td>
       <td><span class="bh134MiniJudge ${mj134.cls}">${mj134.mark}</span></td>
       <td><span class="bh134MiniJudge ${hj134.cls}">${hj134.mark}</span></td>
+      <td><span class="bh134MiniJudge ${fj141.cls}">${fj141.mark}</span></td>
     </tr>`;
   }
   return `<section class="bh116Venue" data-v="${v}">
@@ -8427,7 +8480,7 @@ function venueHTML116(v,g){
       <div class="bh116Metric"><small>ねじれHUNTER上げ穴艇</small><b>2連対 ${pct(a.t2,a.tn)} / 3連対 ${pct(a.t3,a.tn)}</b><div class="sub">${a.tn?`対象 ${a.tn}艇`:'対象なし'}</div></div>
     </div>
     <div class="bh116RaceWrap"><table class="bh116RaceTable">
-      <thead><tr><th>R</th><th>結果</th><th>確定オッズ</th><th>本命</th><th>穴目</th></tr></thead>
+      <thead><tr><th>R</th><th>結果</th><th>確定オッズ</th><th>本命</th><th>穴目</th><th>資金</th></tr></thead>
       <tbody>${body}</tbody>
     </table></div>
     ${detailHTML116(v)}
@@ -9139,6 +9192,37 @@ document.addEventListener('click',e=>{if(e.target?.closest?.('#bhResultDashOpen'
 const panel=$('bhResultDashPanel');if(panel)new MutationObserver(()=>{if(panel.classList.contains('open')&&!$('bh138CompactBox'))mount()}).observe(panel,{childList:true,subtree:false});
 setTimeout(mount,0);
 window.BH_VOL139={version:139,dailyArchive:true,compactResult:true,hiddenDetail:true,hitPositionStats:true,twistHeadBlocked:true};
+})();
+</script>
+
+
+<style id="bh-vol141-fund-css">
+.bh141FundSummary{margin:12px 0;padding:12px;border:1px solid rgba(255,215,0,.38);border-radius:14px;background:linear-gradient(180deg,rgba(72,54,5,.42),rgba(20,17,9,.72))}.bh141FundSummary>div:first-child{display:flex;justify-content:space-between;gap:10px;align-items:center}.bh141FundSummary b{color:#ffd85a;font-size:15px}.bh141FundSummary span{font-weight:900}.bh141FundMeta{margin-top:5px;color:#d7c98f;font-size:11px;font-weight:800}.bh141BudgetBtns{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap}.bh141BudgetBtns button{border:1px solid #5d522d;background:#1c1b16;color:#bcb28e;border-radius:8px;padding:6px 9px;font-weight:900}.bh141BudgetBtns button.active{background:#d6a900;color:#161100;border-color:#ffd84f}.bh141Fund{font-weight:1000;border-radius:7px;padding:4px 7px;white-space:nowrap}.bh141Fund.on{background:#d6a900;color:#161100}.bh141Fund.zero{background:#26282d;color:#777}.bh141Profit{width:100%;font-size:10px;color:#e8cf70;font-weight:900;text-align:right}.bh141FundZero{opacity:.42}.bh141FundZero .bh117HoleBet{color:#a4a7ad}.bh141FundOn{box-shadow:0 0 0 1px rgba(255,215,0,.18),0 5px 16px rgba(0,0,0,.25)}
+.bh141Gold{background:linear-gradient(135deg,#fff1a6,#d6a900,#fff0a0)!important;color:#241800!important;border-color:#ffe46b!important;box-shadow:0 0 12px rgba(255,215,0,.28)}
+</style>
+<script id="bh-vol141-fund-result-js">
+(()=>{'use strict';
+const ARCH='BOAT_HUNTER_DAILY_STATS_V141';
+const load=(k,f={})=>{try{return JSON.parse(localStorage.getItem(k)||'null')||f}catch(e){return f}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const hasFund=(d,key)=>Array.isArray(d?.buy?.items)&&d.buy.items.some(x=>x.key===key&&Number(x.amount)>0);
+function fundStats(){
+ const rows=typeof window.bhResultRows116==='function'?window.bhResultRows116():(window.bhRecordedRows?.('all')||[]),by={};
+ for(const row of rows){if(!row?.day||!row?.result)continue;const d=(typeof decisionFor116==='function'?decisionFor116(row):null);if(!d?.buy?.items)continue;
+  const s=by[row.day]||(by[row.day]={n:0,h:0,invest:0,payout:0});s.n++;s.invest+=Number(d.buy.used||0);
+  const item=d.buy.items.find(x=>x.key===String(row.result)&&Number(x.amount)>0);if(item){s.h++;s.payout+=Math.round(Number(item.amount)*Number(row.odds||row.payout/100||item.odds||0));}
+ }
+ save(ARCH,by);return by;
+}
+function decorate(){
+ const box=document.getElementById('bh138CompactBox');if(!box)return;const by=fundStats(),today=new Date().toLocaleDateString('sv-SE'),s=by[today]||{n:0,h:0,invest:0,payout:0};
+ let x=document.getElementById('bh141FundResult');if(x)x.remove();
+ const rate=s.n?(s.h/s.n*100).toFixed(1)+'%':'-',roi=s.invest?(s.payout/s.invest*100).toFixed(1)+'%':'-';
+ box.insertAdjacentHTML('beforeend',`<div id="bh141FundResult" class="bh141FundSummary"><div><b>🏆 資金配分AI</b><span class="bh141Gold" style="padding:5px 9px;border-radius:8px">的中率 ${rate}</span></div><div class="bh141FundMeta">${s.h}/${s.n||0}R｜投資 ${s.invest.toLocaleString()}円｜払戻 ${s.payout.toLocaleString()}円｜回収率 ${roi}</div></div>`);
+ document.querySelectorAll('.bh116RaceTable tbody tr,.bh125DetailTable tbody tr').forEach(tr=>{const cells=tr.querySelectorAll('td');if(cells.length<3)return;const result=(cells[2]?.textContent||'').trim();if(!result)return;const txt=tr.textContent||'';if(/本命\d|穴目\d/.test(txt)){/* 通常的中は既存表示 */}});
+}
+const mo=new MutationObserver(()=>setTimeout(decorate,0));const p=document.getElementById('bhResultDashPanel');if(p)mo.observe(p,{childList:true,subtree:true});
+document.addEventListener('click',e=>{if(e.target?.closest?.('#bhResultDashOpen'))setTimeout(decorate,180)},true);setTimeout(decorate,300);
 })();
 </script>
 

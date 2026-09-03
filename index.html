@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.125</div>
+<div id="bhTopVersion">Vol.126</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.125</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.126</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7169,7 +7169,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.125: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.126: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7222,7 +7222,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.125: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.126: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7244,7 +7244,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.125: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.126: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7252,7 +7252,7 @@ window.bhRenderOddsPopularity=function(){
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
-  // Vol.125 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
+  // Vol.126 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
   let mainTheoryExtra118=null;
   const mainBaseKeys118=new Set(main10.map(x=>x.key));
   const rowByKey118=new Map(scored.map(x=>[x.key,x]));
@@ -7275,7 +7275,7 @@ window.bhRenderOddsPopularity=function(){
   }
   if(mainTheoryExtra118)main10.push(mainTheoryExtra118);
 
-  // Vol.125 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
+  // Vol.126 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
   // 前付け/進入変更時は艇番ではなく進入コースへ置換して同じ並び判定を行う。
   const impossiblePattern122=new Set(['2-4-5','2-4-6','2-5-3','2-5-4','2-5-6','2-6-3','2-6-4','2-6-5','3-5-6','3-6-2','3-6-4','3-6-5','4-2-6','4-3-6','4-6-2','4-6-3','5-2-6','5-3-4','5-3-6','5-6-3','6-3-2','6-3-4','6-3-5','6-4-2','6-4-3','6-4-5','6-5-2','6-5-3','6-5-4']);
   const coursePatternKey122=(legs)=>{
@@ -7287,15 +7287,15 @@ window.bhRenderOddsPopularity=function(){
 
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.125 本命側の「切り候補」は穴目へ復活させない。
+  // Vol.126 本命側の「切り候補」は穴目へ復活させない。
   const cutKeys119=new Set(scored.filter(x=>x.pop>Math.ceil(scored.length*0.60)).map(x=>x.key));
-  // Vol.125: 人気上位でも本命選考から落とした目は穴目へ復活させない。
+  // Vol.126: 人気上位でも本命選考から落とした目は穴目へ復活させない。
   const mainRejected120=new Set(scored.filter(x=>
     !mainKeys.has(x.key) && (x.pop<=10 || Number(x.hs||0)>=70 || Number(x.hunterStrength||0)>=70)
   ).map(x=>x.key));
   const holeBlocked120=new Set([...cutKeys119,...mainRejected120]);
 
-  // Vol.125 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
+  // Vol.126 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
   // 出目理論：頭X → 相手軸は「1コース」と「Xの1つ後ろのコース」。
   // 2→3 / 3→4 / 4→5 / 5→6 / 6→2。○は頭候補ランキング上位艇。
   const course113=(b)=>Number(window.course?.(Number(b))||Number(b));
@@ -7337,7 +7337,7 @@ window.bhRenderOddsPopularity=function(){
   const holePool113=[];
   const used113=new Set(mainKeys);
 
-  // Vol.125 穴目ロジックの最優先固定目。
+  // Vol.126 穴目ロジックの最優先固定目。
   // 本命の「1着-2着」の並びが指定ペアなら、対応する3着を必ず穴候補へ入れる。
   // 例：本命1が 2-3-6 なら、2-3-4 を最優先で穴目へ。
   const fixedPair121={
@@ -7416,7 +7416,7 @@ window.bhRenderOddsPopularity=function(){
     });
   }
 
-  // Vol.125 穴目だけの「迷った時の最終補充」。
+  // Vol.126 穴目だけの「迷った時の最終補充」。
   // 本命ロジックには一切触れない。既存の本命/穴と重複した目は入れない。
   if(holePool113.length<10){
     const fallback115=[
@@ -7472,10 +7472,13 @@ window.bhRenderOddsPopularity=function(){
   const twistHoleBoats116=[...new Set(
     hole10.flatMap(x=>x.legs||[]).map(Number).filter(b=>twistUpBoats116.has(b))
   )];
+  const decisionDay126=(typeof bhTodayKey==='function'?bhTodayKey():new Date().toISOString().slice(0,10));
+  const decisionVenue126=Number(document.getElementById('venue')?.value||0);
+  const decisionRace126=Number(document.getElementById('race')?.value||0);
   const decision={
-    day:(typeof selectedDate!=='undefined'?selectedDate:''),
-    venue:(typeof selectedVenue!=='undefined'?selectedVenue:null),
-    race:(typeof selectedRace!=='undefined'?selectedRace:null),
+    day:decisionDay126,
+    venue:decisionVenue126,
+    race:decisionRace126,
     odds:scored.map(x=>({key:x.key,pop:x.pop,odds:x.odds})),
     headCandidates:headCandidates116,
     main:main10.map((x,i)=>({key:x.key,rank:i+1,theoryExtra:!!x.mainTheoryExtra,reason:x.mainTheoryReason||''})),
@@ -8072,7 +8075,7 @@ function makeTickets111(){
     t=t.map(x=>({...x,legs:Array.isArray(x?.legs)?x.legs.map(Number):[]}));
     if(typeof window.bhV3Allocate==='function')window.bhV3Allocate(t);
     return t;
-  }catch(e){console.warn('Vol125 ticket snapshot',e);return[]}
+  }catch(e){console.warn('Vol126 ticket snapshot',e);return[]}
 }
 
 function saveAnalysis111(){
@@ -8083,7 +8086,7 @@ function saveAnalysis111(){
     const outlook=currentOutlook111();
     window.bhLastOutlook=outlook;
     window.bhSavePredictionSnapshot?.(tickets,outlook);
-  }catch(e){console.warn('Vol125 snapshot save',e)}
+  }catch(e){console.warn('Vol126 snapshot save',e)}
 }
 
 function attachOdds111(){
@@ -8106,7 +8109,7 @@ function attachOdds111(){
     const a=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
     a[[day,v,r].join('|')]=d;
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(a));
-  }catch(e){console.warn('Vol125 odds attach',e)}
+  }catch(e){console.warn('Vol126 odds attach',e)}
 }
 
 // AI解析完了時に、その時点の買い目・買う/見・見通しを必ずレース別保存。
@@ -8391,6 +8394,76 @@ window.BH_VOL116={version:116,resultReviewRebuilt:true,venueRaceStats:true,venue
 .bh125JudgeMiss{background:#351414;border:1px solid #a84646;color:#ffaaaa}
 .bh125JudgeNone{background:#1a2227;border:1px solid #46545c;color:#82929a}
 </style>
+
+
+<script id="bh-vol126-result-archive-key-repair">
+(()=>{
+'use strict';
+const ARCH='BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108';
+
+function currentKey126(){
+  const day=window.bhTodayKey?.()||new Date().toISOString().slice(0,10);
+  const venue=Number(document.getElementById('venue')?.value||0);
+  const race=Number(document.getElementById('race')?.value||0);
+  return day&&venue&&race?{day,venue,race,key:[day,venue,race].join('|')}:null;
+}
+
+function repairCurrentDecision126(){
+  try{
+    const k=currentKey126(); if(!k)return false;
+    let d=window.BH_ODDS_DECISION_V108||JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_V108')||'null');
+    if(!d||!Array.isArray(d.main)||!Array.isArray(d.hole))return false;
+
+    // Only repair blank/invalid IDs. Never move a valid decision from another race.
+    const validDay=/^\d{4}-\d{2}-\d{2}$/.test(String(d.day||''));
+    const validVenue=Number(d.venue)>=1&&Number(d.venue)<=24;
+    const validRace=Number(d.race)>=1&&Number(d.race)<=12;
+    if(validDay&&validVenue&&validRace)return false;
+
+    d={...d,day:k.day,venue:k.venue,race:k.race,savedAt:Date.now()};
+    window.BH_ODDS_DECISION_V108=d;
+    localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_V108',JSON.stringify(d));
+
+    const a=JSON.parse(localStorage.getItem(ARCH)||'{}');
+    a[k.key]=d;
+    if(a['||'])delete a['||'];
+    localStorage.setItem(ARCH,JSON.stringify(a));
+
+    const snaps=window.bhSnapshotStore?.()||{};
+    if(snaps[k.key]){
+      snaps[k.key].oddsDecision=d;
+      window.bhSaveSnapshotStore?.(snaps);
+    }
+    return true;
+  }catch(e){console.warn('Vol126 decision repair',e);return false}
+}
+
+// Every odds render now stores the shortlist against the actual selected race immediately.
+const oldOdds126=window.bhRenderOddsPopularity;
+if(typeof oldOdds126==='function'){
+  window.bhRenderOddsPopularity=function(){
+    const r=oldOdds126.apply(this,arguments);
+    setTimeout(repairCurrentDecision126,0);
+    return r;
+  };
+}
+
+// Before opening/updating results, repair a legacy blank-key current decision if present.
+const oldOpen126=window.bhOpenResultDashboard;
+if(typeof oldOpen126==='function'){
+  window.bhOpenResultDashboard=function(){
+    repairCurrentDecision126();
+    return oldOpen126.apply(this,arguments);
+  };
+}
+
+window.BH_VOL126={
+  version:126,
+  resultArchiveRaceKeyFixed:true,
+  shortlistResultAggregation:true
+};
+})();
+</script>
 
 </body>
 </html>

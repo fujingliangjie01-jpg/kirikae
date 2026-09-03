@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.137</div>
+<div id="bhTopVersion">Vol.138</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.137</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.138</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -8964,6 +8964,122 @@ if(content){new MutationObserver(refreshReady137).observe(content,{childList:tru
 document.addEventListener('DOMContentLoaded',refreshReady137);
 setTimeout(refreshReady137,0);
 window.BH_VOL137={version:137,mainMax:10,holeMax:8,goBetButtonFixed:true};
+})();
+</script>
+
+
+<style id="bh-vol138-compact-result-css">
+/* Vol.138: 結果確認は普段は必要最低限。詳細は隠しボタンで展開。 */
+.bh138CompactBox{margin:10px 0 4px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(10,12,16,.72)}
+.bh138CompactTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bh138CompactTitle{font-size:13px;font-weight:900;color:#aeb7c5}
+.bh138CompactDate{font-size:11px;color:#7f8997;margin-top:2px}
+.bh138MiniStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+.bh138MiniStat{min-width:0;padding:9px 5px;border-radius:10px;background:#171a20;text-align:center}
+.bh138MiniStat small{display:block;font-size:10px;color:#8f98a6;font-weight:800;white-space:nowrap}
+.bh138MiniStat b{display:block;margin-top:3px;font-size:20px;line-height:1.1;color:#fff}
+.bh138MiniStat .sub{margin-top:2px;font-size:9px;color:#737d8a}
+.bh138DetailBtn{width:100%;margin-top:9px;padding:10px 12px;border:1px solid #3c4655;border-radius:10px;background:#20252d;color:#dce4ef;font-size:13px;font-weight:900}
+.bh138History{display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.bh138History.open{display:block}
+.bh138HistoryTitle{font-size:12px;font-weight:900;color:#bbc5d2;margin-bottom:7px}
+.bh138DayRow{display:grid;grid-template-columns:72px repeat(3,minmax(0,1fr));gap:5px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11px}
+.bh138DayRow:last-child{border-bottom:0}
+.bh138DayRow .date{font-weight:900;color:#dce4ef}
+.bh138DayRow span:not(.date){text-align:center;color:#aeb7c5}
+.bh138DayRow b{display:block;color:#fff;font-size:12px}
+/* 詳細を閉じている間は従来の大量データを隠す */
+#bhResultDashPanel.bh138CompactMode:not(.bh138ShowFull) #bhResultDashSummary,
+#bhResultDashPanel.bh138CompactMode:not(.bh138ShowFull) #bhResultDashGrid,
+#bhResultDashPanel.bh138CompactMode:not(.bh138ShowFull) #bhResultDashLegacyStats{display:none!important}
+#bhResultDashPanel.bh138CompactMode.bh138ShowFull #bhResultDashSummary,
+#bhResultDashPanel.bh138CompactMode.bh138ShowFull #bhResultDashGrid{display:block}
+@media(max-width:480px){
+ .bh138MiniStat b{font-size:18px}
+ .bh138DayRow{grid-template-columns:64px repeat(3,minmax(0,1fr));font-size:10px}
+}
+</style>
+<script id="bh-vol138-compact-result-js">
+(()=>{
+'use strict';
+const ARCH='BOAT_HUNTER_DAILY_STATS_V138';
+const PICKS='BOAT_HUNTER_RESULT_PICKS_V134';
+const ODDS_ARCH='BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108';
+const $=id=>document.getElementById(id);
+const loadJSON=(k,f={})=>{try{return JSON.parse(localStorage.getItem(k)||'null')||f}catch(e){return f}};
+const saveJSON=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const pct=(h,n)=>n?`${(h/n*100).toFixed(1)}%`:'-';
+const has=(list,key)=>Array.isArray(list)&&list.some(x=>(typeof x==='string'?x:x?.key)===key);
+function decision(row){
+  const key=[String(row.day||''),Number(row.venue||0),Number(row.race||0)].join('|');
+  const direct=loadJSON(PICKS,{}); if(direct[key])return direct[key];
+  try{const snap=window.bhSnapshotStore?.()?.[row.key];if(snap?.oddsDecision)return snap.oddsDecision}catch(e){}
+  return loadJSON(ODDS_ARCH,{})[key]||null;
+}
+function dayStatsFromRows(){
+  const rows=typeof window.bhResultRows116==='function'?window.bhResultRows116():(window.bhRecordedRows?.('all')||[]);
+  const by={};
+  for(const row of rows){
+    if(!row?.day||!row?.result)continue;
+    const d=decision(row); if(!d)continue;
+    const s=by[row.day]||(by[row.day]={races:0,mn:0,m:0,hn:0,h:0,cn:0,c:0,updatedAt:0});
+    s.races++;
+    const result=String(row.result);
+    const m=Array.isArray(d.main)&&d.main.length;
+    const h=Array.isArray(d.hole)&&d.hole.length;
+    if(m){s.mn++;if(has(d.main,result))s.m++}
+    if(h){s.hn++;if(has(d.hole,result))s.h++}
+    if(m||h){s.cn++;if(has(d.main,result)||has(d.hole,result))s.c++}
+    s.updatedAt=Math.max(s.updatedAt,Number(row.time||0),Date.now());
+  }
+  return by;
+}
+function persistArchive(){
+  const old=loadJSON(ARCH,{}), live=dayStatsFromRows();
+  Object.entries(live).forEach(([day,s])=>old[day]={...old[day],...s});
+  saveJSON(ARCH,old);return old;
+}
+function localDay(){
+  const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function compactHTML(){
+  const arc=persistArchive(),today=localDay(),s=arc[today]||{races:0,mn:0,m:0,hn:0,h:0,cn:0,c:0};
+  const days=Object.keys(arc).sort((a,b)=>b.localeCompare(a)).slice(0,30);
+  const hist=days.length?days.map(day=>{const x=arc[day];return `<div class="bh138DayRow"><span class="date">${day.slice(5).replace('-','/')}</span><span>本命<b>${pct(x.m,x.mn)}</b></span><span>穴目<b>${pct(x.h,x.hn)}</b></span><span>総合<b>${pct(x.c,x.cn)}</b></span></div>`}).join(''):'<div class="bhResultHistoryEmpty">保存済みの日別成績はまだありません。</div>';
+  return `<div id="bh138CompactBox" class="bh138CompactBox">
+    <div class="bh138CompactTop"><div><div class="bh138CompactTitle">📊 今日の成績</div><div class="bh138CompactDate">${today.replaceAll('-','/')}｜${s.races||0}R確定</div></div></div>
+    <div class="bh138MiniStats">
+      <div class="bh138MiniStat"><small>本命</small><b>${pct(s.m,s.mn)}</b><div class="sub">${s.mn?`${s.m}/${s.mn}`:'0件'}</div></div>
+      <div class="bh138MiniStat"><small>穴目</small><b>${pct(s.h,s.hn)}</b><div class="sub">${s.hn?`${s.h}/${s.hn}`:'0件'}</div></div>
+      <div class="bh138MiniStat"><small>総合</small><b>${pct(s.c,s.cn)}</b><div class="sub">${s.cn?`${s.c}/${s.cn}`:'0件'}</div></div>
+    </div>
+    <button id="bh138DetailBtn" class="bh138DetailBtn" type="button">🔒 詳細データを開く</button>
+    <div id="bh138History" class="bh138History"><div class="bh138HistoryTitle">日別成績｜直近30日</div>${hist}</div>
+  </div>`;
+}
+function mount(){
+  const p=$('bhResultDashPanel');if(!p)return;
+  p.classList.add('bh138CompactMode');
+  let box=$('bh138CompactBox');
+  const summary=$('bhResultDashSummary');
+  if(!box&&summary){summary.insertAdjacentHTML('beforebegin',compactHTML());box=$('bh138CompactBox');}
+  else if(box){box.outerHTML=compactHTML();box=$('bh138CompactBox');}
+  const btn=$('bh138DetailBtn'),hist=$('bh138History');
+  if(btn&&hist)btn.onclick=()=>{
+    const open=!p.classList.contains('bh138ShowFull');
+    p.classList.toggle('bh138ShowFull',open);hist.classList.toggle('open',open);
+    btn.textContent=open?'🔓 詳細データを閉じる':'🔒 詳細データを開く';
+  };
+}
+const oldOpen=window.bhOpenResultDashboard;
+if(typeof oldOpen==='function')window.bhOpenResultDashboard=function(){const r=oldOpen.apply(this,arguments);setTimeout(mount,80);return r};
+const oldRender=window.bhRenderResultDashboard;
+if(typeof oldRender==='function')window.bhRenderResultDashboard=function(){const r=oldRender.apply(this,arguments);setTimeout(mount,0);return r};
+document.addEventListener('click',e=>{if(e.target?.closest?.('#bhResultDashOpen'))setTimeout(mount,120)},true);
+const panel=$('bhResultDashPanel');if(panel)new MutationObserver(()=>{if(panel.classList.contains('open')&&!$('bh138CompactBox'))mount()}).observe(panel,{childList:true,subtree:false});
+setTimeout(mount,0);
+window.BH_VOL138={version:138,dailyArchive:true,compactResult:true,hiddenDetail:true};
 })();
 </script>
 

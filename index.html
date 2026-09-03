@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.110</div>
+<div id="bhTopVersion">Vol.111</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.110</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.111</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7165,7 +7165,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.110: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.111: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7218,7 +7218,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.110: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.111: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7240,7 +7240,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.110: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.111: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7250,7 +7250,7 @@ window.bhRenderOddsPopularity=function(){
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.110 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
+  // Vol.111 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
   let sc108=null;try{sc108=window.bhRaceScenario?.()||null}catch(e){}
   const atk108=Number(sc108?.head||0),method108=String(sc108?.method||sc108?.methodCandidate||'');
   const atkCourse108=atk108?Number(window.course?.(atk108)||atk108):0;
@@ -7409,14 +7409,26 @@ window.bhHighlightBeforeInfoRanks=function(){
  var table=box&&box.querySelector('table'); if(!table)return;
  var trs=Array.from(table.querySelectorAll('tbody tr'));
  [2,3,4,5,6].forEach(function(col){
+   // 展示ST(col=2)は bhRenderBeforeInfo 側ですでにF除外して順位確定済み。
+   // ここでは再計算せず、その1位/2位クラスをセルへ反映するだけにする。
+   if(col===2){
+     trs.forEach(function(tr){
+       var cell=tr.children[col];if(!cell)return;
+       cell.classList.remove('bhBeforeRank1Cell','bhBeforeRank2Cell');
+       Array.from(cell.querySelectorAll('.bhBeforeCellRankLabel')).forEach(function(el){el.remove();});
+       if(cell.querySelector('.bhBeforeFlying'))return;
+       var r1=cell.querySelector('.bhBeforeRank1'),r2=cell.querySelector('.bhBeforeRank2');
+       if(r1)cell.classList.add('bhBeforeRank1Cell');
+       else if(r2)cell.classList.add('bhBeforeRank2Cell');
+     });
+     return;
+   }
    var cells=trs.map(function(tr,i){return {cell:tr.children[col],boat:i+1};})
      .map(function(x){
-       var txt=x.cell&&x.cell.textContent||'';
-       x.isFlying=(col===2&&/\bF\b/i.test(txt));
-       x.value=n86(txt);
+       x.value=n86(x.cell&&x.cell.textContent);
        return x;
      })
-     .filter(function(x){return x.cell&&x.value!==null&&!x.isFlying;});
+     .filter(function(x){return x.cell&&x.value!==null;});
    // 先に全セルの旧順位装飾を消す。F艇にも順位色を残さない。
    trs.forEach(function(tr){
      var cell=tr.children[col];if(!cell)return;
@@ -7739,6 +7751,106 @@ window.BH_VOL93={
 })();
 </script>
 
+
+
+<script id="bh-vol111-result-api-expose">
+try{
+ if(typeof bhSavePredictionSnapshot==='function')window.bhSavePredictionSnapshot=bhSavePredictionSnapshot;
+ if(typeof bhSnapshotStore==='function')window.bhSnapshotStore=bhSnapshotStore;
+ if(typeof bhSaveSnapshotStore==='function')window.bhSaveSnapshotStore=bhSaveSnapshotStore;
+ if(typeof bhRaceKey==='function')window.bhRaceKey=bhRaceKey;
+ if(typeof bhTodayKey==='function')window.bhTodayKey=bhTodayKey;
+ if(typeof bhStartAutoResultCheck==='function')window.bhStartAutoResultCheck=bhStartAutoResultCheck;
+}catch(e){}
+</script>
+
+<script id="bh-vol111-result-aggregation-fix">
+(()=>{
+'use strict';
+const N=v=>Number.isFinite(Number(v))?Number(v):0;
+
+function currentOutlook111(){
+  try{
+    const o=window.bhLastOutlook;
+    if(o&&Number.isFinite(Number(o.escape)))return o;
+  }catch(e){}
+  try{
+    const o=window.overallEscapeProbability?.();
+    if(o)return o;
+  }catch(e){}
+  return {escape:0};
+}
+
+function makeTickets111(){
+  try{
+    let t=window.bhV3Generate?.(currentOutlook111());
+    if(!Array.isArray(t))t=[];
+    t=t.map(x=>({...x,legs:Array.isArray(x?.legs)?x.legs.map(Number):[]}));
+    if(typeof window.bhV3Allocate==='function')window.bhV3Allocate(t);
+    return t;
+  }catch(e){console.warn('Vol111 ticket snapshot',e);return[]}
+}
+
+function saveAnalysis111(){
+  try{
+    const tickets=makeTickets111();
+    if(!tickets.length)return;
+    window.bhLastTickets=tickets;
+    const outlook=currentOutlook111();
+    window.bhLastOutlook=outlook;
+    window.bhSavePredictionSnapshot?.(tickets,outlook);
+  }catch(e){console.warn('Vol111 snapshot save',e)}
+}
+
+function attachOdds111(){
+  try{
+    const day=window.bhTodayKey?.();
+    const v=Number(document.getElementById('venue')?.value||0);
+    const r=Number(document.getElementById('race')?.value||0);
+    const key=window.bhRaceKey?.(day,v,r);
+    if(!key)return;
+    const snaps=window.bhSnapshotStore?.()||{};
+    const snap=snaps[key];if(!snap)return;
+    let d=window.BH_ODDS_DECISION_V108||window.BH_ODDS_DECISION_V106||null;
+    if(!d)try{d=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_V108')||'null')}catch(e){}
+    if(!d)return;
+    d={...d,day,venue:v,race:r,buy:!snap.finance?.watch,watch:!!snap.finance?.watch,savedAt:Date.now()};
+    snap.oddsDecision=d;snaps[key]=snap;
+    window.bhSaveSnapshotStore?.(snaps);
+    const a=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
+    a[[day,v,r].join('|')]=d;
+    localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(a));
+  }catch(e){console.warn('Vol111 odds attach',e)}
+}
+
+// AI解析完了時に、その時点の買い目・買う/見・見通しを必ずレース別保存。
+const oldRun111=window.runAnalysis;
+if(typeof oldRun111==='function'){
+  window.runAnalysis=async function(){
+    const r=await oldRun111.apply(this,arguments);
+    setTimeout(saveAnalysis111,120);
+    setTimeout(()=>{saveAnalysis111();attachOdds111()},700);
+    return r;
+  };
+}
+
+// 120通りオッズ評価が後から更新された場合も、そのレースの予想スナップショットへ追記。
+const oldOdds111=window.bhRenderOddsPopularity;
+if(typeof oldOdds111==='function'){
+  window.bhRenderOddsPopularity=function(){
+    const r=oldOdds111.apply(this,arguments);
+    setTimeout(attachOdds111,50);
+    return r;
+  };
+}
+
+// 結果集計は停止せず自動確認を有効化。結果確認ボタンの手動更新も従来通り使用可能。
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{try{window.bhStartAutoResultCheck?.()}catch(e){}},1800);
+});
+window.BH_VOL111={version:111,resultAggregation:true,predictionSnapshot:true,buyWatchSaved:true,stRankSourceSingle:true};
+})();
+</script>
 
 </body>
 </html>

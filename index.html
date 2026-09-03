@@ -390,9 +390,15 @@ var bhClassPatchCore=window.bhClassPatchCore;
 .bhBeforeRank2{background:#f6c945!important;color:#191919!important;border-color:#ffe082!important;font-weight:1000!important}
 .bhBeforeFlying,.bhBeforeFlying *{background:transparent!important;color:inherit!important;border-color:transparent!important;box-shadow:none!important}
 </style>
+
+<style id="bh-v110-f-final-neutral-css">
+#bhBeforeInfoRows td:has(.bhBeforeFlying){background:transparent!important;color:inherit!important;box-shadow:none!important}
+#bhBeforeInfoRows td:has(.bhBeforeFlying) .bhBeforeCellRankLabel{display:none!important}
+#bhBeforeInfoRows .bhBeforeFlying,#bhBeforeInfoRows .bhBeforeFlyingMark{background:transparent!important;color:#fff!important;border:0!important;box-shadow:none!important}
+</style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.109</div>
+<div id="bhTopVersion">Vol.110</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -412,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.109</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.110</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7159,7 +7165,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.109: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.110: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7212,7 +7218,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.109: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.110: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7234,7 +7240,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.109: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.110: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7244,7 +7250,7 @@ window.bhRenderOddsPopularity=function(){
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.109 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
+  // Vol.110 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
   let sc108=null;try{sc108=window.bhRaceScenario?.()||null}catch(e){}
   const atk108=Number(sc108?.head||0),method108=String(sc108?.method||sc108?.methodCandidate||'');
   const atkCourse108=atk108?Number(window.course?.(atk108)||atk108):0;
@@ -7404,15 +7410,24 @@ window.bhHighlightBeforeInfoRanks=function(){
  var trs=Array.from(table.querySelectorAll('tbody tr'));
  [2,3,4,5,6].forEach(function(col){
    var cells=trs.map(function(tr,i){return {cell:tr.children[col],boat:i+1};})
-     .map(function(x){x.value=n86(x.cell&&x.cell.textContent);return x;})
-     .filter(function(x){return x.cell&&x.value!==null;});
+     .map(function(x){
+       var txt=x.cell&&x.cell.textContent||'';
+       x.isFlying=(col===2&&/\bF\b/i.test(txt));
+       x.value=n86(txt);
+       return x;
+     })
+     .filter(function(x){return x.cell&&x.value!==null&&!x.isFlying;});
+   // 先に全セルの旧順位装飾を消す。F艇にも順位色を残さない。
+   trs.forEach(function(tr){
+     var cell=tr.children[col];if(!cell)return;
+     cell.classList.remove('bhBeforeRank1Cell','bhBeforeRank2Cell');
+     Array.from(cell.querySelectorAll('.bhBeforeCellRankLabel')).forEach(function(el){el.remove();});
+   });
    cells.sort(function(a,b){return a.value-b.value||a.boat-b.boat;});
    var last=null,rank=0;
    cells.forEach(function(x,i){
      if(last===null||Math.abs(x.value-last)>1e-9)rank=i+1;
      last=x.value;
-     x.cell.classList.remove('bhBeforeRank1Cell','bhBeforeRank2Cell');
-     Array.from(x.cell.querySelectorAll('.bhBeforeCellRankLabel')).forEach(function(el){el.remove();});
      if(rank===1||rank===2){
        x.cell.classList.add(rank===1?'bhBeforeRank1Cell':'bhBeforeRank2Cell');
        var lab=document.createElement('span');

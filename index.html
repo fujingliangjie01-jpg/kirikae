@@ -375,9 +375,24 @@ var bhClassPatchCore=window.bhClassPatchCore;
 .bh105PickBox{margin:9px 0;padding:10px;border-radius:11px;background:#0d1821;border:1px solid #2d475b}.bh105PickTitle{font-size:16px;font-weight:1000;margin-bottom:7px}.bh105Picks{display:flex;flex-wrap:wrap;gap:5px}.bh105Pick{padding:5px 7px;border-radius:7px;background:#173024;font-size:11px;font-weight:900}.bh105Pick.hole{background:#3b2b0d;color:#ffe18a}
 .bh105ResultSummary{margin-top:10px;padding:10px;border-radius:10px;background:#101c25;border:1px solid #345267}.bh105ResultSummary b{color:#ffe083}.bh105ResultSummary small{color:#91a8b8;line-height:1.6}
 </style>
+
+<style id="bh-v109-hunter-final-css">
+.bh109HunterFinal{margin:12px 0 14px;padding:14px;border-radius:14px;background:#0b1822;border:2px solid #42ccff;box-shadow:0 0 18px rgba(66,204,255,.18)}
+.bh109HunterTitle{font-size:21px;font-weight:1000;margin-bottom:8px}
+.bh109HunterHead{font-size:26px;font-weight:1000;color:#ffe06a;margin:6px 0 10px}
+.bh109HunterGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.bh109HunterGrid>div{padding:9px;border-radius:10px;background:#132431;border:1px solid #34576d;text-align:center}
+.bh109HunterGrid small{display:block;color:#92b2c4;font-size:10px}.bh109HunterGrid b{font-size:18px}
+.bh109HunterWarn{margin-top:9px;padding:9px;border-radius:9px;background:#311722;border-left:4px solid #ff5f86;font-weight:900}
+.bh109HunterOk{margin-top:9px;padding:9px;border-radius:9px;background:#112b23;border-left:4px solid #3fe0a0;font-weight:900}
+.bh109HunterBasis{margin-top:8px;color:#92a9b7;font-size:11px;line-height:1.55}
+.bhBeforeRank1{background:#e53935!important;color:#fff!important;border-color:#ff8a80!important;font-weight:1000!important}
+.bhBeforeRank2{background:#f6c945!important;color:#191919!important;border-color:#ffe082!important;font-weight:1000!important}
+.bhBeforeFlying,.bhBeforeFlying *{background:transparent!important;color:inherit!important;border-color:transparent!important;box-shadow:none!important}
+</style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.108</div>
+<div id="bhTopVersion">Vol.109</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -397,7 +412,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.108</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.109</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7144,7 +7159,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.108: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.109: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7197,7 +7212,29 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.108: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.109: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  const overSet109=new Set(overs.map(x=>x.boat));
+  const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
+  const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
+  const finalHead109=(head&&!overSet109.has(head))?head:(hunterTop109?.boat||head);
+  const finalHeadRank109=hm[finalHead109]?.hunterRank||null;
+  const finalTrust109=overSet109.has(finalHead109)?'低':finalHeadRank109===1?'高':finalHeadRank109<=3?'中':'低';
+  const headConflict109=head&&overSet109.has(head);
+  const hunterFinalHTML109=`
+    <div class="bh109HunterFinal">
+      <div class="bh109HunterTitle">🤖 HUNTER最終評価</div>
+      <div class="bh109HunterHead">頭候補：${finalHead109?finalHead109+'号艇':'該当なし'}｜信頼度：${finalTrust109}</div>
+      <div class="bh109HunterGrid">
+        <div><small>市場の頭支持1位</small><b>${head?head+'号艇':'-'}</b></div>
+        <div><small>HUNTER評価1位</small><b>${hunterOrder109[0]?.boat?hunterOrder109[0].boat+'号艇':'-'}</b></div>
+        <div><small>最終採用頭</small><b>${finalHead109?finalHead109+'号艇':'-'}</b></div>
+      </div>
+      ${headConflict109?`<div class="bh109HunterWarn">⚠️ ${head}号艇は人気先行・ねじれ判定のため「頭信頼」から除外</div>`:`<div class="bh109HunterOk">✅ 市場支持とHUNTER評価に大きな矛盾なし</div>`}
+      <div class="bh109HunterBasis">判定順：市場支持 → HUNTER順位 → ねじれ除外 → 最終頭候補。人気先行・ねじれ艇は、同時に「信頼できる頭」へ表示しません。</div>
+    </div>`;
+
+
+  // Vol.109: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7207,7 +7244,7 @@ window.bhRenderOddsPopularity=function(){
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.108 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
+  // Vol.109 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
   let sc108=null;try{sc108=window.bhRaceScenario?.()||null}catch(e){}
   const atk108=Number(sc108?.head||0),method108=String(sc108?.method||sc108?.methodCandidate||'');
   const atkCourse108=atk108?Number(window.course?.(atk108)||atk108):0;
@@ -7270,7 +7307,7 @@ window.bhRenderOddsPopularity=function(){
 
       <div class="bhOddsTrustBox">
         <div class="bhOddsTrustTitle">🎯 オッズ最終分析・評価のねじれ</div>
-        <div class="bhOddsTrustMain">頭候補1：${head}号艇｜信頼度：${headTrust}</div>
+        <div class="bhOddsTrustMain">頭候補1：${finalHead109}号艇｜信頼度：${finalTrust109}</div>
         <div class="bhOddsTrustRow bhOddsTrustGood">✅ 信頼できる位置：1着 ${firstRank[0]}号艇 / 2着 ${secondRank[0]}号艇 / 3着 ${thirdRank[0]}号艇</div>
         <div class="bhOddsTrustRow bhOddsTrustHole">🔥 穴目で期待：${holeText}</div>
         <div class="bhOddsTrustRow bhOddsTrustWarn">⚠️ 人気先行・ねじれ：${overText}</div>
@@ -7278,6 +7315,7 @@ window.bhRenderOddsPopularity=function(){
       </div>
     </div>
 
+    ${hunterFinalHTML109}
     <div class="bh105PickBox"><div class="bh105PickTitle">🎯 本命候補 最大10点</div><div class="bh105Picks">${mainPickHTML}</div></div>
     <div class="bh105PickBox"><div class="bh105PickTitle">🔥 根拠あり穴目 最大10点（無理に10点へ補充しない）</div><div class="bh105Picks">${holePickHTML}</div></div>
     <div class="bhOddsPopularitySection">

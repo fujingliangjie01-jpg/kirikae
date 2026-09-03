@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.111</div>
+<div id="bhTopVersion">Vol.112</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.111</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.112</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -4977,13 +4977,14 @@ function bhToggleStartHistory(){
    sel.value=days.includes(cur)?cur:(days[0]||bhTodayKey());
  }
  const BH106_STATS="BOAT_HUNTER_ODDS_RESULT_STATS_V106";
- function bh106Empty(){return {seen:{},total:0,main:0,hole:0,cut:0,bands:{"1-3":0,"4-10":0,"11-20":0,"21-50":0,"51-120":0},mainRankHits:[0,0,0,0,0,0,0,0,0,0]}}
+ function bh106Empty(){return {seen:{},total:0,main:0,hole:0,holeTypeHits:{'展開穴':0,'HUNTER根拠穴':0},cut:0,bands:{"1-3":0,"4-10":0,"11-20":0,"21-50":0,"51-120":0},mainRankHits:[0,0,0,0,0,0,0,0,0,0]}}
  function bh106Stats(){
    try{
      const x=JSON.parse(localStorage.getItem(BH106_STATS)||'null');
      if(!x)return bh106Empty();
      x.seen=x.seen||{};x.bands=x.bands||{"1-3":0,"4-10":0,"11-20":0,"21-50":0,"51-120":0};
      x.mainRankHits=Array.isArray(x.mainRankHits)?x.mainRankHits:Array(10).fill(0);
+     x.holeTypeHits=x.holeTypeHits||{'展開穴':0,'HUNTER根拠穴':0};
      return x;
    }catch(e){return bh106Empty()}
  }
@@ -5016,12 +5017,14 @@ function bhToggleStartHistory(){
    if(d.race!=null&&Number(d.race)!==Number(x.race))return null;
    const o=(d.odds||[]).find(z=>z.key===x.result);if(!o)return null;
    const mr=bh106RankOf(d.main,x.result),hr=bh106RankOf(d.hole,x.result);
-   const kind=mr?"本命"+mr:hr?"穴"+hr:bh106ListHas(d.cut,x.result)?"切り":"通常";
+   const holeObj112=(d.hole||[]).find(v=>(typeof v==="string"?v:v?.key)===x.result);
+   const holeType112=typeof holeObj112==="object"?(holeObj112.type||'HUNTER根拠穴'):'HUNTER根拠穴';
+   const kind=mr?"本命"+mr:hr?`穴${hr}（${holeType112}）`:bh106ListHas(d.cut,x.result)?"切り":"通常";
    let st=bh106Stats(),id=x.key+"|"+x.result;
    if(!st.seen[id]){
      st.seen[id]=1;st.total++;st.bands[bh106Band(o.pop)]++;
      if(mr){st.main++;st.mainRankHits[mr-1]++}
-     if(hr)st.hole++;
+     if(hr){st.hole++;st.holeTypeHits=st.holeTypeHits||{'展開穴':0,'HUNTER根拠穴':0};st.holeTypeHits[holeType112]=(st.holeTypeHits[holeType112]||0)+1}
      if(bh106ListHas(d.cut,x.result))st.cut++;
      localStorage.setItem(BH106_STATS,JSON.stringify(st))
    }
@@ -5049,6 +5052,7 @@ function bhToggleStartHistory(){
    }).join(" / ");
    return `<div class="bh105ResultSummary"><b>📊 買うレース限定｜世間人気 × HUNTER結果検証</b><br>
    累計 ${st.total}R｜本命的中 ${st.main}R｜穴目期待的中 ${st.hole}R｜切り候補が来た ${st.cut}R<br>
+   穴内訳：展開穴 ${st.holeTypeHits?.['展開穴']||0}R / HUNTER根拠穴 ${st.holeTypeHits?.['HUNTER根拠穴']||0}R<br>
    実際に来た人気：1〜3番 ${b["1-3"]}R / 4〜10番 ${b["4-10"]}R / 11〜20番 ${b["11-20"]}R / 21〜50番 ${b["21-50"]}R / 51〜120番 ${b["51-120"]}R<br>
    <b>🎯 ${target}</b>${sampleNote}<br><small>${ranks}</small></div>`;
  }
@@ -7165,7 +7169,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.111: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.112: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7218,7 +7222,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.111: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.112: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7240,7 +7244,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.111: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.112: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7250,7 +7254,7 @@ window.bhRenderOddsPopularity=function(){
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.111 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
+  // Vol.112 穴目は「高オッズ」では選ばない。1Mで物理的な攻め成立＋展開先が説明できる場合だけ候補化。
   let sc108=null;try{sc108=window.bhRaceScenario?.()||null}catch(e){}
   const atk108=Number(sc108?.head||0),method108=String(sc108?.method||sc108?.methodCandidate||'');
   const atkCourse108=atk108?Number(window.course?.(atk108)||atk108):0;
@@ -7266,17 +7270,59 @@ window.bhRenderOddsPopularity=function(){
     flow108=boatAtCourse108(1);
     if(flow108)reason108=`${atk108}号艇差し → 1号艇残りを相手軸`;
   }
-  const hole10=flow108?[...scored].filter(x=>{
+  let hole10=[];
+  if(flow108){
+    // 第1優先：決まり手・1M展開から説明できる「展開穴」。
+    hole10=[...scored].filter(x=>{
       if(mainKeys.has(x.key)||x.pop<=10)return false;
       const hasAttack=x.legs.includes(atk108);
       const flowAxis=x.legs[0]===flow108||x.legs[1]===flow108;
       return hasAttack&&flowAxis;
     }).sort((a,b)=>b.hunterStrength-a.hunterStrength||a.pop-b.pop).slice(0,10)
-      .map(x=>({...x,holeReason:reason108})):[];
+      .map(x=>({...x,holeType:'展開穴',holeReason:reason108}));
+  }else{
+    // 第2優先：展開穴がない時だけ「HUNTER根拠穴」。
+    // 頭候補1は相手軸(2/3着)。伸び上位・市場→HUNTERねじれ上昇艇を1/2着へ。
+    const baseHead112=Number(finalHead109||head||0);
+    const stretch112=(()=>{
+      try{
+        const st=window.bhV18StartSnapshot?.()||[];
+        const om=window.bhOneMModel?.(st)||[];
+        return [...om].filter(x=>Number.isFinite(Number(x?.startBoatBehind))&&Number.isFinite(Number(x?.boatBehind)))
+          .map(x=>({boat:Number(x.boat),gain:Number(x.startBoatBehind)-Number(x.boatBehind)}))
+          .sort((a,b)=>b.gain-a.gain).slice(0,2).map(x=>x.boat);
+      }catch(e){return []}
+    })();
+    const twistUp112=Object.values(hm).filter(Boolean)
+      .filter(x=>Number(x.marketRank||99)-Number(x.hunterRank||99)>=2)
+      .sort((a,b)=>(Number(b.marketRank)-Number(b.hunterRank))-(Number(a.marketRank)-Number(a.hunterRank)))
+      .slice(0,3).map(x=>Number(x.boat));
+    const attack112=[...new Set([...stretch112,...twistUp112])].filter(b=>b&&b!==baseHead112);
+    const reasonFor112=(x)=>{
+      const reasons=[];
+      if(stretch112.includes(x.legs[0])||stretch112.includes(x.legs[1]))reasons.push(`${stretch112.find(b=>x.legs[0]===b||x.legs[1]===b)}号艇 伸び上位`);
+      const tw=twistUp112.find(b=>x.legs[0]===b||x.legs[1]===b);
+      if(tw)reasons.push(`${tw}号艇 世間評価→HUNTERねじれ上昇`);
+      if(baseHead112&&(x.legs[1]===baseHead112||x.legs[2]===baseHead112))reasons.push(`頭候補1の${baseHead112}号艇を相手軸`);
+      return reasons.join('＋');
+    };
+    hole10=[...scored].filter(x=>{
+      if(mainKeys.has(x.key)||x.pop<=10||!baseHead112)return false;
+      // 頭候補1を穴の1着には置かない。
+      if(x.legs[0]===baseHead112)return false;
+      // 頭候補1は必ず2着または3着に残す。
+      if(x.legs[1]!==baseHead112&&x.legs[2]!==baseHead112)return false;
+      // 伸び上位 or ねじれ上昇艇を1着または2着に置く。
+      if(!attack112.some(b=>x.legs[0]===b||x.legs[1]===b))return false;
+      return true;
+    }).map(x=>({...x,holeType:'HUNTER根拠穴',holeReason:reasonFor112(x)}))
+      .filter(x=>x.holeReason)
+      .sort((a,b)=>b.hunterStrength-a.hunterStrength||a.pop-b.pop).slice(0,10);
+  }
 
   const holeKeys=new Set(hole10.map(x=>x.key));
   const cutKeys=new Set(scored.filter(x=>x.pop<=30&&!mainKeys.has(x.key)&&!holeKeys.has(x.key)&&x.hs<=18).map(x=>x.key));
-  const decision={day:(typeof selectedDate!=='undefined'?selectedDate:''),venue:(typeof selectedVenue!=='undefined'?selectedVenue:null),race:(typeof selectedRace!=='undefined'?selectedRace:null),odds:scored.map(x=>({key:x.key,pop:x.pop,odds:x.odds})),main:main10.map((x,i)=>({key:x.key,rank:i+1})),hole:hole10.map((x,i)=>({key:x.key,rank:i+1,reason:x.holeReason||''})),cut:[...cutKeys],holeBasis:reason108||'',buy:null};
+  const decision={day:(typeof selectedDate!=='undefined'?selectedDate:''),venue:(typeof selectedVenue!=='undefined'?selectedVenue:null),race:(typeof selectedRace!=='undefined'?selectedRace:null),odds:scored.map(x=>({key:x.key,pop:x.pop,odds:x.odds})),main:main10.map((x,i)=>({key:x.key,rank:i+1})),hole:hole10.map((x,i)=>({key:x.key,rank:i+1,type:x.holeType||'',reason:x.holeReason||''})),cut:[...cutKeys],holeBasis:reason108||'',buy:null};
   window.BH_ODDS_DECISION_V108=decision;
   try{
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_V108',JSON.stringify(decision));
@@ -7291,8 +7337,8 @@ window.bhRenderOddsPopularity=function(){
   const mainRankMap=new Map(main10.map((x,i)=>[x.key,i+1]));
   const mainPickHTML=main10.map((x,i)=>`<span class="bh105Pick">本命${i+1}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍</span>`).join('');
   const holePickHTML=hole10.length
-    ?hole10.map((x,i)=>`<span class="bh105Pick hole">穴${i+1}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍<br><small>根拠：${x.holeReason}</small></span>`).join('')
-    :'<span class="bh105Pick hole">展開根拠のある穴目なし</span>';
+    ?hole10.map((x,i)=>`<span class="bh105Pick hole">穴${i+1}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍<br><small>${x.holeType}｜根拠：${x.holeReason}</small></span>`).join('')
+    :'<span class="bh105Pick hole">展開穴・HUNTER根拠穴ともに該当なし</span>';
   // 120通り表へ直接ラベルを反映。
   const allRows105=all120.map((x,i)=>{
     const main=mainKeys.has(x.key),hole=holeKeys.has(x.key),cut=cutKeys.has(x.key);
@@ -7323,7 +7369,7 @@ window.bhRenderOddsPopularity=function(){
 
     ${hunterFinalHTML109}
     <div class="bh105PickBox"><div class="bh105PickTitle">🎯 本命候補 最大10点</div><div class="bh105Picks">${mainPickHTML}</div></div>
-    <div class="bh105PickBox"><div class="bh105PickTitle">🔥 根拠あり穴目 最大10点（無理に10点へ補充しない）</div><div class="bh105Picks">${holePickHTML}</div></div>
+    <div class="bh105PickBox"><div class="bh105PickTitle">🔥 根拠あり穴目 最大10点｜展開穴 → HUNTER根拠穴</div><div class="bh105Picks">${holePickHTML}</div></div>
     <div class="bhOddsPopularitySection">
       <h3>② 3連単オッズ 1位〜120位</h3>
       <div class="bhOdds120Scroll">
@@ -7788,7 +7834,7 @@ function makeTickets111(){
     t=t.map(x=>({...x,legs:Array.isArray(x?.legs)?x.legs.map(Number):[]}));
     if(typeof window.bhV3Allocate==='function')window.bhV3Allocate(t);
     return t;
-  }catch(e){console.warn('Vol111 ticket snapshot',e);return[]}
+  }catch(e){console.warn('Vol112 ticket snapshot',e);return[]}
 }
 
 function saveAnalysis111(){
@@ -7799,7 +7845,7 @@ function saveAnalysis111(){
     const outlook=currentOutlook111();
     window.bhLastOutlook=outlook;
     window.bhSavePredictionSnapshot?.(tickets,outlook);
-  }catch(e){console.warn('Vol111 snapshot save',e)}
+  }catch(e){console.warn('Vol112 snapshot save',e)}
 }
 
 function attachOdds111(){
@@ -7820,7 +7866,7 @@ function attachOdds111(){
     const a=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
     a[[day,v,r].join('|')]=d;
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(a));
-  }catch(e){console.warn('Vol111 odds attach',e)}
+  }catch(e){console.warn('Vol112 odds attach',e)}
 }
 
 // AI解析完了時に、その時点の買い目・買う/見・見通しを必ずレース別保存。

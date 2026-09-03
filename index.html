@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.138</div>
+<div id="bhTopVersion">Vol.139</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.138</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.139</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7255,12 +7255,14 @@ window.bhRenderOddsPopularity=function(){
     const hs=(7-h1)*3+(7-h2)*2+(7-h3);
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
-  let main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
-  // Vol.137 強いねじれ：市場よりHUNTER評価が上で、HUNTER上位3艇なら本命1着まで許可。
-  // 本命側が出目除外などで10点未満になった場合は、この頭候補を優先して最大10点まで補充する。
-  const strongTwistHeads128=new Set(
-    holes.filter(x=>Number(x.h)<=3&&Number(x.h)<Number(x.m)).map(x=>Number(x.boat))
+  // Vol.139: ねじれ判定艇は本命・穴目とも1着（頭）へ絶対に採用しない。
+  // 2着・3着での採用は許可する。
+  const twistHeadBlocked139=new Set(
+    [...holes,...overs].map(x=>Number(x.boat)).filter(Boolean)
   );
+  const headAllowed139=x=>!twistHeadBlocked139.has(Number(x?.legs?.[0]??x?.[0]));
+  let main10=[...scored].filter(headAllowed139)
+    .sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
   // Vol.137 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
   let mainTheoryExtra118=null;
   const mainBaseKeys118=new Set(main10.map(x=>x.key));
@@ -7277,7 +7279,7 @@ window.bhRenderOddsPopularity=function(){
     for(const p of perms){
       const key=p.join('-');
       if(mainBaseKeys118.has(key)||!validTheory118(p))continue;
-      const row=rowByKey118.get(key);if(!row)continue;
+      const row=rowByKey118.get(key);if(!row||!headAllowed139(row))continue;
       mainTheoryExtra118={...row,mainTheoryExtra:true,mainTheoryReason:`本命${mi+1} ${m.key} の組替え＋出目理論`};
       break outer118;
     }
@@ -7300,30 +7302,18 @@ window.bhRenderOddsPopularity=function(){
     if(h&&!mainHeadOrder135.includes(h))mainHeadOrder135.push(h);
     if(mainHeadOrder135.length>=2)break;
   }
-  for(const h of strongTwistHeads128){
-    const n=Number(h);
-    if(n&&!mainHeadOrder135.includes(n)&&mainHeadOrder135.length<2)mainHeadOrder135.push(n);
-  }
   main10=main10.filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))).slice(0,10);
 
-  // Vol.137 本命不足補充。まずHUNTER上位のねじれ艇を1着にした目を優先。
+  // Vol.139 本命不足補充。ねじれ艇を頭から除外した通常評価順だけで最大10点まで補充。
   const mainUsed128=new Set(main10.map(x=>x.key));
-  const strongFill128=[...scored]
-    .filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))&&strongTwistHeads128.has(Number(x.legs?.[0]))&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
-    .sort((a,b)=>(hr(a.legs[0])-hr(b.legs[0]))||b.mainScore-a.mainScore||a.pop-b.pop);
-  for(const x of strongFill128){
-    if(main10.length>=10)break;
-    x.twistMain128=true;
-    main10.push(x);mainUsed128.add(x.key);
-  }
-  // まだ不足する場合だけ、通常の本命評価順から有効目を補充。
   const normalFill128=[...scored]
-    .filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
+    .filter(x=>mainHeadOrder135.includes(Number(x.legs?.[0]))&&headAllowed139(x)&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
     .sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop);
   for(const x of normalFill128){
     if(main10.length>=10)break;
     main10.push(x);mainUsed128.add(x.key);
   }
+  main10=main10.filter(headAllowed139).slice(0,10);
 
   const mainKeys=new Set(main10.map(x=>x.key));
 
@@ -7352,9 +7342,9 @@ window.bhRenderOddsPopularity=function(){
     .sort((a,b)=>(Number(a.hunterRank||99)-Number(b.hunterRank||99))||
                  (Number(a.marketRank||99)-Number(b.marketRank||99))||
                  (Number(a.boat)-Number(b.boat)))
-    .map(x=>Number(x.boat)).filter(Boolean);
+    .map(x=>Number(x.boat)).filter(b=>b&&!twistHeadBlocked139.has(b));
   [Number(finalHead109||0),Number(head||0),1,2,3,4,5,6].forEach(b=>{
-    if(b&&!headOrder113.includes(b))headOrder113.push(b);
+    if(b&&!twistHeadBlocked139.has(b)&&!headOrder113.includes(b))headOrder113.push(b);
   });
 
   const rowMap113=new Map(scored.map(x=>[x.key,x]));
@@ -7398,7 +7388,7 @@ window.bhRenderOddsPopularity=function(){
     const key=fixedPair121[pair];
     if(!key||mainKeys.has(key)||used113.has(key))return;
     const row=rowMap113.get(key);
-    if(!row||isBlockedPattern122(row))return;
+    if(!row||!headAllowed139(row)||isBlockedPattern122(row))return;
     used113.add(key);
     holePool113.push({
       ...row,
@@ -7409,7 +7399,7 @@ window.bhRenderOddsPopularity=function(){
     });
   });
   const pushHole113=(row,type,reason,sourceRank=999)=>{
-    if(!row||used113.has(row.key)||holeBlocked120.has(row.key)||isBlockedPattern122(row)||!validTheory113(row.legs))return;
+    if(!row||!headAllowed139(row)||used113.has(row.key)||holeBlocked120.has(row.key)||isBlockedPattern122(row)||!validTheory113(row.legs))return;
     used113.add(row.key);
     holePool113.push({...row,holeType:type,holeReason:reason,sourceRank});
   };
@@ -7442,7 +7432,7 @@ window.bhRenderOddsPopularity=function(){
         [[h,nx,o],[h,inn,o],[h,o,nx],[h,o,inn]].forEach(p=>{
           if(new Set(p).size!==3)return;
           const row=rowMap113.get(p.join('-'));
-          if(!row||mainKeys.has(row.key)||holeBlocked120.has(row.key)||isBlockedPattern122(row)||used113.has(row.key))return;
+          if(!row||!headAllowed139(row)||mainKeys.has(row.key)||holeBlocked120.has(row.key)||isBlockedPattern122(row)||used113.has(row.key))return;
           generated113.push({...row,headRank113:hi+1,circleRank113:oi+1,
             holeType:'出目理論補充穴',
             holeReason:`頭候補${hi+1} ${h}号艇＋${theoryReason113(p)}`});
@@ -7476,12 +7466,12 @@ window.bhRenderOddsPopularity=function(){
       const row=rowMap113.get(key);
       return row?{...row,holeType:'最終補充穴',holeReason:`固定出目｜${why}`,sourceRank:200+idx}:null;
     }).filter(Boolean)
-      .filter(x=>!mainKeys.has(x.key)&&!holeBlocked120.has(x.key)&&!isBlockedPattern122(x)&&!used113.has(x.key))
+      .filter(x=>headAllowed139(x)&&!mainKeys.has(x.key)&&!holeBlocked120.has(x.key)&&!isBlockedPattern122(x)&&!used113.has(x.key))
       // 固定出目同士で迷った場合はオッズランキング上位を優先。
       .sort((a,b)=>a.pop-b.pop||a.sourceRank-b.sourceRank);
     add115.forEach(x=>{
       if(holePool113.length>=10)return;
-      if(used113.has(x.key)||mainKeys.has(x.key)||holeBlocked120.has(x.key)||isBlockedPattern122(x))return;
+      if(!headAllowed139(x)||used113.has(x.key)||mainKeys.has(x.key)||holeBlocked120.has(x.key)||isBlockedPattern122(x))return;
       used113.add(x.key);
       holePool113.push(x);
     });
@@ -7491,7 +7481,7 @@ window.bhRenderOddsPopularity=function(){
   // 次に出目理論補充、最後に固定出目の最終補充。
   const holePool135=holePool113
     .filter(x=>{
-      if(mainKeys.has(x.key)||isBlockedPattern122(x))return false;
+      if(!headAllowed139(x)||mainKeys.has(x.key)||isBlockedPattern122(x))return false;
       if(x.mandatory121)return true;
       return !mainRejected120.has(x.key)&&!cutKeys119.has(x.key);
     })
@@ -7516,7 +7506,7 @@ window.bhRenderOddsPopularity=function(){
   const headCandidates116=[
     Number(finalHead109||0),
     ...headOrder113.filter(b=>Number(b)!==Number(finalHead109||0))
-  ].filter((b,i,a)=>b&&a.indexOf(b)===i).slice(0,2);
+  ].filter((b,i,a)=>b&&!twistHeadBlocked139.has(Number(b))&&a.indexOf(b)===i).slice(0,2);
   const twistUpBoats116=new Set(holes.map(x=>Number(x.boat)).filter(Boolean));
   const twistHoleBoats116=[...new Set(
     hole10.flatMap(x=>x.legs||[]).map(Number).filter(b=>twistUpBoats116.has(b))
@@ -7567,7 +7557,7 @@ window.bhRenderOddsPopularity=function(){
   }catch(e){}
   const mainRankMap=new Map(main10.map((x,i)=>[x.key,i+1]));
   const mainPickHTML=main10.map((x,i)=>{
-    const label=x.mainTheoryExtra?'本命＋1':x.twistMain128?'本ねじれ':`本${i+1}`;
+    const label=x.mainTheoryExtra?'本命＋1':`本${i+1}`;
     const reason=x.mainTheoryExtra
       ?String(x.mainTheoryReason||'出目理論による追加')
       :`HUNTER本命評価｜人気${x.pop}位`;
@@ -8272,12 +8262,12 @@ function ignored116(row){
 function freshStat116(){
   return {n:0,h1n:0,h1:0,h2n:0,h2:0,mn:0,m:0,hn:0,h:0,tn:0,t2:0,t3:0};
 }
-function judge116(list,result){
-  if(!Array.isArray(list)||!list.length)return {mark:'判定なし',cls:'bh125JudgeNone',hit:''};
-  const hit=(list||[]).find(v=>(typeof v==='string'?v:v?.key)===result);
-  return hit
-    ?{mark:'的中',cls:'bh125JudgeHit',hit:(typeof hit==='string'?hit:hit?.key)||result}
-    :{mark:'外れ',cls:'bh125JudgeMiss',hit:''};
+function judge116(list,result,label=''){
+  if(!Array.isArray(list)||!list.length)return {mark:'判定なし',cls:'bh125JudgeNone',hit:'',rank:0};
+  const idx=(list||[]).findIndex(v=>(typeof v==='string'?v:v?.key)===result);
+  if(idx<0)return {mark:'外れ',cls:'bh125JudgeMiss',hit:'',rank:0};
+  const item=list[idx],rank=Number((typeof item==='object'&&item?.rank)||idx+1);
+  return {mark:label?`${label}${rank}`:'的中',cls:'bh125JudgeHit',hit:(typeof item==='string'?item:item?.key)||result,rank};
 }
 function detailRows116(v){
   return rows116()
@@ -8290,7 +8280,7 @@ function detailHTML116(v){
   if(!rows.length)return '';
   const body=rows.map(row=>{
     const d=decisionFor116(row),result=String(row.result||'');
-    const mj=judge116(d?.main,result),hj=judge116(d?.hole,result);
+    const mj=judge116(d?.main,result,'本命'),hj=judge116(d?.hole,result,'穴目');
     return `<tr>
       <td>${String(row.day||'').slice(5).replace('-','/')}</td>
       <td>${row.race}R</td>
@@ -8380,8 +8370,8 @@ function venueHTML116(v,g){
     const result127=rr127?.result||'-';
     const odds127=confirmedOdds127(rr127);
     const d134=rr127?decisionFor116(rr127):null;
-    const mj134=rr127?judge116(d134?.main,result127):{mark:'-',cls:'bh125JudgeNone',hit:''};
-    const hj134=rr127?judge116(d134?.hole,result127):{mark:'-',cls:'bh125JudgeNone',hit:''};
+    const mj134=rr127?judge116(d134?.main,result127,'本命'):{mark:'-',cls:'bh125JudgeNone',hit:''};
+    const hj134=rr127?judge116(d134?.hole,result127,'穴目'):{mark:'-',cls:'bh125JudgeNone',hit:''};
     body+=`<tr>
       <td>${r}R</td>
       <td class="bh127ResultCell">${result127}</td>
@@ -8495,6 +8485,12 @@ window.BH_VOL116={version:116,resultReviewRebuilt:true,venueRaceStats:true,venue
 .bh117HoleReason{display:flex;align-items:flex-start;gap:7px;padding:8px 10px 10px;border-top:1px solid rgba(255,194,45,.18);color:#e6d9ae;font-size:12px;line-height:1.45;font-weight:800}
 .bh117ReasonLabel{flex:0 0 auto;padding:2px 6px;border-radius:5px;background:#6c5113;color:#ffe59a;font-size:10px;font-weight:1000}
 .bh117HoleEmpty{padding:14px;border:1px dashed #6c5929;border-radius:10px;color:#bba86d;text-align:center;font-weight:900}
+.bh139PosBlock{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.bh139PosTitle{font-size:12px;font-weight:900;color:#bbc5d2;margin-bottom:7px}
+.bh139PosGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.bh139PosCell{padding:7px 3px;border-radius:8px;background:#171a20;text-align:center}
+.bh139PosCell small{display:block;font-size:9px;color:#8f98a6;font-weight:800}
+.bh139PosCell b{display:block;margin-top:2px;font-size:12px;color:#fff}
 @media(max-width:480px){
  .bh117HoleTop{gap:6px;padding:8px}
  .bh117HoleBet{font-size:24px}
@@ -8994,6 +8990,12 @@ window.BH_VOL137={version:137,mainMax:10,holeMax:8,goBetButtonFixed:true};
 #bhResultDashPanel.bh138CompactMode:not(.bh138ShowFull) #bhResultDashLegacyStats{display:none!important}
 #bhResultDashPanel.bh138CompactMode.bh138ShowFull #bhResultDashSummary,
 #bhResultDashPanel.bh138CompactMode.bh138ShowFull #bhResultDashGrid{display:block}
+.bh139PosBlock{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08)}
+.bh139PosTitle{font-size:12px;font-weight:900;color:#bbc5d2;margin-bottom:7px}
+.bh139PosGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.bh139PosCell{padding:7px 3px;border-radius:8px;background:#171a20;text-align:center}
+.bh139PosCell small{display:block;font-size:9px;color:#8f98a6;font-weight:800}
+.bh139PosCell b{display:block;margin-top:2px;font-size:12px;color:#fff}
 @media(max-width:480px){
  .bh138MiniStat b{font-size:18px}
  .bh138DayRow{grid-template-columns:64px repeat(3,minmax(0,1fr));font-size:10px}
@@ -9002,7 +9004,7 @@ window.BH_VOL137={version:137,mainMax:10,holeMax:8,goBetButtonFixed:true};
 <script id="bh-vol138-compact-result-js">
 (()=>{
 'use strict';
-const ARCH='BOAT_HUNTER_DAILY_STATS_V138';
+const ARCH='BOAT_HUNTER_DAILY_STATS_V139';
 const PICKS='BOAT_HUNTER_RESULT_PICKS_V134';
 const ODDS_ARCH='BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108';
 const $=id=>document.getElementById(id);
@@ -9022,13 +9024,21 @@ function dayStatsFromRows(){
   for(const row of rows){
     if(!row?.day||!row?.result)continue;
     const d=decision(row); if(!d)continue;
-    const s=by[row.day]||(by[row.day]={races:0,mn:0,m:0,hn:0,h:0,cn:0,c:0,updatedAt:0});
+    const s=by[row.day]||(by[row.day]={races:0,mn:0,m:0,hn:0,h:0,cn:0,c:0,mainPos:Array(10).fill(0),holePos:Array(8).fill(0),updatedAt:0});
     s.races++;
     const result=String(row.result);
     const m=Array.isArray(d.main)&&d.main.length;
     const h=Array.isArray(d.hole)&&d.hole.length;
-    if(m){s.mn++;if(has(d.main,result))s.m++}
-    if(h){s.hn++;if(has(d.hole,result))s.h++}
+    if(m){
+      s.mn++;
+      const mi=d.main.findIndex(x=>(typeof x==='string'?x:x?.key)===result);
+      if(mi>=0){s.m++;const rank=Number((typeof d.main[mi]==='object'&&d.main[mi]?.rank)||mi+1);if(rank>=1&&rank<=10)s.mainPos[rank-1]++}
+    }
+    if(h){
+      s.hn++;
+      const hi=d.hole.findIndex(x=>(typeof x==='string'?x:x?.key)===result);
+      if(hi>=0){s.h++;const rank=Number((typeof d.hole[hi]==='object'&&d.hole[hi]?.rank)||hi+1);if(rank>=1&&rank<=8)s.holePos[rank-1]++}
+    }
     if(m||h){s.cn++;if(has(d.main,result)||has(d.hole,result))s.c++}
     s.updatedAt=Math.max(s.updatedAt,Number(row.time||0),Date.now());
   }
@@ -9043,9 +9053,20 @@ function localDay(){
   const d=new Date(),y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${dd}`;
 }
+function sumPos(arc,key,len){
+  const out=Array(len).fill(0);
+  Object.values(arc).forEach(x=>(x?.[key]||[]).forEach((n,i)=>{if(i<len)out[i]+=Number(n||0)}));
+  return out;
+}
+function posGrid(label,arr){
+  return `<div class="bh139PosBlock"><div class="bh139PosTitle">${label}｜的中位置 累計</div><div class="bh139PosGrid">${
+    arr.map((n,i)=>`<div class="bh139PosCell"><small>${label}${i+1}</small><b>${n}回</b></div>`).join('')
+  }</div></div>`;
+}
 function compactHTML(){
   const arc=persistArchive(),today=localDay(),s=arc[today]||{races:0,mn:0,m:0,hn:0,h:0,cn:0,c:0};
   const days=Object.keys(arc).sort((a,b)=>b.localeCompare(a)).slice(0,30);
+  const mainPos=sumPos(arc,'mainPos',10),holePos=sumPos(arc,'holePos',8);
   const hist=days.length?days.map(day=>{const x=arc[day];return `<div class="bh138DayRow"><span class="date">${day.slice(5).replace('-','/')}</span><span>本命<b>${pct(x.m,x.mn)}</b></span><span>穴目<b>${pct(x.h,x.hn)}</b></span><span>総合<b>${pct(x.c,x.cn)}</b></span></div>`}).join(''):'<div class="bhResultHistoryEmpty">保存済みの日別成績はまだありません。</div>';
   return `<div id="bh138CompactBox" class="bh138CompactBox">
     <div class="bh138CompactTop"><div><div class="bh138CompactTitle">📊 今日の成績</div><div class="bh138CompactDate">${today.replaceAll('-','/')}｜${s.races||0}R確定</div></div></div>
@@ -9055,7 +9076,11 @@ function compactHTML(){
       <div class="bh138MiniStat"><small>総合</small><b>${pct(s.c,s.cn)}</b><div class="sub">${s.cn?`${s.c}/${s.cn}`:'0件'}</div></div>
     </div>
     <button id="bh138DetailBtn" class="bh138DetailBtn" type="button">🔒 詳細データを開く</button>
-    <div id="bh138History" class="bh138History"><div class="bh138HistoryTitle">日別成績｜直近30日</div>${hist}</div>
+    <div id="bh138History" class="bh138History">
+      <div class="bh138HistoryTitle">日別成績｜直近30日</div>${hist}
+      ${posGrid('本命',mainPos)}
+      ${posGrid('穴目',holePos)}
+    </div>
   </div>`;
 }
 function mount(){
@@ -9079,7 +9104,7 @@ if(typeof oldRender==='function')window.bhRenderResultDashboard=function(){const
 document.addEventListener('click',e=>{if(e.target?.closest?.('#bhResultDashOpen'))setTimeout(mount,120)},true);
 const panel=$('bhResultDashPanel');if(panel)new MutationObserver(()=>{if(panel.classList.contains('open')&&!$('bh138CompactBox'))mount()}).observe(panel,{childList:true,subtree:false});
 setTimeout(mount,0);
-window.BH_VOL138={version:138,dailyArchive:true,compactResult:true,hiddenDetail:true};
+window.BH_VOL139={version:139,dailyArchive:true,compactResult:true,hiddenDetail:true,hitPositionStats:true,twistHeadBlocked:true};
 })();
 </script>
 

@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.122</div>
+<div id="bhTopVersion">Vol.124</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.122</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.124</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -7169,7 +7169,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.122: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.124: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7222,7 +7222,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.122: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.124: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7244,7 +7244,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.122: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.124: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7252,7 +7252,7 @@ window.bhRenderOddsPopularity=function(){
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
   const main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
-  // Vol.122 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
+  // Vol.124 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
   let mainTheoryExtra118=null;
   const mainBaseKeys118=new Set(main10.map(x=>x.key));
   const rowByKey118=new Map(scored.map(x=>[x.key,x]));
@@ -7275,7 +7275,7 @@ window.bhRenderOddsPopularity=function(){
   }
   if(mainTheoryExtra118)main10.push(mainTheoryExtra118);
 
-  // Vol.122 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
+  // Vol.124 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
   // 前付け/進入変更時は艇番ではなく進入コースへ置換して同じ並び判定を行う。
   const impossiblePattern122=new Set(['2-4-5','2-4-6','2-5-3','2-5-4','2-5-6','2-6-3','2-6-4','2-6-5','3-5-6','3-6-2','3-6-4','3-6-5','4-2-6','4-3-6','4-6-2','4-6-3','5-2-6','5-3-4','5-3-6','5-6-3','6-3-2','6-3-4','6-3-5','6-4-2','6-4-3','6-4-5','6-5-2','6-5-3','6-5-4']);
   const coursePatternKey122=(legs)=>{
@@ -7287,15 +7287,15 @@ window.bhRenderOddsPopularity=function(){
 
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.122 本命側の「切り候補」は穴目へ復活させない。
+  // Vol.124 本命側の「切り候補」は穴目へ復活させない。
   const cutKeys119=new Set(scored.filter(x=>x.pop>Math.ceil(scored.length*0.60)).map(x=>x.key));
-  // Vol.122: 人気上位でも本命選考から落とした目は穴目へ復活させない。
+  // Vol.124: 人気上位でも本命選考から落とした目は穴目へ復活させない。
   const mainRejected120=new Set(scored.filter(x=>
     !mainKeys.has(x.key) && (x.pop<=10 || Number(x.hs||0)>=70 || Number(x.hunterStrength||0)>=70)
   ).map(x=>x.key));
   const holeBlocked120=new Set([...cutKeys119,...mainRejected120]);
 
-  // Vol.122 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
+  // Vol.124 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
   // 出目理論：頭X → 相手軸は「1コース」と「Xの1つ後ろのコース」。
   // 2→3 / 3→4 / 4→5 / 5→6 / 6→2。○は頭候補ランキング上位艇。
   const course113=(b)=>Number(window.course?.(Number(b))||Number(b));
@@ -7337,7 +7337,7 @@ window.bhRenderOddsPopularity=function(){
   const holePool113=[];
   const used113=new Set(mainKeys);
 
-  // Vol.122 穴目ロジックの最優先固定目。
+  // Vol.124 穴目ロジックの最優先固定目。
   // 本命の「1着-2着」の並びが指定ペアなら、対応する3着を必ず穴候補へ入れる。
   // 例：本命1が 2-3-6 なら、2-3-4 を最優先で穴目へ。
   const fixedPair121={
@@ -7416,7 +7416,7 @@ window.bhRenderOddsPopularity=function(){
     });
   }
 
-  // Vol.122 穴目だけの「迷った時の最終補充」。
+  // Vol.124 穴目だけの「迷った時の最終補充」。
   // 本命ロジックには一切触れない。既存の本命/穴と重複した目は入れない。
   if(holePool113.length<10){
     const fallback115=[
@@ -7496,7 +7496,20 @@ window.bhRenderOddsPopularity=function(){
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(store));
   }catch(e){}
   const mainRankMap=new Map(main10.map((x,i)=>[x.key,i+1]));
-  const mainPickHTML=main10.map((x,i)=>`<span class="bh105Pick">${x.mainTheoryExtra?'本命＋1（出目理論）':`本命${i+1}`}｜${x.pop}位 ${x.key} ${x.odds.toFixed(1)}倍${x.mainTheoryExtra?`<br><small>根拠：${x.mainTheoryReason}</small>`:''}</span>`).join('');
+  const mainPickHTML=main10.map((x,i)=>{
+    const label=x.mainTheoryExtra?'本命＋1':`本${i+1}`;
+    const reason=x.mainTheoryExtra
+      ?String(x.mainTheoryReason||'出目理論による追加')
+      :`HUNTER本命評価｜人気${x.pop}位`;
+    return `<div class="bh117Hole bh123MainCard">
+      <div class="bh117HoleTop bh123MainTop">
+        <span class="bh117HoleNo bh123MainNo">${label}</span>
+        <span class="bh117HoleBet">${x.key}</span>
+        <span class="bh117HoleOdds">${x.odds.toFixed(1)}倍</span>
+        <span class="bh117HolePop">人気${x.pop}位</span>
+      </div>
+    </div>`;
+  }).join('');
   const holePickHTML=hole10.length
     ?hole10.map((x,i)=>{
       const reason=String(x.holeReason||'').replace(/^固定出目｜/,'').replace(/^[^｜]+｜/,'');
@@ -7506,10 +7519,6 @@ window.bhRenderOddsPopularity=function(){
           <span class="bh117HoleBet">${x.key}</span>
           <span class="bh117HoleOdds">${x.odds.toFixed(1)}倍</span>
           <span class="bh117HolePop">人気${x.pop}位</span>
-        </div>
-        <div class="bh117HoleReason">
-          <span class="bh117ReasonLabel">根拠</span>
-          <span>${reason}</span>
         </div>
       </div>`;
     }).join('')
@@ -7543,8 +7552,16 @@ window.bhRenderOddsPopularity=function(){
     </div>
 
     ${hunterFinalHTML109}
-    <div class="bh105PickBox"><div class="bh105PickTitle">🎯 本命候補 最大10点</div><div class="bh105Picks">${mainPickHTML}</div></div>
-    <div class="bh105PickBox"><div class="bh105PickTitle">🔥 穴目 最大10点｜本命先頭2艇の固定目 → 本命不採用目は復活禁止 → 出目理論 → 最終補充</div><div class="bh105Picks">${holePickHTML}</div></div>
+    <div class="bh123PickColumns">
+      <div class="bh105PickBox bh123PickCol bh123HoleCol">
+        <div class="bh105PickTitle">🔥 穴目 最大10点</div>
+        <div class="bh105Picks">${holePickHTML}</div>
+      </div>
+      <div class="bh105PickBox bh123PickCol bh123MainCol">
+        <div class="bh105PickTitle">🎯 本命候補 最大10点</div>
+        <div class="bh105Picks">${mainPickHTML}</div>
+      </div>
+    </div>
     <div class="bhOddsPopularitySection">
       <h3>② 3連単オッズ 1位〜120位</h3>
       <div class="bhOdds120Scroll">
@@ -8055,7 +8072,7 @@ function makeTickets111(){
     t=t.map(x=>({...x,legs:Array.isArray(x?.legs)?x.legs.map(Number):[]}));
     if(typeof window.bhV3Allocate==='function')window.bhV3Allocate(t);
     return t;
-  }catch(e){console.warn('Vol122 ticket snapshot',e);return[]}
+  }catch(e){console.warn('Vol124 ticket snapshot',e);return[]}
 }
 
 function saveAnalysis111(){
@@ -8066,7 +8083,7 @@ function saveAnalysis111(){
     const outlook=currentOutlook111();
     window.bhLastOutlook=outlook;
     window.bhSavePredictionSnapshot?.(tickets,outlook);
-  }catch(e){console.warn('Vol122 snapshot save',e)}
+  }catch(e){console.warn('Vol124 snapshot save',e)}
 }
 
 function attachOdds111(){
@@ -8089,7 +8106,7 @@ function attachOdds111(){
     const a=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
     a[[day,v,r].join('|')]=d;
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(a));
-  }catch(e){console.warn('Vol122 odds attach',e)}
+  }catch(e){console.warn('Vol124 odds attach',e)}
 }
 
 // AI解析完了時に、その時点の買い目・買う/見・見通しを必ずレース別保存。
@@ -8300,6 +8317,31 @@ window.BH_VOL116={version:116,resultReviewRebuilt:true,venueRaceStats:true,venue
  .bh117HoleOdds{font-size:15px}
  .bh117HolePop{font-size:9px}
  .bh117HoleReason{font-size:11px}
+}
+</style>
+
+
+<style id="bh-vol123-main-hole-columns-css">
+.bh123PickColumns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start;margin:10px 0}
+.bh123PickCol{margin:0!important;min-width:0}
+.bh123PickCol .bh105PickTitle{font-size:17px;line-height:1.25}
+.bh123Rule{margin:-2px 0 8px;color:#8fa0aa;font-size:10px;line-height:1.35;font-weight:800}
+.bh123PickCol .bh117Hole{margin:7px 0}
+.bh123PickCol .bh117HoleTop{gap:5px;padding:7px 7px;min-height:46px;flex-wrap:wrap}
+.bh123PickCol .bh117HoleBet{font-size:21px}
+.bh123PickCol .bh117HoleOdds{font-size:14px}
+.bh123PickCol .bh117HolePop{font-size:8px;padding:3px 4px}
+.bh123PickCol .bh117HoleReason{font-size:10px;padding:7px;gap:5px}
+.bh123MainCard{border-color:rgba(72,210,122,.38);background:linear-gradient(180deg,#123b24 0%,#0d281a 100%)}
+.bh123MainTop{background:rgba(72,210,122,.08)}
+.bh123MainNo{background:#35c56e;color:#06170d}
+.bh123MainReason{border-top-color:rgba(72,210,122,.18);color:#cde8d5}
+.bh123MainReasonLabel{background:#205f39;color:#d9ffe5}
+@media(max-width:380px){
+ .bh123PickColumns{gap:6px}
+ .bh123PickCol .bh105PickTitle{font-size:15px}
+ .bh123PickCol .bh117HoleBet{font-size:18px}
+ .bh123PickCol .bh117HoleOdds{font-size:12px}
 }
 </style>
 

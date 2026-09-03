@@ -398,7 +398,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.131</div>
+<div id="bhTopVersion">Vol.133</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +418,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.131</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.133</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -4696,8 +4696,11 @@ async function bhFetchAllResultsForDay(day=bhTodayKey()){
     for(const x of got){let k=x.venue+"|"+x.race,old=merged.get(k);if(!old||(!old.payout&&x.payout))merged.set(k,x)}
   }
   let rows=[...merged.values()].sort((a,b)=>a.venue-b.venue||a.race-b.race);
-  if(!rows.length)return {count:0,sources:okSources};
-  let store=bhAllResultStore();store[day]={updatedAt:Date.now(),rows};bhSaveAllResultStore(store);return {count:rows.length,sources:okSources}
+  if(!rows.length)return {count:0,sources:okSources,rows:[]};
+  let store=bhAllResultStore();store[day]={updatedAt:Date.now(),rows};bhSaveAllResultStore(store);
+  window.BH_RESULT_DIRECT_ROWS_132=window.BH_RESULT_DIRECT_ROWS_132||{};
+  window.BH_RESULT_DIRECT_ROWS_132[day]=rows;
+  return {count:rows.length,sources:okSources,rows}
 }
 let bhAutoResultLock=false,bhAutoResultTimer=null;
 function bhRaceKey(day=bhTodayKey(),venue=null,raceNo=null){
@@ -7169,7 +7172,7 @@ window.bhRenderOddsPopularity=function(){
     return;
   }
 
-  // Vol.131: 3連単120通りをそのまま使用。上位50だけには切らない。
+  // Vol.133: 3連単120通りをそのまま使用。上位50だけには切らない。
   const all120=rows.slice(0,120);
 
   // 120通りでは各艇の「1着組み合わせ数」は20通りで同数になる。
@@ -7223,7 +7226,7 @@ window.bhRenderOddsPopularity=function(){
     ?overs.slice(0,2).map(x=>`${x.boat}号艇（市場${x.m}位 → HUNTER${x.h}位）`).join(' / ')
     :'該当なし';
 
-  // Vol.131: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
+  // Vol.133: HUNTER最終判定。人気先行・ねじれ艇を「信頼頭」と同時表示しない。
   const overSet109=new Set(overs.map(x=>x.boat));
   const hunterOrder109=Object.values(hm).filter(Boolean).sort((a,b)=>(a.hunterRank||99)-(b.hunterRank||99));
   const hunterTop109=hunterOrder109.find(x=>!overSet109.has(x.boat))||hunterOrder109[0]||null;
@@ -7245,7 +7248,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.131: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
+  // Vol.133: 120通りから本命10点・穴目10点・人気先行の切り候補を分類。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7253,12 +7256,12 @@ window.bhRenderOddsPopularity=function(){
     return {...x,pop,hs,mainScore:hs+(121-pop)/120*18,holeScore:hs+Math.min(pop,80)*.22-Math.max(0,10-pop)*.6};
   });
   let main10=[...scored].sort((a,b)=>b.mainScore-a.mainScore||a.pop-b.pop).slice(0,10);
-  // Vol.131 強いねじれ：市場よりHUNTER評価が上で、HUNTER上位3艇なら本命1着まで許可。
+  // Vol.133 強いねじれ：市場よりHUNTER評価が上で、HUNTER上位3艇なら本命1着まで許可。
   // 本命側が出目除外などで10点未満になった場合は、この頭候補を優先して最大10点まで補充する。
   const strongTwistHeads128=new Set(
     holes.filter(x=>Number(x.h)<=3&&Number(x.h)<Number(x.m)).map(x=>Number(x.boat))
   );
-  // Vol.131 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
+  // Vol.133 現行本命はそのまま。出目理論が成立する場合だけ最大1点追加。
   let mainTheoryExtra118=null;
   const mainBaseKeys118=new Set(main10.map(x=>x.key));
   const rowByKey118=new Map(scored.map(x=>[x.key,x]));
@@ -7281,7 +7284,7 @@ window.bhRenderOddsPopularity=function(){
   }
   if(mainTheoryExtra118)main10.push(mainTheoryExtra118);
 
-  // Vol.131 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
+  // Vol.133 通常進入時の「出ない出目」は、本命・穴目とも買い目に入れない。
   // 前付け/進入変更時は艇番ではなく進入コースへ置換して同じ並び判定を行う。
   const impossiblePattern122=new Set(['2-4-5','2-4-6','2-5-3','2-5-4','2-5-6','2-6-3','2-6-4','2-6-5','3-5-6','3-6-2','3-6-4','3-6-5','4-2-6','4-3-6','4-6-2','4-6-3','5-2-6','5-3-4','5-3-6','5-6-3','6-3-2','6-3-4','6-3-5','6-4-2','6-4-3','6-4-5','6-5-2','6-5-3','6-5-4']);
   const coursePatternKey122=(legs)=>{
@@ -7291,7 +7294,7 @@ window.bhRenderOddsPopularity=function(){
   const isBlockedPattern122=(x)=>impossiblePattern122.has(coursePatternKey122(x?.legs||String(x?.key||'').split('-')));
   for(let i=main10.length-1;i>=0;i--)if(isBlockedPattern122(main10[i]))main10.splice(i,1);
 
-  // Vol.131 本命不足補充。まずHUNTER上位のねじれ艇を1着にした目を優先。
+  // Vol.133 本命不足補充。まずHUNTER上位のねじれ艇を1着にした目を優先。
   const mainUsed128=new Set(main10.map(x=>x.key));
   const strongFill128=[...scored]
     .filter(x=>strongTwistHeads128.has(Number(x.legs?.[0]))&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
@@ -7312,15 +7315,15 @@ window.bhRenderOddsPopularity=function(){
 
   const mainKeys=new Set(main10.map(x=>x.key));
 
-  // Vol.131 本命側の「切り候補」は穴目へ復活させない。
+  // Vol.133 本命側の「切り候補」は穴目へ復活させない。
   const cutKeys119=new Set(scored.filter(x=>x.pop>Math.ceil(scored.length*0.60)).map(x=>x.key));
-  // Vol.131: 人気上位でも本命選考から落とした目は穴目へ復活させない。
+  // Vol.133: 人気上位でも本命選考から落とした目は穴目へ復活させない。
   const mainRejected120=new Set(scored.filter(x=>
     !mainKeys.has(x.key) && (x.pop<=10 || Number(x.hs||0)>=70 || Number(x.hunterStrength||0)>=70)
   ).map(x=>x.key));
   const holeBlocked120=new Set([...cutKeys119,...mainRejected120]);
 
-  // Vol.131 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
+  // Vol.133 穴目：本命3艇の組替えを最優先し、「出目理論」を通ったものだけ残す。
   // 出目理論：頭X → 相手軸は「1コース」と「Xの1つ後ろのコース」。
   // 2→3 / 3→4 / 4→5 / 5→6 / 6→2。○は頭候補ランキング上位艇。
   const course113=(b)=>Number(window.course?.(Number(b))||Number(b));
@@ -7362,7 +7365,7 @@ window.bhRenderOddsPopularity=function(){
   const holePool113=[];
   const used113=new Set(mainKeys);
 
-  // Vol.131 穴目ロジックの最優先固定目。
+  // Vol.133 穴目ロジックの最優先固定目。
   // 本命の「1着-2着」の並びが指定ペアなら、対応する3着を必ず穴候補へ入れる。
   // 例：本命1が 2-3-6 なら、2-3-4 を最優先で穴目へ。
   const fixedPair121={
@@ -7441,7 +7444,7 @@ window.bhRenderOddsPopularity=function(){
     });
   }
 
-  // Vol.131 穴目だけの「迷った時の最終補充」。
+  // Vol.133 穴目だけの「迷った時の最終補充」。
   // 本命ロジックには一切触れない。既存の本命/穴と重複した目は入れない。
   if(holePool113.length<10){
     const fallback115=[
@@ -8105,7 +8108,7 @@ function makeTickets111(){
     t=t.map(x=>({...x,legs:Array.isArray(x?.legs)?x.legs.map(Number):[]}));
     if(typeof window.bhV3Allocate==='function')window.bhV3Allocate(t);
     return t;
-  }catch(e){console.warn('Vol131 ticket snapshot',e);return[]}
+  }catch(e){console.warn('Vol133 ticket snapshot',e);return[]}
 }
 
 function saveAnalysis111(){
@@ -8116,7 +8119,7 @@ function saveAnalysis111(){
     const outlook=currentOutlook111();
     window.bhLastOutlook=outlook;
     window.bhSavePredictionSnapshot?.(tickets,outlook);
-  }catch(e){console.warn('Vol131 snapshot save',e)}
+  }catch(e){console.warn('Vol133 snapshot save',e)}
 }
 
 function attachOdds111(){
@@ -8139,7 +8142,7 @@ function attachOdds111(){
     const a=JSON.parse(localStorage.getItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108')||'{}');
     a[[day,v,r].join('|')]=d;
     localStorage.setItem('BOAT_HUNTER_ODDS_DECISION_ARCHIVE_V108',JSON.stringify(a));
-  }catch(e){console.warn('Vol131 odds attach',e)}
+  }catch(e){console.warn('Vol133 odds attach',e)}
 }
 
 // AI解析完了時に、その時点の買い目・買う/見・見通しを必ずレース別保存。
@@ -8260,7 +8263,7 @@ function detailHTML116(v){
     </table></div>`;
 }
 function add116(st,row,d){
-  if(!row?.result||!d)return st;
+  if(!row?.result||!d||ignored116(row))return st;
   const result=String(row.result), legs=result.split('-').map(Number), first=legs[0];
   st.n++;
   const hc=Array.isArray(d.headCandidates)?d.headCandidates.map(Number):[];
@@ -8278,11 +8281,26 @@ function add116(st,row,d){
   return st;
 }
 function rows116(){
-  const rows=window.bhRecordedRows?.('all')||[];
-  // Vol.131: 結果APIで取得できた確定レースは、予想保存の有無に関係なく開催場・Rを表示する。
-  // 本命/穴目などの的中率だけ、decisionFor116(row) が存在するレースを集計対象にする。
-  return rows.filter(r=>r?.result&&!ignored116(r));
+  const base=window.bhRecordedRows?.('all')||[];
+  const map=new Map();
+  const absorb=(row)=>{
+    if(!row)return;
+    const day=String(row.day||'');
+    const venue=Number(row.venue||row.stadium_number||row.stadiumNumber||0);
+    const race=Number(row.race||row.race_number||row.raceNumber||0);
+    const result=String(row.result||'');
+    if(!day||!venue||!race||!result)return;
+    const key=row.key||[day,venue,race].join('|');
+    const old=map.get(key)||{};
+    const payout=Number(row.payout??old.payout??0)||0;
+    map.set(key,{...old,...row,key,day,venue,race,result,payout,odds:Number(row.odds??old.odds??0)||(payout/100),time:Number(row.time||old.time||0)});
+  };
+  base.forEach(absorb);
+  const direct=window.BH_RESULT_DIRECT_ROWS_132||{};
+  Object.entries(direct).forEach(([day,rows])=>(rows||[]).forEach(x=>absorb({...x,day:x.day||day})));
+  return [...map.values()].sort((a,b)=>String(b.day).localeCompare(String(a.day))||a.venue-b.venue||a.race-b.race);
 }
+window.bhResultRows116=rows116;
 function group116(){
   const out=new Map();
   rows116().forEach(row=>{
@@ -8348,12 +8366,41 @@ function venueHTML116(v,g){
     ${detailHTML116(v)}
   </section>`;
 }
+const BH_RESULT_VENUE_SELECT_133='BOAT_HUNTER_RESULT_VENUE_SELECT_V133';
+function resultVenueSelected133(g){
+  const current=Number(document.getElementById('venue')?.value||0);
+  let saved=Number(localStorage.getItem(BH_RESULT_VENUE_SELECT_133)||0);
+  if(saved>=1&&saved<=24)return saved;
+  if(current>=1&&current<=24)return current;
+  const first=[...g.keys()].map(Number).filter(v=>v>=1&&v<=24).sort((a,b)=>a-b)[0];
+  return first||2;
+}
 function render116(){
   const grid=$('bhResultDashGrid'), summary=$('bhResultDashSummary');
   if(!grid||!summary)return;
-  const g=group116(), venues=[...g.keys()].sort((a,b)=>a-b);
-  summary.innerHTML=`<div class="bh116Intro"><b>結果確認・累計集計</b><br>取得済みの確定結果は開催場ごとにすべて表示します。レース結果・確定3連単オッズは予想保存がなくても表示。本命・穴目・頭候補・ねじれの的中率は、そのレースでBOAT HUNTERの予想を保存していた場合だけ集計します。</div>`;
-  grid.innerHTML=venues.length?venues.map(v=>venueHTML116(v,g.get(v))).join(''):'<div class="bh116Empty">現行ロジックで結果確定したレースがまだありません。</div>';
+  const g=group116();
+  const selected=resultVenueSelected133(g);
+  const opts=Array.from({length:24},(_,i)=>i+1).map(v=>{
+    const n=g.get(v)?.keys?.length||0;
+    return `<option value="${v}" ${v===selected?'selected':''}>${window.bhVenueLabel?.(v)||`${v}場`}${n?`（${n}R）`:''}</option>`;
+  }).join('');
+  summary.innerHTML=`<div class="bh133VenuePicker">
+    <span class="bh133VenuePickerLabel">開催場</span>
+    <select id="bhResultVenueSelect133">${opts}</select>
+    <span class="bh133VenuePickerCount">${g.get(selected)?.keys?.length||0}R確定</span>
+  </div>`;
+  const data=g.get(selected);
+  grid.innerHTML=data
+    ?venueHTML116(selected,data)
+    :`<div class="bh116Empty"><b>${window.bhVenueLabel?.(selected)||`${selected}場`}</b><br>確定結果はまだ取得できていません。<br><small>「🔄 結果を更新」を押してください。</small></div>`;
+  const sel=$('bhResultVenueSelect133');
+  if(sel){
+    sel.onchange=()=>{
+      const v=Number(sel.value||0);
+      if(v>=1&&v<=24)localStorage.setItem(BH_RESULT_VENUE_SELECT_133,String(v));
+      render116();
+    };
+  }
 }
 function resetVenue116(v){
   v=Number(v);if(!v)return;
@@ -8492,7 +8539,7 @@ function repairCurrentDecision126(){
       window.bhSaveSnapshotStore?.(snaps);
     }
     return true;
-  }catch(e){console.warn('Vol131 decision repair',e);return false}
+  }catch(e){console.warn('Vol133 decision repair',e);return false}
 }
 
 // Every odds render now stores the shortlist against the actual selected race immediately.
@@ -8570,6 +8617,10 @@ async function refresh129(manual=false){
         const r=await window.bhFetchAllResultsForDay?.(day);
         total+=Number(r?.count||0);
         sources+=Number(r?.sources||0);
+        if(Array.isArray(r?.rows)&&r.rows.length){
+          window.BH_RESULT_DIRECT_ROWS_132=window.BH_RESULT_DIRECT_ROWS_132||{};
+          window.BH_RESULT_DIRECT_ROWS_132[day]=r.rows;
+        }
       }catch(e){}
     }
 
@@ -8578,9 +8629,9 @@ async function refresh129(manual=false){
 
     // 現在の結果確認を必ず再描画。
     try{window.bhRenderResultDashboard?.()}catch(e){}
-    if(st)st.textContent=`更新完了 ${total}R`;
+    if(st)st.textContent=`更新完了 ${total}R ／ 表示 ${typeof window.bhResultRows116==='function'?window.bhResultRows116().length:'-'}R`;
   }catch(e){
-    console.warn('Vol131 結果直接更新',e);
+    console.warn('Vol133 結果直接更新',e);
     if(st)st.textContent='更新失敗・再試行';
   }finally{
     lock129=false;
@@ -8653,7 +8704,7 @@ async function bhRefreshOdds130(){
       window.bhRenderOddsPopularity();
     }
   }catch(e){
-    console.warn('Vol131 オッズ自動更新',e);
+    console.warn('Vol133 オッズ自動更新',e);
   }finally{
     bhOddsBusy130=false;
   }
@@ -8681,6 +8732,33 @@ window.BH_VOL130={version:130,oddsAutoRefreshSeconds:30};
 <style id="bh-vol131-result-venue-visible-css">
 .bh131VenueCount{display:inline-block;margin-left:7px;color:#86a7b7;font-size:10px;font-weight:900;vertical-align:middle}
 .bh125JudgeNone{min-width:58px}
+</style>
+
+
+<style id="bh-vol133-result-compact-venue-css">
+#bhResultDashSummary{margin-top:8px!important}
+.bh133VenuePicker{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 10px;margin:4px 0 8px;border:1px solid #315669;border-radius:11px;background:#081923}
+.bh133VenuePickerLabel{font-size:11px;font-weight:1000;color:#8da9b8}
+#bhResultVenueSelect133{width:100%;min-height:38px;padding:6px 9px;border:1px solid #3b6b82;border-radius:9px;background:#0c2734;color:#fff;font-size:16px;font-weight:1000}
+.bh133VenuePickerCount{white-space:nowrap;font-size:10px;font-weight:1000;color:#ffd75d}
+.bh116Venue{margin:8px 0!important;border-width:1px!important;border-radius:11px!important}
+.bh116VenueHead{padding:8px 10px!important}
+.bh116VenueTitle{font-size:16px!important}
+.bh116Reset{min-height:32px!important;padding:5px 8px!important;font-size:9px!important}
+.bh116VenueSummary{gap:5px!important;padding:7px!important}
+.bh116Metric{padding:7px 4px!important;border-radius:8px!important}
+.bh116Metric small{font-size:8px!important}
+.bh116Metric b{font-size:13px!important;margin-top:2px!important}
+.bh116Metric .sub{font-size:8px!important}
+.bh116RaceWrap{padding:0 6px 7px!important}
+.bh116RaceTable{border-spacing:0 3px!important}
+.bh116RaceTable td{padding:6px 4px!important;font-size:10px!important}
+.bh125DetailTitle{margin:2px 7px 5px!important;padding:7px!important;font-size:10px!important}
+@media(max-width:600px){
+  .bh133VenuePicker{grid-template-columns:auto minmax(0,1fr);gap:6px}
+  .bh133VenuePickerCount{grid-column:2;text-align:right;margin-top:-4px}
+  .bh116VenueSummary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
 </style>
 
 </body>

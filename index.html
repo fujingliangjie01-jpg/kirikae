@@ -311,21 +311,47 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 
 
-<style id="bhOddsTrustV98Style">
-.bh-odds-trust-v98{margin:14px 0;padding:14px;border:1px solid #6f5cff;border-radius:16px;background:rgba(18,12,35,.92);box-shadow:0 0 18px rgba(111,92,255,.12)}
-.bh-odds-trust-v98 h3{margin:0 0 12px;font-size:18px}
-.bh-ot-main{padding:12px;border-radius:12px;background:rgba(255,255,255,.055);margin-bottom:10px}
-.bh-ot-head{font-size:22px;font-weight:900}
-.bh-ot-high{color:#78f0a7}.bh-ot-mid{color:#ffd76a}.bh-ot-low{color:#ff8585}
-.bh-ot-grid{display:grid;grid-template-columns:1fr;gap:8px}
-.bh-ot-row{padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.04);font-weight:700}
-.bh-ot-value{border:1px solid rgba(255,215,106,.55)}
-.bh-ot-twist{border:1px solid rgba(255,112,155,.45)}
-.bh-ot-note{font-size:12px;opacity:.72;margin-top:9px;line-height:1.55}
+<style id="bhOdds120V99Style">
+#bhOdds120V99Box{margin:14px 0;padding:15px;border-radius:16px;border:1px solid rgba(125,96,255,.7);background:rgba(17,12,34,.94);box-shadow:0 0 20px rgba(100,70,255,.13)}
+#bhOdds120V99Box h3{margin:0 0 11px;font-size:19px}.bh99main{font-size:21px;font-weight:900;margin-bottom:10px}
+.bh99row{padding:10px 12px;margin:7px 0;border-radius:11px;background:rgba(255,255,255,.05);font-weight:750}
+.bh99good{border:1px solid rgba(80,230,150,.45)}.bh99hole{border:1px solid rgba(255,205,80,.55)}.bh99warn{border:1px solid rgba(255,100,130,.45)}
+.bh99small{font-size:12px;opacity:.7;margin-top:9px;line-height:1.5}
+</style>
+<style id="bhStretchTopV100Style">
+.bhOneM .bhSlipRow.bhStretchTopRow{
+  background:linear-gradient(90deg,rgba(255,216,77,.10),rgba(255,216,77,0));
+  border-radius:10px;
+}
+.bhStretchTopPatch{
+  position:absolute;
+  left:50%;
+  top:-10px;
+  transform:translateX(-50%);
+  padding:2px 6px;
+  border-radius:999px;
+  background:#ffd84d;
+  color:#111;
+  border:1px solid #fff1a6;
+  box-shadow:0 0 10px rgba(255,216,77,.75);
+  font-size:8px;
+  line-height:1.2;
+  font-weight:1000;
+  white-space:nowrap;
+  z-index:8;
+}
+.bhStretchTopPatch small{
+  font-size:7px;
+  font-weight:900;
+}
+@media(max-width:600px){
+  .bhStretchTopPatch{font-size:7px;padding:2px 5px;top:-9px}
+  .bhStretchTopPatch small{font-size:6px}
+}
 </style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.98</div>
+<div id="bhTopVersion">Vol.100</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -345,7 +371,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.98</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.100</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2168,15 +2194,25 @@ function bhOneMSlipHTML(rows){
  let usable=rows.filter(x=>Number.isFinite(x.arrival));
  if(!usable.length)return `<div class="bhStartNone">1マーク到達予測を計算できません。</div>`;
  let ordered=[...usable].sort((a,b)=>a.arrival-b.arrival||a.boat-b.boat),leader=ordered[0];
+ // STARTスリット→1Mスリットで「何艇身ぶん前へ詰めたか」を比較。
+ // startBoatBehind - boatBehind が最大の艇を「伸び1番」とする。
+ let stretchRows=usable.map(x=>({
+   boat:x.boat,
+   gain:(Number.isFinite(x.startBoatBehind)&&Number.isFinite(x.boatBehind))?(x.startBoatBehind-x.boatBehind):null
+ })).filter(x=>Number.isFinite(x.gain));
+ let stretchTop=stretchRows.length?[...stretchRows].sort((a,b)=>b.gain-a.gain||a.boat-b.boat)[0]:null;
  let rankMap=new Map(ordered.map((x,i)=>[x.boat,i+1]));
  const ord=n=>n===1?"1st":n===2?"2nd":n===3?"3rd":`${n}th`;
  return `<div class="bhSlip bhOneM"><div class="bhSlipTitle">🏁 1マーク直前・予測隊形</div><div class="bhSlipRule"><b>先頭艇の船先を基準線に固定</b>。スタート隊形＋直前タイムの行き足（加速）＋展示タイムの伸び（最高速側）で1M前を推定。展示タイム150mから平均速度(km/h)を算出し、全速区間を135〜140mとして両方計算。1M予測は中間の137.5m換算を使用。STARTスリットの位置差＋137.5mの実時間差で1M直前を推定。0.15秒差＝1艇身換算。</div>${rows.map((x,idx)=>{
   let ok=Number.isFinite(x.arrival),behind=ok?x.boatBehind:0,shiftPx=behind*56;
   let nose=`calc(var(--start-x) - ${shiftPx.toFixed(3)}px)`;
   let boatBadgeStyle={1:'background:#f7f7f7;color:#111;border-color:#cfd2d6',2:'background:#111;color:#fff;border-color:#444',3:'background:#e63b36;color:#fff;border-color:#ff7772',4:'background:#2d7eea;color:#fff;border-color:#6aa8ff',5:'background:#f2d21b;color:#111;border-color:#ffe66a',6:'background:#35a853;color:#fff;border-color:#72d98a'}[x.boat]||'';
-  let cls=ok&&x.boat===leader.boat?' bhSlipAhead':ok&&behind>=.7?' bhSlipBehind':'';
+  let isStretchTop=!!(ok&&stretchTop&&x.boat===stretchTop.boat);
+  let cls=(ok&&x.boat===leader.boat?' bhSlipAhead':ok&&behind>=.7?' bhSlipBehind':'')+(isStretchTop?' bhStretchTopRow':'');
   let rk=ok?rankMap.get(x.boat):null;
-  return `<div class="bhSlipRow${cls}"><div class="bhSlipBoat" style="${boatBadgeStyle}">${x.boat}</div><div class="bhSlipLane">${idx===0?'<div class="bhSlipStartLabel">1M先頭基準</div>':''}<div class="bhSlipTrack"></div>${ok?`<div class="bhSlipMarker" style="left:${nose}" title="予測 ${x.speed.toFixed(1)}km/h / 先頭差 ${behind.toFixed(2)}艇身">${bhSlipBoatSvg(x.boat)}</div>`:''}</div><div class="bhSlipST">${ok?(behind<.01?'先頭':behind.toFixed(2)+'艇'):'－'}</div><div class="bhSlipRank ${rk?`r${rk}`:''}">${rk?ord(rk):'－'}</div></div>`;
+  let gainBody=(Number.isFinite(x.startBoatBehind)&&Number.isFinite(x.boatBehind))?(x.startBoatBehind-x.boatBehind):null;
+  let stretchPatch=isStretchTop?`<span class="bhStretchTopPatch">🚀 伸び1番${Number.isFinite(gainBody)?` <small>${gainBody>=0?'+':''}${gainBody.toFixed(2)}艇</small>`:''}</span>`:'';
+  return `<div class="bhSlipRow${cls}"><div class="bhSlipBoat" style="${boatBadgeStyle}">${x.boat}</div><div class="bhSlipLane">${idx===0?'<div class="bhSlipStartLabel">1M先頭基準</div>':''}<div class="bhSlipTrack"></div>${ok?`<div class="bhSlipMarker" style="left:${nose}" title="予測 ${x.speed.toFixed(1)}km/h / 先頭差 ${behind.toFixed(2)}艇身${Number.isFinite(gainBody)?` / START→1M ${gainBody>=0?'+':''}${gainBody.toFixed(2)}艇身`:''}">${stretchPatch}${bhSlipBoatSvg(x.boat)}</div>`:''}</div><div class="bhSlipST">${ok?(behind<.01?'先頭':behind.toFixed(2)+'艇'):'－'}</div><div class="bhSlipRank ${rk?`r${rk}`:''}">${rk?ord(rk):'－'}</div></div>`;
  }).join('')}<div class="bhSlipAxis"><div></div><div class="bhSlipAxisLane"><span class="bhSlipAxisLate">1艇身後</span><span class="bhSlipAxisZero">先頭</span></div><div></div></div></div>`;
 }
 function bhOneMDetailHTML(rows){
@@ -7424,75 +7460,66 @@ window.BH_VOL93={
 </script>
 
 
-<script id="bhOddsTrustV98">
+<script id="bhOdds120V99">
 (function(){
-  function num(v){v=Number(v);return Number.isFinite(v)?v:null}
-  function getRows(){
-    var rows=[].slice.call(document.querySelectorAll('tr'));
-    var out=[];
-    rows.forEach(function(tr){
-      var t=(tr.innerText||'').replace(/\s+/g,' ');
-      var m=t.match(/([1-6])号艇\s+(\d+)回\s+(\d+)回\s+(\d+)回/);
-      if(m) out.push({boat:+m[1],first:+m[2],second:+m[3],third:+m[4]});
-    });
-    return out.length===6?out:null;
-  }
-  function hunterRank(boat){
-    var selectors=[
-      '[data-boat="'+boat+'"][data-ai-rank]','[data-lane="'+boat+'"][data-ai-rank]',
-      '[data-boat="'+boat+'"][data-hunter-rank]','[data-lane="'+boat+'"][data-hunter-rank]'
-    ];
-    for(var i=0;i<selectors.length;i++){
-      var e=document.querySelector(selectors[i]); if(e){
-        var r=num(e.getAttribute('data-ai-rank')||e.getAttribute('data-hunter-rank')); if(r)return r;
-      }
-    }
-    var body=document.body.innerText||'';
-    var rx=new RegExp(boat+'号艇[^\\n]{0,100}(?:AI評価|HUNTER評価)[^\\d]{0,8}([1-6])位');
-    var m=body.match(rx); return m?+m[1]:null;
-  }
-  function insertTarget(){
-    var tables=[].slice.call(document.querySelectorAll('table'));
-    for(var i=0;i<tables.length;i++){
-      var tx=tables[i].innerText||'';
-      if(tx.indexOf('1着回数')>=0 && tx.indexOf('2着回数')>=0) return tables[i].closest('section,.card,.panel,div')||tables[i];
-    }
-    return null;
-  }
-  function render(){
-    var rows=getRows(), target=insertTarget(); if(!rows||!target)return;
-    var old=document.getElementById('bhOddsTrustV98Box'); if(old)old.remove();
-    var market=rows.slice().sort(function(a,b){return b.first-a.first||b.second-a.second||a.boat-b.boat});
-    market.forEach(function(x,i){x.marketRank=i+1;x.hunterRank=hunterRank(x.boat)});
-    var head=market[0], hr=head.hunterRank;
-    var cls='bh-ot-mid', trust='中';
-    if(hr===1){cls='bh-ot-high';trust='高'}
-    else if(hr!=null && hr>=4){cls='bh-ot-low';trust='低'}
-    var twists=market.filter(function(x){return x.hunterRank!=null && Math.abs(x.marketRank-x.hunterRank)>=2})
-      .sort(function(a,b){return Math.abs(b.marketRank-b.hunterRank)-Math.abs(a.marketRank-a.hunterRank)});
-    var value=market.filter(function(x){return x.hunterRank!=null && x.hunterRank+1<x.marketRank})
-      .sort(function(a,b){return (b.marketRank-b.hunterRank)-(a.marketRank-a.hunterRank)});
-    var over=market.filter(function(x){return x.hunterRank!=null && x.marketRank+1<x.hunterRank})
-      .sort(function(a,b){return (b.hunterRank-b.marketRank)-(a.hunterRank-a.marketRank)});
-    var box=document.createElement('div'); box.id='bhOddsTrustV98Box';box.className='bh-odds-trust-v98';
-    var detail=hr?('市場頭評価1位 / HUNTER評価'+hr+'位'):('市場頭評価1位 / HUNTER評価はAI解析後に照合');
-    var html='<h3>🎯 オッズ信頼度・評価のねじれ</h3>'+
-      '<div class="bh-ot-main"><div class="bh-ot-head '+cls+'">頭候補1：'+head.boat+'号艇　信頼度 '+trust+'</div><div>'+detail+'</div></div>'+
-      '<div class="bh-ot-grid">';
-    if(value.length) html+='<div class="bh-ot-row bh-ot-value">🔥 穴目で期待：'+value.slice(0,2).map(function(x){return x.boat+'号艇（市場'+x.marketRank+'位→HUNTER'+x.hunterRank+'位）'}).join(' / ')+'</div>';
-    else html+='<div class="bh-ot-row">🔥 穴目で期待：該当なし</div>';
-    if(over.length) html+='<div class="bh-ot-row bh-ot-twist">⚠️ 人気先行警戒：'+over.slice(0,2).map(function(x){return x.boat+'号艇（市場'+x.marketRank+'位→HUNTER'+x.hunterRank+'位）'}).join(' / ')+'</div>';
-    else html+='<div class="bh-ot-row">⚠️ 人気先行警戒：該当なし</div>';
-    if(twists.length) html+='<div class="bh-ot-row">🔀 評価のねじれ：'+twists.slice(0,3).map(function(x){return x.boat+'号艇 '+Math.abs(x.marketRank-x.hunterRank)+'段差'}).join(' / ')+'</div>';
-    else html+='<div class="bh-ot-row">🔀 評価のねじれ：該当なし</div>';
-    html+='</div><div class="bh-ot-note">オッズ上位50通りの1着回数を市場の頭評価として、HUNTER評価順位と照合。人気だけで買い目を決めず「市場とAIが一致する部分」と「市場が低く見ている艇」を分けて表示。</div>';
-    box.innerHTML=html;
-    target.insertAdjacentElement('afterend',box);
-  }
-  var mo=new MutationObserver(function(){clearTimeout(window.__bhOT98);window.__bhOT98=setTimeout(render,250)});
-  function start(){render();mo.observe(document.body,{childList:true,subtree:true,characterData:true})}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+ function oddsMap(){
+   var candidates=['oddsData','trifectaOdds','odds3t','currentOdds','raceOdds','oddsMap'];
+   for(var i=0;i<candidates.length;i++){
+     var v=window[candidates[i]];
+     if(v && typeof v==='object') return v;
+   }
+   return null;
+ }
+ function parse(){
+   var map=oddsMap(), a=[];
+   if(map){
+     Object.keys(map).forEach(function(k){
+       var m=String(k).match(/([1-6])\D*([1-6])\D*([1-6])/),o=Number(map[k]);
+       if(m&&Number.isFinite(o)&&+m[1]!=+m[2]&&+m[1]!=+m[3]&&+m[2]!=+m[3])a.push({a:+m[1],b:+m[2],c:+m[3],o:o});
+     });
+   }
+   if(a.length<100){
+     a=[];
+     document.querySelectorAll('tr,[data-combo],[data-odds]').forEach(function(e){
+       var t=(e.innerText||'')+' '+(e.getAttribute&&((e.getAttribute('data-combo')||'')+' '+(e.getAttribute('data-odds')||'')));
+       var m=t.match(/([1-6])\s*[-–]\s*([1-6])\s*[-–]\s*([1-6]).*?(\d+(?:\.\d+)?)/);
+       if(m){var o=+m[4]; if(o>0)a.push({a:+m[1],b:+m[2],c:+m[3],o:o})}
+     });
+   }
+   var u={},r=[];a.forEach(function(x){var k=x.a+'-'+x.b+'-'+x.c;if(!u[k]){u[k]=1;r.push(x)}});return r;
+ }
+ function hRank(n){
+   var sels=['[data-boat="'+n+'"][data-ai-rank]','[data-lane="'+n+'"][data-ai-rank]','[data-boat="'+n+'"][data-hunter-rank]'];
+   for(var i=0;i<sels.length;i++){var e=document.querySelector(sels[i]);if(e){var v=+(e.getAttribute('data-ai-rank')||e.getAttribute('data-hunter-rank'));if(v)return v}}
+   var m=(document.body.innerText||'').match(new RegExp(n+'号艇[^\\n]{0,120}(?:AI評価|HUNTER評価)[^\\d]{0,8}([1-6])位'));return m?+m[1]:null;
+ }
+ function target(){
+   var hs=[].slice.call(document.querySelectorAll('h1,h2,h3,h4,div'));
+   return hs.find(function(e){return /オッズ人気|オッズ上位|オッズ分析/.test(e.textContent||'')})||document.querySelector('#oddsArea,.odds-area')||null;
+ }
+ function render(){
+   var x=parse(); if(x.length<100)return;
+   x.sort(function(p,q){return p.o-q.o});
+   var stats={};for(var n=1;n<=6;n++)stats[n]={n:n,p1:0,p2:0,p3:0,score:0,hr:hRank(n)};
+   x.forEach(function(z,i){var w=1/(z.o||999);stats[z.a].p1++;stats[z.b].p2++;stats[z.c].p3++;stats[z.a].score+=w*3;stats[z.b].score+=w*2;stats[z.c].score+=w});
+   var arr=Object.values(stats).sort(function(a,b){return b.score-a.score});arr.forEach(function(v,i){v.mr=i+1});
+   var head=Object.values(stats).sort(function(a,b){return b.p1-a.p1})[0];
+   var hr=head.hr, trust=hr===1?'高':(hr&&hr>=4?'低':'中');
+   var holes=arr.filter(function(v){return v.hr&&v.hr+1<v.mr}).sort(function(a,b){return (b.mr-b.hr)-(a.mr-a.hr)});
+   var overs=arr.filter(function(v){return v.hr&&v.mr+1<v.hr}).sort(function(a,b){return (b.hr-b.mr)-(a.hr-a.mr)});
+   var sec=Object.values(stats).sort(function(a,b){return b.p2-a.p2})[0],third=Object.values(stats).sort(function(a,b){return b.p3-a.p3})[0];
+   var old=document.getElementById('bhOdds120V99Box');if(old)old.remove();
+   var box=document.createElement('div');box.id='bhOdds120V99Box';
+   box.innerHTML='<h3>🎯 120通りオッズ最終分析</h3>'+
+   '<div class="bh99main">頭候補1：'+head.n+'号艇｜信頼度：'+trust+'</div>'+
+   '<div class="bh99row bh99good">✅ オッズで信頼できる部分：1着 '+head.n+'号艇 / 2着 '+sec.n+'号艇 / 3着 '+third.n+'号艇</div>'+
+   '<div class="bh99row bh99hole">🔥 穴目で期待：'+(holes.length?holes.slice(0,2).map(function(v){return v.n+'号艇（市場'+v.mr+'位→HUNTER'+v.hr+'位）'}).join(' / '):'該当なし')+'</div>'+
+   '<div class="bh99row bh99warn">⚠️ 人気先行・ねじれ：'+(overs.length?overs.slice(0,2).map(function(v){return v.n+'号艇（市場'+v.mr+'位→HUNTER'+v.hr+'位）'}).join(' / '):'該当なし')+'</div>'+
+   '<div class="bh99small">3連単120通りを内部集計。人気順だけでなくオッズ強度を加味し、1・2・3着それぞれの市場評価とHUNTER評価のズレを確認する。</div>';
+   var t=target();if(t){var p=t.closest('.card,.panel,section')||t;p.insertAdjacentElement('afterend',box)}
+ }
+ var timer;new MutationObserver(function(){clearTimeout(timer);timer=setTimeout(render,300)}).observe(document.body,{subtree:true,childList:true,characterData:true});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render();
 })();
-</script>
-</body>
+</script></body>
 </html>

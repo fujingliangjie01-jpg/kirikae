@@ -312,7 +312,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 </head>
 <body>
-<div id="bhTopVersion">Vol.95</div>
+<div id="bhTopVersion">Vol.96</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -332,7 +332,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.95</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.96</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2549,11 +2549,18 @@ function bhWindMainDevelopment(){
     :{main:"イン逃げ・2コース差しを軽く評価",sub:`弱い追い風 ${s.toFixed(1)}m/s。`,none:false};
  }
  if(wi.mode==="cross")return {main:"スタート・ターンの乱れを警戒",sub:`横風 ${s.toFixed(1)}m/s。左右差の場別補正は未接続。`,none:false};
- return {main:"風による展開判定データ不足",sub:`風向：${wi.direction||"－"} / ${s.toFixed(1)}m/s`,none:true};
+ // 方位風しか取得できない場合も「データ不足」で止めず、風速から展開影響を判定する。
+ // 追い/向かいの断定はせず、安全側に「乱れ・外攻め警戒」として扱う。
+ if(wi.direction&&wi.direction!=="風向データなし"){
+   if(s>=5)return {main:"強風 → スタート・1Mの乱れを強く警戒",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。追い・向かいを断定できないため、イン固定評価はせずセンター〜アウトの展開変化を警戒。`,none:false};
+   if(s>=3)return {main:"風の影響大 → センター〜アウト展開を警戒",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。方位風データから強さを判定し、スタート差・ターン流れを展開材料にする。`,none:false};
+   if(s>=1)return {main:"弱風 → 展開補正は小さめ",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。風は取得済み。追い・向かい未確定のため強い補正はかけない。`,none:false};
+ }
+ return {main:"風情報なし",sub:"風向・風速を取得できませんでした。風補正なし。",none:true};
 }
 function bhTideMainDevelopment(){
  let ti=bhTideInfo(),vt=venueTrait(),wi=windInfo(),name=String(vt.name||"");
- if(!ti.available)return {main:"潮位データなし",sub:"潮位・潮流を取得できた時だけ判定します。",none:true};
+ if(!ti.available)return {main:"該当なし",sub:"このレースでは使用できる潮位・潮流データがありません。",none:true};
  let txt=(String(ti.raw||"")+" "+String(ti.flow||"")).toLowerCase();
  let high=txt.includes("満")||txt.includes("上げ"),low=txt.includes("干")||txt.includes("下げ");
  let tideLabel=[ti.raw,ti.level>0?`${ti.level}cm`:"",ti.flow].filter(Boolean).join(" / ")||"潮位取得済み";
@@ -2574,7 +2581,7 @@ function bhTideMainDevelopment(){
    if(high)return {main:"アウト攻めを軽く評価",sub:`${tideLabel}。宮島は満潮・上げ側で現行補正が外寄り。`,none:false};
    if(low)return {main:"イン逃げをわずかに評価",sub:`${tideLabel}。`,none:false};
  }
- return {main:"この場の潮位別展開ルールは未設定",sub:`${tideLabel}。潮位データ自体は取得済み。`,none:true};
+ return {main:"該当なし",sub:`${tideLabel}。この場は現在、潮位による展開補正の対象外。`,none:true};
 }
 function bhVenueStrongDevelopment(){
  let vt=venueTrait();

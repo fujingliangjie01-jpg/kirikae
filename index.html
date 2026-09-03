@@ -310,9 +310,22 @@ var bhClassPatchCore=window.bhClassPatchCore;
 @media(max-width:520px){.bhShobuTitle{font-size:16px}.bhShobuNeed{font-size:16px}.bhSlipGap{font-size:8px}.bhSlipGap b{font-size:9px}}
 </style>
 
+
+<style id="bhOddsTrustV98Style">
+.bh-odds-trust-v98{margin:14px 0;padding:14px;border:1px solid #6f5cff;border-radius:16px;background:rgba(18,12,35,.92);box-shadow:0 0 18px rgba(111,92,255,.12)}
+.bh-odds-trust-v98 h3{margin:0 0 12px;font-size:18px}
+.bh-ot-main{padding:12px;border-radius:12px;background:rgba(255,255,255,.055);margin-bottom:10px}
+.bh-ot-head{font-size:22px;font-weight:900}
+.bh-ot-high{color:#78f0a7}.bh-ot-mid{color:#ffd76a}.bh-ot-low{color:#ff8585}
+.bh-ot-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.bh-ot-row{padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.04);font-weight:700}
+.bh-ot-value{border:1px solid rgba(255,215,106,.55)}
+.bh-ot-twist{border:1px solid rgba(255,112,155,.45)}
+.bh-ot-note{font-size:12px;opacity:.72;margin-top:9px;line-height:1.55}
+</style>
 </head>
 <body>
-<div id="bhTopVersion">Vol.96</div>
+<div id="bhTopVersion">Vol.98</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -332,7 +345,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.96</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.98</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2429,7 +2442,7 @@ function bhWindImpactText(){
  if(wi.mode==="head")return wi.speed>=3?"向かい風 → センター〜アウトのまくり・まくり差しを警戒":"弱い向かい風 → 外の攻めを軽く警戒";
  if(wi.mode==="tail")return wi.speed>=3?"追い風 → イン・差しを軸に、強い場合は1Mの流れも警戒":"弱い追い風 → イン・差しを軽く評価";
  if(wi.mode==="cross")return"横風 → スタート・ターンの乱れを警戒（左右差は今後の場別補正で追加）";
- return"風向は取得済み。追い/向かい/横の自動判定は場別水面軸データ確定後に接続";
+ return"";
 }
 const VENUE_TRAITS={
 1:{name:"桐生",escape:1.02,maki:1.04,sashi:1,makiSashi:1.03,note:"イン有利を基本に、展開次第では外の攻めも警戒。"},
@@ -2554,7 +2567,7 @@ function bhWindMainDevelopment(){
  if(wi.direction&&wi.direction!=="風向データなし"){
    if(s>=5)return {main:"強風 → スタート・1Mの乱れを強く警戒",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。追い・向かいを断定できないため、イン固定評価はせずセンター〜アウトの展開変化を警戒。`,none:false};
    if(s>=3)return {main:"風の影響大 → センター〜アウト展開を警戒",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。方位風データから強さを判定し、スタート差・ターン流れを展開材料にする。`,none:false};
-   if(s>=1)return {main:"弱風 → 展開補正は小さめ",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。風は取得済み。追い・向かい未確定のため強い補正はかけない。`,none:false};
+   if(s>=1)return {main:"弱風 → 展開補正は小さめ",sub:`風向：${wi.direction} / ${s.toFixed(1)}m/s。`,none:false};
  }
  return {main:"風情報なし",sub:"風向・風速を取得できませんでした。風補正なし。",none:true};
 }
@@ -7410,5 +7423,76 @@ window.BH_VOL93={
 })();
 </script>
 
+
+<script id="bhOddsTrustV98">
+(function(){
+  function num(v){v=Number(v);return Number.isFinite(v)?v:null}
+  function getRows(){
+    var rows=[].slice.call(document.querySelectorAll('tr'));
+    var out=[];
+    rows.forEach(function(tr){
+      var t=(tr.innerText||'').replace(/\s+/g,' ');
+      var m=t.match(/([1-6])号艇\s+(\d+)回\s+(\d+)回\s+(\d+)回/);
+      if(m) out.push({boat:+m[1],first:+m[2],second:+m[3],third:+m[4]});
+    });
+    return out.length===6?out:null;
+  }
+  function hunterRank(boat){
+    var selectors=[
+      '[data-boat="'+boat+'"][data-ai-rank]','[data-lane="'+boat+'"][data-ai-rank]',
+      '[data-boat="'+boat+'"][data-hunter-rank]','[data-lane="'+boat+'"][data-hunter-rank]'
+    ];
+    for(var i=0;i<selectors.length;i++){
+      var e=document.querySelector(selectors[i]); if(e){
+        var r=num(e.getAttribute('data-ai-rank')||e.getAttribute('data-hunter-rank')); if(r)return r;
+      }
+    }
+    var body=document.body.innerText||'';
+    var rx=new RegExp(boat+'号艇[^\\n]{0,100}(?:AI評価|HUNTER評価)[^\\d]{0,8}([1-6])位');
+    var m=body.match(rx); return m?+m[1]:null;
+  }
+  function insertTarget(){
+    var tables=[].slice.call(document.querySelectorAll('table'));
+    for(var i=0;i<tables.length;i++){
+      var tx=tables[i].innerText||'';
+      if(tx.indexOf('1着回数')>=0 && tx.indexOf('2着回数')>=0) return tables[i].closest('section,.card,.panel,div')||tables[i];
+    }
+    return null;
+  }
+  function render(){
+    var rows=getRows(), target=insertTarget(); if(!rows||!target)return;
+    var old=document.getElementById('bhOddsTrustV98Box'); if(old)old.remove();
+    var market=rows.slice().sort(function(a,b){return b.first-a.first||b.second-a.second||a.boat-b.boat});
+    market.forEach(function(x,i){x.marketRank=i+1;x.hunterRank=hunterRank(x.boat)});
+    var head=market[0], hr=head.hunterRank;
+    var cls='bh-ot-mid', trust='中';
+    if(hr===1){cls='bh-ot-high';trust='高'}
+    else if(hr!=null && hr>=4){cls='bh-ot-low';trust='低'}
+    var twists=market.filter(function(x){return x.hunterRank!=null && Math.abs(x.marketRank-x.hunterRank)>=2})
+      .sort(function(a,b){return Math.abs(b.marketRank-b.hunterRank)-Math.abs(a.marketRank-a.hunterRank)});
+    var value=market.filter(function(x){return x.hunterRank!=null && x.hunterRank+1<x.marketRank})
+      .sort(function(a,b){return (b.marketRank-b.hunterRank)-(a.marketRank-a.hunterRank)});
+    var over=market.filter(function(x){return x.hunterRank!=null && x.marketRank+1<x.hunterRank})
+      .sort(function(a,b){return (b.hunterRank-b.marketRank)-(a.hunterRank-a.marketRank)});
+    var box=document.createElement('div'); box.id='bhOddsTrustV98Box';box.className='bh-odds-trust-v98';
+    var detail=hr?('市場頭評価1位 / HUNTER評価'+hr+'位'):('市場頭評価1位 / HUNTER評価はAI解析後に照合');
+    var html='<h3>🎯 オッズ信頼度・評価のねじれ</h3>'+
+      '<div class="bh-ot-main"><div class="bh-ot-head '+cls+'">頭候補1：'+head.boat+'号艇　信頼度 '+trust+'</div><div>'+detail+'</div></div>'+
+      '<div class="bh-ot-grid">';
+    if(value.length) html+='<div class="bh-ot-row bh-ot-value">🔥 穴目で期待：'+value.slice(0,2).map(function(x){return x.boat+'号艇（市場'+x.marketRank+'位→HUNTER'+x.hunterRank+'位）'}).join(' / ')+'</div>';
+    else html+='<div class="bh-ot-row">🔥 穴目で期待：該当なし</div>';
+    if(over.length) html+='<div class="bh-ot-row bh-ot-twist">⚠️ 人気先行警戒：'+over.slice(0,2).map(function(x){return x.boat+'号艇（市場'+x.marketRank+'位→HUNTER'+x.hunterRank+'位）'}).join(' / ')+'</div>';
+    else html+='<div class="bh-ot-row">⚠️ 人気先行警戒：該当なし</div>';
+    if(twists.length) html+='<div class="bh-ot-row">🔀 評価のねじれ：'+twists.slice(0,3).map(function(x){return x.boat+'号艇 '+Math.abs(x.marketRank-x.hunterRank)+'段差'}).join(' / ')+'</div>';
+    else html+='<div class="bh-ot-row">🔀 評価のねじれ：該当なし</div>';
+    html+='</div><div class="bh-ot-note">オッズ上位50通りの1着回数を市場の頭評価として、HUNTER評価順位と照合。人気だけで買い目を決めず「市場とAIが一致する部分」と「市場が低く見ている艇」を分けて表示。</div>';
+    box.innerHTML=html;
+    target.insertAdjacentElement('afterend',box);
+  }
+  var mo=new MutationObserver(function(){clearTimeout(window.__bhOT98);window.__bhOT98=setTimeout(render,250)});
+  function start(){render();mo.observe(document.body,{childList:true,subtree:true,characterData:true})}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
 </body>
 </html>

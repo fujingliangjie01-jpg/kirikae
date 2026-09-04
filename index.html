@@ -10208,10 +10208,11 @@ window.BH_VOL164={version:164,statsUnified:true,holeHeadAxisUnified:true,oneTime
 .bh178Top{display:flex;justify-content:space-between;gap:10px;align-items:center}.bh178Top h2{margin:0;font-size:19px}.bh178Btn{border:0;border-radius:10px;padding:10px 13px;font-weight:1000;background:#1677ff;color:#fff}.bh178Sub{font-size:10px;color:#8fa8ba;margin-top:5px;line-height:1.5}.bh178Grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.bh178Box{padding:10px;border-radius:11px;background:#0f1721;border:1px solid #24394b}.bh178Box small{display:block;color:#8ea3b5;font-size:9px}.bh178Box b{display:block;font-size:18px;margin-top:3px}.bh178Market{color:#ffd85c}.bh178Exacta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.bh178Ticket{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.07);font-weight:900}.bh178Ticket:last-child{border-bottom:0}.bh178Ticket strong{font-size:18px}.bh178Scenario{font-size:10px;color:#a9bed0;margin-top:8px;line-height:1.65}.bh178Table{width:100%;border-collapse:collapse;margin-top:8px;font-size:10px}.bh178Table th,.bh178Table td{padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.07);text-align:center}.bh178Shot{margin-top:12px;padding:12px;border-radius:13px;background:#080d13;border:2px solid #3d87bd}.bh178ShotTitle{font-weight:1000;font-size:16px}.bh178ShotLine{font-size:11px;line-height:1.7;margin-top:6px}.bh178Actual{color:#67e38d;font-weight:1000}.bh178Warn{color:#ffca63}.bh178HideBtn{margin-left:auto;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.35);color:#dce8f0;border-radius:999px;padding:5px 9px;font-size:10px;font-weight:900}.bh178HiddenBody{display:none!important}.bh178CardHead{display:flex;align-items:center;gap:8px}.bh178CardHead>*:first-child{flex:1}.bh178ScoreNote{font-size:9px;color:#7f94a5;line-height:1.55;margin-top:8px}.bh178ScenarioTag{display:inline-block;margin:3px 3px 0 0;padding:4px 6px;border-radius:999px;background:#122231;border:1px solid #29445a;color:#bad1e4;font-size:9px;font-weight:900}
 .bh178Situation{margin-top:10px;border-color:#3b6c8d}.bh178SituationTitle{font-size:15px!important;color:#d8efff!important;font-weight:1000;margin-bottom:6px}.bh178SituationRow{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.07);font-size:11px;font-weight:900}.bh178SituationRow:last-child{border-bottom:0}.bh178SituationRow strong{font-size:12px}.bh178SituationCount{white-space:nowrap;color:#9fdcff}.bh178Alert{margin-top:9px;padding:8px 10px;border-radius:10px;background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.25);font-size:10px;line-height:1.55;color:#f4d57c}
 @media(max-width:520px){.bh178Exacta{grid-template-columns:1fr}.bh178Grid{gap:6px}.bh178Box b{font-size:16px}}
+.bh181Tie{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:999px;background:rgba(255,215,80,.14);border:1px solid rgba(255,215,80,.35);color:#ffd85c;font-size:9px;font-weight:1000}.bh181Explain{font-size:9px;color:#8ea3b5;margin:2px 0 6px}
 </style>
 <script id="bh-vol178-sim-core">
 (()=>{'use strict';
-const V=178, SIMKEY='BOAT_HUNTER_SIM_V178', UIKEY='BOAT_HUNTER_UI_HIDE_V178';
+const V=181, SIMS=5000, SIMKEY='BOAT_HUNTER_SIM_V181', UIKEY='BOAT_HUNTER_UI_HIDE_V181';
 const N=v=>Number.isFinite(Number(v))?Number(v):0, clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function safe(fn,fb=null){try{return fn()}catch(e){return fb}}
 function avg(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:0}
@@ -10255,39 +10256,74 @@ function buildScenarioCandidates(F,market,rnd){let mm=marketMap(market), starts=
  }
  return {out,starts};}
 function residualAbility(x,starts){let s=starts[x.boat]?.score||0;return Math.max(.1,20+x.base*.55+s*1.2+(7-x.hunterRank)*.6)}
-function secondWeights(F,winner,sc,starts,rnd){let arr=[];let one=F.find(x=>x.course===1),att=F.find(x=>x.boat===winner);for(const x of F){if(x.boat===winner)continue;let w=residualAbility(x,starts);let dist=x.course-att.course;
+function secondWeights(F,winner,sc,starts,rnd){
+ let arr=[];let one=F.find(x=>x.course===1),att=F.find(x=>x.boat===winner);if(!att)return [];
+ // Vol.181: 2着は「外へ流す」だけでなく、攻められた内側が残る展開を明示的に評価する。
+ // 特に 2号艇の差し/まくり成功時の1残り、3〜6号艇の攻め成功時の直内残りを強化。
+ let directInside=F.filter(y=>y.course<att.course).sort((a,b)=>b.course-a.course)[0]||null;
+ for(const x of F){if(x.boat===winner)continue;let w=residualAbility(x,starts);let dist=x.course-att.course;
    if(sc.type==='逃げ'){
-     // 逃げ切っても、攻めた外艇・その外側に差し場が生まれる。
-     if(x.course===2)w*=1.12;if(x.course>=3)w*=1.0+Math.max(x.maki,x.makiSashi,x.sashi)*.012;if(x.course>=5)w*=1.08;
+     // イン逃げ後は2コース差し残りを基本線。外艇も足・攻撃力に応じて2着へ。
+     if(x.course===2)w*=1.42;
+     if(x.course>=3)w*=1.0+Math.max(x.maki,x.makiSashi,x.sashi)*.010;
+     if(x.course>=5)w*=1.03;
    }else if(sc.type==='差し'){
-     if(one&&x.boat===one.boat)w*=1.72;if(dist===1)w*=1.13;if(x.course>att.course)w*=1.08;
+     // 差し切りは内艇を潰し切らないケースが多い。1号艇残りを最重要候補にする。
+     if(one&&x.boat===one.boat){
+       let hold=clamp(2.25-one.lose.sasare*.018,1.25,2.30);
+       if(att.course===2)hold*=1.18;
+       w*=hold;
+     }
+     if(directInside&&x.boat===directInside.boat)w*=1.38;
+     if(dist===1)w*=1.05;
+     if(x.course>att.course)w*=.94;
    }else if(sc.type==='まくり'){
-     // まくり成功時は内側が潰れやすいが、1は抵抗力があれば残る。外隣に最も展開が向く。
-     if(one&&x.boat===one.boat)w*=clamp(1.42-one.defense*.018,.42,1.35);if(x.course<att.course&&(!one||x.boat!==one.boat))w*=.58;if(dist===1)w*=1.65;if(dist===2)w*=1.28;if(x.course>=5)w*=1.08;
+     // まくり成功でも「内側全滅」に固定しない。直内艇は残り足があれば2着へ残す。
+     if(directInside&&x.boat===directInside.boat){
+       let survive=1.62;
+       if(x.course===1)survive*=clamp(1.28-x.defense*.008,.82,1.22);
+       else survive*=clamp(1.18-x.defense*.006,.82,1.16);
+       w*=survive;
+     }else if(x.course<att.course){
+       w*=.92;
+     }
+     if(one&&x.boat===one.boat&&att.course===2)w*=clamp(1.92-one.defense*.012,1.05,1.85);
+     if(dist===1)w*=1.24;
+     if(dist===2)w*=1.08;
+     if(x.course>=5)w*=.98;
    }else if(sc.type==='まくり差し'){
-     if(one&&x.boat===one.boat)w*=clamp(1.55-one.lose.mksare*.015,.55,1.45);if(dist===1)w*=1.30;if(x.course<att.course&&(!one||x.boat!==one.boat))w*=.82;if(x.course>att.course)w*=1.12;
+     // まくり差しは内艇が壁として残りやすい。直内と1号艇の残存を優先。
+     if(directInside&&x.boat===directInside.boat)w*=1.48;
+     if(one&&x.boat===one.boat)w*=clamp(1.82-one.lose.mksare*.012,1.05,1.75);
+     if(x.course<att.course&&(!directInside||x.boat!==directInside.boat)&&(!one||x.boat!==one.boat))w*=1.02;
+     if(dist===1)w*=1.12;
+     if(x.course>att.course)w*=1.00;
    }
-   // 20%以上の被攻め/決まり手は小さく扱わない。
-   if(x.course===1&&x.defense>=20&&sc.type!=='逃げ')w*=.78;
-   w*=Math.max(.75,1+normal(rnd)*.08);arr.push({boat:x.boat,w});}
- return arr;}
+   // 被攻め率20%以上でも一律に内艇を消さない。高被攻めは減点するが「残り目」を残す。
+   if(x.course===1&&x.defense>=20&&sc.type!=='逃げ')w*=.90;
+   w*=Math.max(.78,1+normal(rnd)*.075);arr.push({boat:x.boat,w});
+ }
+ return arr;
+}
 function thirdWeights(F,first,second,sc,starts,rnd){let winner=F.find(x=>x.boat===first);return F.filter(x=>x.boat!==first&&x.boat!==second).map(x=>{let w=residualAbility(x,starts);let dist=x.course-winner.course;if(sc.type==='まくり'&&dist>0)w*=1.18;if(sc.type==='まくり差し'&&x.course>=winner.course)w*=1.12;if(x.course===1)w*=1.15;if(x.course>=5)w*=1.05;w*=Math.max(.78,1+normal(rnd)*.07);return {boat:x.boat,w}})}
-function runSim(){let F=featureRows(),market=marketHeads(),venue=Number(document.getElementById('venue')?.value||0),race=Number(document.getElementById('race')?.value||0),ymd=safe(()=>today().ymd,'');let sig=F.map(x=>[x.boat,x.base.toFixed(2),x.ast,x.exRank,x.straightRank,x.lapRank,x.sashi,x.maki,x.makiSashi,x.defense].join(':')).join('|');let rnd=seeded(`${ymd}|${venue}|${race}|${sig}|V178`),pair={},heads={},places={},scenarios={},winTypes={};let market1=market[0]?.boat||null;
- for(let i=0;i<100;i++){let pack=buildScenarioCandidates(F,market,rnd),sc=weightedPick(pack.out,rnd),first=sc.boat;let second=weightedPick(secondWeights(F,first,sc,pack.starts,rnd),rnd).boat;let third=weightedPick(thirdWeights(F,first,second,sc,pack.starts,rnd),rnd).boat;let top=[first,second,third],key=`${first}-${second}`;pair[key]=(pair[key]||0)+1;heads[first]=(heads[first]||0)+1;top.forEach((b,k)=>{places[b]=places[b]||[0,0,0];places[b][k]++});let sk=`${first}号艇 ${sc.type} → ${second}号艇2着`;scenarios[sk]=(scenarios[sk]||0)+1;let wk=`${first}:${sc.type}`;winTypes[wk]=(winTypes[wk]||0)+1;}
- let exacta=Object.entries(pair).map(([key,count])=>({key,count,pct:count})).sort((a,b)=>b.count-a.count||a.key.localeCompare(b.key));let headRows=F.map(x=>({boat:x.boat,win:heads[x.boat]||0,p1:places[x.boat]?.[0]||0,p2:places[x.boat]?.[1]||0,p3:places[x.boat]?.[2]||0,top3:(places[x.boat]||[]).reduce((a,v)=>a+v,0),base:x.base})).sort((a,b)=>b.win-a.win||b.base-a.base);let scRows=Object.entries(scenarios).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count).slice(0,10);let wtRows=Object.entries(winTypes).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count);let m=market1?headRows.find(x=>x.boat===market1):null;let out={version:V,ymd,venue,race,createdAt:Date.now(),market,market1,features:F,exacta,heads:headRows,scenarios:scRows,winTypes:wtRows,marketStats:m};persist(out);return out}
+function runSim(){let F=featureRows(),market=marketHeads(),venue=Number(document.getElementById('venue')?.value||0),race=Number(document.getElementById('race')?.value||0),ymd=safe(()=>today().ymd,'');let sig=F.map(x=>[x.boat,x.base.toFixed(2),x.ast,x.exRank,x.straightRank,x.lapRank,x.sashi,x.maki,x.makiSashi,x.defense].join(':')).join('|');let rnd=seeded(`${ymd}|${venue}|${race}|${sig}|V180`),pair={},heads={},places={},scenarios={},winTypes={};let market1=market[0]?.boat||null;
+ for(let i=0;i<SIMS;i++){let pack=buildScenarioCandidates(F,market,rnd),sc=weightedPick(pack.out,rnd),first=sc.boat;let second=weightedPick(secondWeights(F,first,sc,pack.starts,rnd),rnd).boat;let third=weightedPick(thirdWeights(F,first,second,sc,pack.starts,rnd),rnd).boat;let top=[first,second,third],key=`${first}-${second}`;pair[key]=(pair[key]||0)+1;heads[first]=(heads[first]||0)+1;top.forEach((b,k)=>{places[b]=places[b]||[0,0,0];places[b][k]++});let sk=`${first}号艇 ${sc.type} → ${second}号艇2着`;scenarios[sk]=(scenarios[sk]||0)+1;let wk=`${first}:${sc.type}`;winTypes[wk]=(winTypes[wk]||0)+1;}
+ let exacta=Object.entries(pair).map(([key,count])=>({key,count,pct:count/SIMS*100})).sort((a,b)=>b.count-a.count||a.key.localeCompare(b.key));let headRows=F.map(x=>({boat:x.boat,win:heads[x.boat]||0,p1:places[x.boat]?.[0]||0,p2:places[x.boat]?.[1]||0,p3:places[x.boat]?.[2]||0,top3:(places[x.boat]||[]).reduce((a,v)=>a+v,0),base:x.base})).sort((a,b)=>b.win-a.win||b.base-a.base);let scRows=Object.entries(scenarios).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count).slice(0,10);let wtRows=Object.entries(winTypes).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count);let m=market1?headRows.find(x=>x.boat===market1):null;let out={version:V,sims:SIMS,ymd,venue,race,createdAt:Date.now(),market,market1,features:F,exacta,heads:headRows,scenarios:scRows,winTypes:wtRows,marketStats:m};persist(out);return out}
 function persist(o){try{let st=JSON.parse(localStorage.getItem(SIMKEY)||'{}');st[`${o.ymd}|${o.venue}|${o.race}`]=o;localStorage.setItem(SIMKEY,JSON.stringify(st))}catch(e){}}
-function pct(n){return `${Number(n||0).toFixed(0)}%`}
+function pct(n,total=SIMS){return `${(Number(n||0)/Number(total||SIMS)*100).toFixed(1)}%`}
+function pp(n,total=SIMS){return Number(n||0)/Number(total||SIMS)*100}
+function tieLabel(rows,i,total=SIMS){if(i<=0)return '';const a=pp(rows[i-1]?.count,total),b=pp(rows[i]?.count,total);return Math.abs(a-b)<=1.0?' <span class="bh181Tie">同格</span>':''}
 async function actualResult(o){try{if(typeof bhFetchAllResultsForDay!=='function')return null;let got=await bhFetchAllResultsForDay(o.ymd),row=(got.rows||[]).find(x=>Number(x.venue)===o.venue&&Number(x.race)===o.race);return row||null}catch(e){return null}}
 function ensureCard(){let c=document.getElementById('bh178SimCard');if(c)return c;document.getElementById('bh175SimCard')?.remove();document.getElementById('bh176SimCard')?.remove();c=document.createElement('section');c.id='bh178SimCard';c.className='card bh178Card';let anchor=document.querySelector('#bhOddsPopularity,.bhOddsPopularity,#oddsPopularity')||document.getElementById('analysisCard')||document.getElementById('raceCard');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(c,anchor.nextSibling);else document.body.appendChild(c);return c}
-async function render(o,fetchActual=false){let c=ensureCard();if(!c)return;document.getElementById('bhVol174Blank')?.remove();let m=o.marketStats||{},main=o.exacta.slice(0,7),sub=o.exacta.slice(7,14),actual=fetchActual?await actualResult(o):null;let actualPair=actual?.result?.split('-').slice(0,2).join('-')||'';let hitRank=actualPair?o.exacta.findIndex(x=>x.key===actualPair)+1:0;let scenarios=o.scenarios.slice(0,10);let winnerSummary=o.winTypes.slice(0,8).map(x=>`${x.key.replace(':','号艇 ')} ${x.count}回`).join(' / ');let outsideWins=o.heads.filter(x=>o.features.find(f=>f.boat===x.boat)?.course!==1).reduce((s,x)=>s+x.p1,0);let one=o.features.find(x=>x.course===1),oneWin=one?o.heads.find(x=>x.boat===one.boat)?.p1||0:0;
- c.innerHTML=`<div class="bh178Top"><div><h2>🧪 100回 模擬レース Vol.179</h2><div class="bh178Sub">6艇の攻撃権 → 1M決まり手 → 成否 → 同じ展開から2着・3着を生成。</div></div><button class="bh178Btn" id="bh178Run">再SIM</button></div><div class="bh178Grid"><div class="bh178Box"><small>世間1着支持1位</small><b class="bh178Market">${o.market1?o.market1+'号艇':'オッズ未取得'}</b></div><div class="bh178Box"><small>世間1位 1着 / 2連対 / 3連対</small><b>${m?pct(m.p1):'-'} / ${m?pct(m.p1+m.p2):'-'} / ${m?pct(m.top3):'-'}</b></div><div class="bh178Box"><small>イン1着 / イン以外1着</small><b>${oneWin}% / ${outsideWins}%</b></div><div class="bh178Box"><small>主な勝ち方</small><b style="font-size:12px;line-height:1.5">${winnerSummary||'-'}</b></div></div><div class="bh178Box bh178Situation"><small class="bh178SituationTitle">🎬 シチュエーション結果 TOP10</small>${scenarios.length?scenarios.map((x,i)=>`<div class="bh178SituationRow"><span>${i+1}. <strong>${x.key}</strong></span><span class="bh178SituationCount">${x.count}/100回　${x.count}%</span></div>`).join(''):'<div class="bh178SituationRow"><span>シチュエーション集計なし</span><span>-</span></div>'}</div><div class="bh178Exacta"><div class="bh178Box"><small>本命・2連単 出現上位7</small>${main.map((x,i)=>`<div class="bh178Ticket"><span>${i+1}. <strong>${x.key}</strong></span><span>${x.count}/100</span></div>`).join('')}</div><div class="bh178Box"><small>本命以外 TOP7</small>${sub.length?sub.map((x,i)=>`<div class="bh178Ticket"><span>${i+8}. <strong>${x.key}</strong></span><span>${x.count}/100</span></div>`).join(''):'該当なし'}</div></div><div class="bh178Box" style="margin-top:10px"><small>着順分布</small><table class="bh178Table"><tr><th>艇</th><th>1着</th><th>2着</th><th>3着</th><th>3連対</th></tr>${o.heads.map(x=>`<tr><td>${x.boat}</td><td>${x.p1}</td><td>${x.p2}</td><td>${x.p3}</td><td>${x.top3}</td></tr>`).join('')}</table></div>${(outsideWins<8&&o.market1&&o.features.find(f=>f.boat===o.market1)?.course!==1)?`<div class="bh178Alert">⚠️ 世間1位が外コースなのに外頭が少なすぎます。攻撃条件の不足を検証対象として保持します。</div>`:''}<div class="bh178Shot"><div class="bh178ShotTitle">📸 答え合わせデータ</div><div class="bh178ShotLine">${o.ymd} / 場${o.venue} / ${o.race}R<br>世間1位：<b>${o.market1||'-'}号艇</b>　SIM：1着 ${m?.p1||0}%・2連対 ${(m?.p1||0)+(m?.p2||0)}%・3連対 ${m?.top3||0}%<br>イン頭：${oneWin}%　外頭：${outsideWins}%<br>本命7：${main.map(x=>`${x.key}(${x.count})`).join(' / ')}<br>次点7：${sub.map(x=>`${x.key}(${x.count})`).join(' / ')}<br>勝ち方：${winnerSummary||'-'}<br>主要展開：${scenarios.map(x=>`${x.key} ${x.count}`).join(' / ')||'-'}<br>${actual?`実結果：<span class="bh178Actual">${actual.result}</span>　2連単SIM順位：${hitRank||'圏外'}位`:`<span class="bh178Warn">結果未取得。下のボタンで今日の結果と照合できます。</span>`}</div><button class="bh178Btn" id="bh178Check" style="margin-top:8px;width:100%">今日の結果と答え合わせ</button></div><div class="bh178ScoreNote">※ 結果に合わせた後付け正解補正はしない。11項目・被攻め率・壁・決まり手・ST揺らぎから展開を生成し、実結果とのズレを検証する。</div>`;
- document.getElementById('bh178Run').onclick=()=>render(runSim(),false);document.getElementById('bh178Check').onclick=()=>render(o,true);applyHideButtons();}
+async function render(o,fetchActual=false){let c=ensureCard();if(!c)return;document.getElementById('bhVol174Blank')?.remove();const sims=Number(o.sims||SIMS);let m=o.marketStats||{},main=o.exacta.slice(0,7),sub=o.exacta.slice(7,14),actual=fetchActual?await actualResult(o):null;let actualPair=actual?.result?.split('-').slice(0,2).join('-')||'';let hitRank=actualPair?o.exacta.findIndex(x=>x.key===actualPair)+1:0;let scenarios=o.scenarios.slice(0,10);let winnerSummary=o.winTypes.slice(0,8).map(x=>`${x.key.replace(':','号艇 ')} ${pct(x.count,sims)}`).join(' / ');let outsideWins=o.heads.filter(x=>o.features.find(f=>f.boat===x.boat)?.course!==1).reduce((s,x)=>s+x.p1,0);let one=o.features.find(x=>x.course===1),oneWin=one?o.heads.find(x=>x.boat===one.boat)?.p1||0:0;
+ c.innerHTML=`<div class="bh178Top"><div><h2>🧪 ${sims.toLocaleString()}回 模擬レース Vol.181</h2><div class="bh178Sub">内部は${sims.toLocaleString()}回。1%以内の差は「同格」として扱い、2連単TOP7は合計出現率で判定。</div></div><button class="bh178Btn" id="bh178Run">再SIM</button></div><div class="bh178Grid"><div class="bh178Box"><small>世間1着支持1位</small><b class="bh178Market">${o.market1?o.market1+'号艇':'オッズ未取得'}</b></div><div class="bh178Box"><small>世間1位 1着 / 2連対 / 3連対</small><b>${m?pct(m.p1,sims):'-'} / ${m?pct((m.p1||0)+(m.p2||0),sims):'-'} / ${m?pct(m.top3,sims):'-'}</b></div><div class="bh178Box"><small>イン1着 / イン以外1着</small><b>${pct(oneWin,sims)} / ${pct(outsideWins,sims)}</b></div><div class="bh178Box"><small>主な勝ち方</small><b style="font-size:12px;line-height:1.5">${winnerSummary||'-'}</b></div></div><div class="bh178Box bh178Situation"><small class="bh178SituationTitle">🎬 シチュエーション結果 TOP10</small><div class="bh181Explain">決まり手込みの展開は分析用。順位差1%以内は実質同格。</div>${scenarios.length?scenarios.map((x,i)=>`<div class="bh178SituationRow"><span>${i+1}. <strong>${x.key}</strong>${tieLabel(scenarios,i,sims)}</span><span class="bh178SituationCount">${x.count.toLocaleString()}/${sims.toLocaleString()}　${pct(x.count,sims)}</span></div>`).join(''):'<div class="bh178SituationRow"><span>シチュエーション集計なし</span><span>-</span></div>'}</div><div class="bh178Exacta"><div class="bh178Box"><small>本命・2連単 出現上位7</small>${main.map((x,i)=>`<div class="bh178Ticket"><span>${i+1}. <strong>${x.key}</strong>${tieLabel(main,i,sims)}</span><span>${pct(x.count,sims)}</span></div>`).join('')}</div><div class="bh178Box"><small>本命以外 TOP7</small>${sub.length?sub.map((x,i)=>`<div class="bh178Ticket"><span>${i+8}. <strong>${x.key}</strong>${tieLabel(o.exacta,i+7,sims)}</span><span>${pct(x.count,sims)}</span></div>`).join(''):'該当なし'}</div></div><div class="bh178Box" style="margin-top:10px"><small>着順分布</small><table class="bh178Table"><tr><th>艇</th><th>1着</th><th>2着</th><th>3着</th><th>3連対</th></tr>${o.heads.map(x=>`<tr><td>${x.boat}</td><td>${pct(x.p1,sims)}</td><td>${pct(x.p2,sims)}</td><td>${pct(x.p3,sims)}</td><td>${pct(x.top3,sims)}</td></tr>`).join('')}</table></div>${(pp(outsideWins,sims)<8&&o.market1&&o.features.find(f=>f.boat===o.market1)?.course!==1)?`<div class="bh178Alert">⚠️ 世間1位が外コースなのに外頭が少なすぎます。攻撃条件の不足を検証対象として保持します。</div>`:''}<div class="bh178Shot"><div class="bh178ShotTitle">📸 答え合わせデータ</div><div class="bh178ShotLine">${o.ymd} / 場${o.venue} / ${o.race}R<br>内部SIM：<b>${sims.toLocaleString()}回</b>　1%以内＝同格<br>世間1位：<b>${o.market1||'-'}号艇</b>　SIM：1着 ${pct(m?.p1||0,sims)}・2連対 ${pct((m?.p1||0)+(m?.p2||0),sims)}・3連対 ${pct(m?.top3||0,sims)}<br>イン頭：${pct(oneWin,sims)}　外頭：${pct(outsideWins,sims)}<br>本命7：${main.map(x=>`${x.key}(${pct(x.count,sims)})`).join(' / ')}<br>次点7：${sub.map(x=>`${x.key}(${pct(x.count,sims)})`).join(' / ')}<br>勝ち方：${winnerSummary||'-'}<br>主要展開：${scenarios.map(x=>`${x.key} ${pct(x.count,sims)}`).join(' / ')||'-'}<br>${actual?`実結果：<span class="bh178Actual">${actual.result}</span>　2連単SIM順位：${hitRank||'圏外'}位`:`<span class="bh178Warn">結果未取得。下のボタンで今日の結果と照合できます。</span>`}</div><button class="bh178Btn" id="bh178Check" style="margin-top:8px;width:100%">今日の結果と答え合わせ</button></div><div class="bh178ScoreNote">※ 5,000回の頻度差を見る。0.1〜1.0pt程度の小差を過信せず、同格帯・2連単合計確率・着順分布を優先する。</div>`;
+ document.getElementById('bh178Run').onclick=()=>render(runSim(),false);document.getElementById('bh178Check').onclick=()=>render(o,true);applyHideButtons();} 
 function ready(){return safe(()=>racers.length===6,false)}
 function start(){if(!ready())return;let o=runSim();render(o,false)}
 function applyHideButtons(){
-  // Vol.179: existing UI is never scanned or rewritten. Only the new SIM card has its own hide control.
+  // Vol.181: existing UI is never scanned or rewritten. Only the new SIM card has its own hide control.
   const c=document.getElementById('bh178SimCard'); if(!c||c.dataset.bh178HideReady)return; c.dataset.bh178HideReady='1';
-  const key='BOAT_HUNTER_SIM_CARD_HIDDEN_V178';
+  const key='BOAT_HUNTER_SIM_CARD_HIDDEN_V181';
   const btn=document.createElement('button'); btn.type='button'; btn.className='bh178HideBtn';
   const top=c.querySelector('.bh178Top'); if(top) top.appendChild(btn);
   const bodies=[...c.children].filter(x=>!x.classList.contains('bh178Top'));
@@ -10296,7 +10332,7 @@ function applyHideButtons(){
 }
 const oldRun=window.runAnalysis;if(typeof oldRun==='function')window.runAnalysis=async function(){let r=await oldRun.apply(this,arguments);setTimeout(start,30);setTimeout(applyHideButtons,50);return r};
 const oldLoad=window.loadRaceData;if(typeof oldLoad==='function')window.loadRaceData=async function(){let r=await oldLoad.apply(this,arguments);setTimeout(applyHideButtons,50);return r};
-document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(()=>{if(ready())start()},300)});window.BH_VOL178={version:V,run:start,runSim,featureRows,marketHeads};
+document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(()=>{if(ready())start()},300)});window.BH_VOL178={version:V,run:start,runSim,featureRows,marketHeads};window.BH_VOL181=window.BH_VOL178;
 })();
 </script>
 
@@ -10305,8 +10341,8 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
 <script id="bh-vol178-version-ui">
 (()=>{
  function setV(){
-  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.179');
-  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='vol.179'});
+  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.181');
+  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.181'});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();
  setTimeout(setV,100);setTimeout(setV,800);
@@ -10327,7 +10363,7 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
 </style>
 <script id="bh-vol179-situation-standalone">
 (()=>{'use strict';
- const KEY='BOAT_HUNTER_SIM_V178';
+ const KEY='BOAT_HUNTER_SIM_V181';
  const safe=(fn,fb=null)=>{try{return fn()}catch(e){return fb}};
  function curKey(){
    const ymd=safe(()=>today().ymd,'');
@@ -10356,9 +10392,9 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
    const c=ensure(),o=getData(force);
    const rows=(o?.scenarios||[]).slice(0,10);
    c.innerHTML=`<div class="bh179Title">🎬 シチュエーション結果 TOP10</div>
-   <div class="bh179Sub">100回の中で実際に発生した「1着艇・決まり手 → 2着艇」を多い順に表示。</div>
-   ${rows.length?rows.map((x,i)=>`<div class="bh179Row"><span>${i+1}. ${x.key}</span><span class="bh179Count">${x.count}/100回　${x.count}%</span></div>`).join(''):`<div class="bh179Empty">まだシチュエーション結果がありません。下の「100回SIMを実行」を押してください。</div>`}
-   <div class="bh179Btns"><button id="bh179Run">100回SIMを実行</button><button id="bh179Refresh">表示を更新</button></div>`;
+   <div class="bh179Sub">5,000回の中で実際に発生した「1着艇・決まり手 → 2着艇」を多い順に表示。</div>
+   ${rows.length?rows.map((x,i)=>`<div class="bh179Row"><span>${i+1}. ${x.key}</span><span class="bh179Count">${x.count.toLocaleString()}/${Number(o?.sims||5000).toLocaleString()}回　${(x.count/Number(o?.sims||5000)*100).toFixed(1)}%</span></div>`).join(''):`<div class="bh179Empty">まだシチュエーション結果がありません。下の「5,000回SIMを実行」を押してください。</div>`}
+   <div class="bh179Btns"><button id="bh179Run">5,000回SIMを実行</button><button id="bh179Refresh">表示を更新</button></div>`;
    document.getElementById('bh179Run').onclick=()=>draw(true);
    document.getElementById('bh179Refresh').onclick=()=>draw(false);
  }

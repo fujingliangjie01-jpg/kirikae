@@ -396,9 +396,15 @@ var bhClassPatchCore=window.bhClassPatchCore;
 #bhBeforeInfoRows td:has(.bhBeforeFlying) .bhBeforeCellRankLabel{display:none!important}
 #bhBeforeInfoRows .bhBeforeFlying,#bhBeforeInfoRows .bhBeforeFlyingMark{background:transparent!important;color:#fff!important;border:0!important;box-shadow:none!important}
 </style>
+
+<style id="bh-vol144-compact-ui-style">
+.bh144CompareWrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px}.bh144EvalCard{min-width:0;border-radius:13px;padding:10px;border:1px solid #38414b;background:#10151b}.bh144EvalCard.market{border-color:#6c5a2b;background:linear-gradient(180deg,#18150c,#101114)}.bh144EvalCard.hunter{border-color:#247ea1;background:linear-gradient(180deg,#0b1d26,#101419)}.bh144EvalTitle{font-size:12px;font-weight:1000;color:#dce7ee;margin-bottom:7px}.bh144EvalMain{display:flex;flex-direction:column;gap:1px}.bh144EvalMain small{font-size:9px;color:#8d99a4}.bh144EvalMain b{font-size:22px;line-height:1.15;color:#fff}.bh144EvalMini{font-size:10px;color:#aeb7be;margin-top:5px}.bh144EvalRanks{font-size:10px;line-height:1.55;margin-top:7px;color:#cbd3d8}.bh144Toggle{width:100%;border:1px solid #39424b;background:#151a20;color:#cfd8df;border-radius:9px;padding:8px 10px;font-size:11px;font-weight:900;text-align:center}.bh144Toggle:after{content:' ▼';font-size:9px}.bh144Toggle[aria-expanded="true"]:after{content:' ▲'}.bh144Toggle.mini{width:auto;padding:5px 8px;white-space:nowrap;font-size:10px}.bh144Collapsible{display:none}.bh144Collapsible.bh144Open{display:block}.bh144ExplainBox{margin:7px 0 10px;padding:9px;border-radius:10px;background:#12151a;border:1px solid #303741}.bh144ExplainText{margin-top:7px;font-size:10px;line-height:1.55;color:#8f9ba4}.bh144CompactHead,.bh144SectionBar{margin-top:9px;border:1px solid #343b43;border-radius:11px;background:#101418;padding:8px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px}.bh144CompactHead>div{min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.bh144CompactHead b,.bh144SectionBar b{font-size:12px}.bh144CompactHead span{font-size:10px;color:#aab4bd;font-weight:800}.bh144CompactHead.fund{border-color:#57491f;background:#17150d}.bh144TrustPill{padding:3px 7px;border-radius:999px}.bh144TrustPill.high{background:#21391f;color:#8cff85!important;border:1px solid #477d43}.bh144TrustPill.mid{background:#3a310f;color:#ffe56d!important;border:1px solid #746322}.bh144TrustPill.low{background:#3b1717;color:#ff8d8d!important;border:1px solid #7a3434}.bh144SectionBar{margin-top:10px}.bh144Collapsible .bh141FundSummary,.bh144Collapsible .bh142MarketTrust{margin-top:6px}.bh144Collapsible .bh123PickColumns{margin-top:7px}.bh144Collapsible .bhOddsPopularitySection{margin-top:6px}
+@media(max-width:420px){.bh144CompareWrap{gap:6px}.bh144EvalCard{padding:8px}.bh144EvalMain b{font-size:20px}.bh144EvalRanks{font-size:9px}.bh144EvalMini{font-size:9px}}
+</style>
+
 </head>
 <body>
-<div id="bhTopVersion">Vol.142</div>
+<div id="bhTopVersion">Vol.144</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -418,7 +424,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.142</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.144</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -4357,7 +4363,13 @@ function bhExtractOdds2FromCsvRow(row){let out={};for(let [k,v] of Object.entrie
 async function bhLoadRealtimePreviewAndOdds(){
  let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od2','od3'],got={};
  await Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}}));
- bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);bhRealtimeOdds=bhExtractOddsFromCsvRow(got.od3);window.bhRealtimeOdds=bhRealtimeOdds;bhRealtimeOdds2=bhExtractOdds2FromCsvRow(got.od2);bhRealtimePreviewLoaded=!!(got.tkz||got.stt||got.sui||got.original_exhibition);return got;
+ bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);
+ // Vol.144: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
+ const nextOdds3=bhExtractOddsFromCsvRow(got.od3),nextOdds2=bhExtractOdds2FromCsvRow(got.od2);
+ if(Object.keys(nextOdds3).length){bhRealtimeOdds=nextOdds3;window.bhRealtimeOdds=bhRealtimeOdds;window.BH_ODDS_LAST_OK_AT=Date.now();}
+ else if(!window.bhRealtimeOdds||!Object.keys(window.bhRealtimeOdds).length){window.bhRealtimeOdds=bhRealtimeOdds||{};}
+ if(Object.keys(nextOdds2).length){bhRealtimeOdds2=nextOdds2;}
+ bhRealtimePreviewLoaded=!!(got.tkz||got.stt||got.sui||got.original_exhibition);return got;
 }
 function bhGetOdds(key){let parts=String(key).split('-');return Number((parts.length===2?bhRealtimeOdds2:bhRealtimeOdds)?.[key])||null}
 async function bhReloadRealtimeVol4(){
@@ -4366,10 +4378,8 @@ async function bhReloadRealtimeVol4(){
   if(btn)btn.disabled=true;
   await bhLoadRealtimePreviewAndOdds();
   bhRenderBeforeInfo();
-  if(typeof window.bhRenderOddsPopularity==='function' &&
-     document.getElementById('bhOddsPopularityPanel')?.classList.contains('open')){
-    window.bhRenderOddsPopularity();
-  }
+  // Vol.144: パネル開閉状態に関係なくオッズ/買い目を再描画する。
+  if(typeof window.bhRenderOddsPopularity==='function')window.bhRenderOddsPopularity();
  }finally{
   if(btn)btn.disabled=false;
  }
@@ -7164,6 +7174,32 @@ function bhOddsPopularityRows(){
     .sort((a,b)=>a.odds-b.odds||a.key.localeCompare(b.key,'ja'));
 }
 
+// Vol.144: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
+window.bh144ToggleSection=function(id,key,btn){
+  const el=document.getElementById(id);if(!el)return;
+  const open=el.classList.contains('bh144Open');
+  el.classList.toggle('bh144Open',!open);
+  try{localStorage.setItem('BOAT_HUNTER_UI_OPEN_V144_'+key,!open?'1':'0')}catch(e){}
+  if(btn)btn.setAttribute('aria-expanded',String(!open));
+};
+window.bh144ApplyOpenStates=function(){
+  const defs=[
+    ['bh144Explain','explain',false],
+    ['bh144TrustDetail','trust',false],
+    ['bh144FundDetail','fund',false],
+    ['bh144PicksDetail','picks',true],
+    ['bh144OddsDetail','odds',false]
+  ];
+  defs.forEach(([id,key,def])=>{
+    const el=document.getElementById(id);if(!el)return;
+    let open=def;
+    try{const v=localStorage.getItem('BOAT_HUNTER_UI_OPEN_V144_'+key);if(v!==null)open=v==='1'}catch(e){}
+    el.classList.toggle('bh144Open',open);
+    const btn=document.querySelector('[data-bh144-key="'+key+'"]');
+    if(btn)btn.setAttribute('aria-expanded',String(open));
+  });
+};
+
 window.bhRenderOddsPopularity=function(){
   const box=document.getElementById('bhOddsPopularityContent');
   if(!box)return;
@@ -7572,7 +7608,7 @@ window.bhRenderOddsPopularity=function(){
   topTrust142 += (topHunterScore142-50)*.18;
   const topCourse142=Number(window.course?.(marketTop142)||marketTop142);
   const topLap142=Number(lapRank142[marketTop142]||0);
-  if(topCourse142===1){topTrust142 += topLap142===1?8:-25;}
+  if(topCourse142===1&&topLap142>=1&&topLap142<=6){topTrust142 += topLap142===1?8:-25;}
   topTrust142=Math.max(0,Math.min(100,Math.round(topTrust142)));
   const topTrustLabel142=topTrust142>=75?'高':topTrust142>=55?'中':'低';
 
@@ -7607,7 +7643,7 @@ window.bhRenderOddsPopularity=function(){
     let adj=edge;
     if(he&&he.market-he.hunter>=2)adj+=12;
     if(he&&he.market-he.hunter<=-2)adj-=10;
-    if(he&&he.course===1&&he.lap&&he.lap!==1)adj-=25;
+    if(he&&he.course===1&&he.lap>=1&&he.lap<=6&&he.lap!==1)adj-=25;
     if(h===marketTop142)adj+=(topTrust142-50)*.35;
     return {...x,fundConfidence:x.fundConfidence+adj,fundEdge142:Math.round(adj)};
   }).filter((x,i,a)=>a.findIndex(y=>y.key===x.key)===i)
@@ -7643,7 +7679,7 @@ window.bhRenderOddsPopularity=function(){
     twistHoleBoats:twistHoleBoats116,
     twistUpBoats:[...twistUpBoats116],
     cut:[...cutKeys],holeBasis:reason108||'',
-    buy:{version:142,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,topMarketBoat:marketTop142,topTrust:topTrust142,topTrustLabel:topTrustLabel142,items:fundItems141}
+    buy:{version:144,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,topMarketBoat:marketTop142,topTrust:topTrust142,topTrustLabel:topTrustLabel142,items:fundItems141}
   };
   window.BH_ODDS_DECISION_V108=decision;
   try{
@@ -7718,55 +7754,79 @@ window.bhRenderOddsPopularity=function(){
   }).join('');
 
   box.innerHTML=`
-    <div class="bhOddsPopularitySection">
-      <h3>① 世間評価</h3>
-      <div class="bhOdds120Summary">
-        <div><small>信頼艇 1位</small><b>${trustedBoats128[0]}号艇</b></div>
-        <div><small>信頼艇 2位</small><b>${trustedBoats128[1]}号艇</b></div>
-        <div><small>信頼艇 3位</small><b>${trustedBoats128[2]}号艇</b></div>
-        <div><small>総合市場評価 1位</small><b>${marketRank[0]}号艇</b></div>
+    <div class="bh144CompareWrap">
+      <div class="bh144EvalCard market">
+        <div class="bh144EvalTitle">🌐 世間評価</div>
+        <div class="bh144EvalMain"><small>頭支持1位</small><b>${head}号艇</b></div>
+        <div class="bh144EvalMini">総合1位 ${marketRank[0]}号艇</div>
+        <div class="bh144EvalRanks">1位 ${trustedBoats128[0]}号艇<br>2位 ${trustedBoats128[1]}号艇<br>3位 ${trustedBoats128[2]}号艇</div>
       </div>
+      <div class="bh144EvalCard hunter">
+        <div class="bh144EvalTitle">🤖 HUNTER評価</div>
+        <div class="bh144EvalMain"><small>最終頭候補</small><b>${finalHead109?finalHead109+'号艇':'-'}</b></div>
+        <div class="bh144EvalMini">HUNTER1位 ${hunterOrder109[0]?.boat?hunterOrder109[0].boat+'号艇':'-'}</div>
+        <div class="bh144EvalRanks">信頼度 ${finalTrust109}<br>${headConflict109?'⚠️ 人気先行あり':'✅ 大きな矛盾なし'}</div>
+      </div>
+    </div>
 
-      <div class="bhOddsTrustBox">
-        <div class="bhOddsTrustTitle">🎯 オッズ最終分析・評価のねじれ</div>
-        <div class="bhOddsTrustMain">頭候補1：${finalHead109}号艇｜信頼度：${finalTrust109}</div>
+    <button type="button" class="bh144Toggle" data-bh144-key="explain" onclick="bh144ToggleSection('bh144Explain','explain',this)">評価の説明</button>
+    <div id="bh144Explain" class="bh144Collapsible">
+      <div class="bh144ExplainBox">
         <div class="bhOddsTrustRow bhOddsTrustGood">✅ 信頼できる艇：${trustedBoats128.map((b,i)=>`${i+1}位 ${b}号艇`).join(" / ")}</div>
-        <div class="bhOddsTrustRow bhOddsTrustHole">🔥 穴目で期待：${holeText}</div>
-        <div class="bhOddsTrustRow bhOddsTrustWarn">⚠️ 人気先行・ねじれ：${overText}</div>
-        <div class="bhOddsPopularityNote">120通りすべてのオッズ支持強度を集計し、HUNTER全艇評価との順位差を照合。AI解析前はねじれ判定が「該当なし」になる場合があります。</div>
+        <div class="bhOddsTrustRow bhOddsTrustHole">🔥 HUNTERが世間より評価：${holeText}</div>
+        <div class="bhOddsTrustRow bhOddsTrustWarn">⚠️ 世間人気が先行：${overText}</div>
+        <div class="bh144ExplainText">市場は120通りのオッズ支持強度、HUNTERは全艇評価で判定。市場支持 → HUNTER順位 → ねじれ頭除外の順に最終頭候補を決めます。</div>
       </div>
     </div>
 
-    ${hunterFinalHTML109}
-    <div class="bh142MarketTrust">
-      <div class="bh142TrustHead"><b>🎯 世間1番人気 ${marketTop142}号艇</b><span class="${topTrust142>=75?'high':topTrust142>=55?'mid':'low'}">信頼度 ${topTrust142}%（${topTrustLabel142}）</span></div>
-      <div class="bh142TrustMeta">HUNTER ${topHunterRank142}位｜HUNTER評価 ${topHunterScore142.toFixed(1)}｜1着支持差 ${supportGap142.toFixed(1)}%${topCourse142===1?`｜一周 ${topLap142&&topLap142<99?topLap142+'位':'未取得'}${topLap142&&topLap142!==1?' → 評価DOWN':''}`:''}</div>
-      <div class="bh142BoatGrid">${boatEval142.map(x=>`<div class="bh142BoatRow ${x.cls}"><b>${x.boat}号艇</b><span>世間 ${x.market}位</span><span>HUNTER ${x.hunter}位</span><em>${x.label}</em></div>`).join('')}</div>
+    <div class="bh144CompactHead">
+      <div><b>🎯 世間1番人気 ${marketTop142}号艇</b><span class="bh144TrustPill ${topTrust142>=75?'high':topTrust142>=55?'mid':'low'}">${topTrust142}% ${topTrustLabel142}</span></div>
+      <button type="button" class="bh144Toggle mini" data-bh144-key="trust" onclick="bh144ToggleSection('bh144TrustDetail','trust',this)">6艇比較</button>
     </div>
-    <div class="bh141FundSummary">
-      <div><b>💰 資金配分AI</b><span>予算 ${fundBudget141.toLocaleString()}円</span></div>
-      <div class="bh141FundMeta">世間×HUNTER 頭順位一致 ${rankMatch141}/3｜1番人気信頼度 ${topTrust142}%｜実投資 ${fundUsed141.toLocaleString()}円｜${Object.values(fundAlloc141).filter(Number).length}点集中${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
-      <div class="bh141BudgetBtns">${[1000,1200,1500,2000].map(v=>`<button type="button" onclick="localStorage.setItem('BOAT_HUNTER_FUND_BUDGET_V141','${v}');window.bhRenderOddsPopularity()" class="${fundBudget141===v?'active':''}">${v.toLocaleString()}円</button>`).join('')}</div>
-    </div>
-    <div class="bh123PickColumns">
-      <div class="bh105PickBox bh123PickCol bh123MainCol">
-        <div class="bh105PickTitle">🎯 本命候補 最大10点</div>
-        <div class="bh105Picks">${mainPickHTML}</div>
-      </div>
-      <div class="bh105PickBox bh123PickCol bh123HoleCol">
-        <div class="bh105PickTitle">🔥 穴目 最大8点</div>
-        <div class="bh105Picks">${holePickHTML}</div>
+    <div id="bh144TrustDetail" class="bh144Collapsible">
+      <div class="bh142MarketTrust">
+        <div class="bh142TrustMeta">HUNTER ${topHunterRank142}位｜HUNTER評価 ${topHunterScore142.toFixed(1)}｜1着支持差 ${supportGap142.toFixed(1)}%${topCourse142===1?`｜一周 ${topLap142&&topLap142<99?topLap142+'位':'未取得'}${topLap142&&topLap142!==1?' → 評価DOWN':''}`:''}</div>
+        <div class="bh142BoatGrid">${boatEval142.map(x=>`<div class="bh142BoatRow ${x.cls}"><b>${x.boat}号艇</b><span>世間 ${x.market}位</span><span>HUNTER ${x.hunter}位</span><em>${x.label}</em></div>`).join('')}</div>
       </div>
     </div>
-    <div class="bhOddsPopularitySection">
-      <h3>② 3連単オッズ 1位〜120位</h3>
-      <div class="bhOdds120Scroll">
-        <table class="bhOdds120Table">
-          <thead><tr><th>人気</th><th>買い目</th><th>オッズ</th></tr></thead>
-          <tbody>${allRows105}</tbody>
-        </table>
+
+    <div class="bh144CompactHead fund">
+      <div><b>💰 資金配分AI</b><span>予算 ${fundBudget141.toLocaleString()}円｜実投資 ${fundUsed141.toLocaleString()}円｜${Object.values(fundAlloc141).filter(Number).length}点</span></div>
+      <button type="button" class="bh144Toggle mini" data-bh144-key="fund" onclick="bh144ToggleSection('bh144FundDetail','fund',this)">配分設定</button>
+    </div>
+    <div id="bh144FundDetail" class="bh144Collapsible">
+      <div class="bh141FundSummary">
+        <div class="bh141FundMeta">世間×HUNTER 頭順位一致 ${rankMatch141}/3｜1番人気信頼度 ${topTrust142}%${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
+        <div class="bh141BudgetBtns">${[1000,1200,1500,2000].map(v=>`<button type="button" onclick="localStorage.setItem('BOAT_HUNTER_FUND_BUDGET_V141','${v}');window.bhRenderOddsPopularity()" class="${fundBudget141===v?'active':''}">${v.toLocaleString()}円</button>`).join('')}</div>
+      </div>
+    </div>
+
+    <div class="bh144SectionBar"><b>🎟️ 買い目</b><button type="button" class="bh144Toggle mini" data-bh144-key="picks" onclick="bh144ToggleSection('bh144PicksDetail','picks',this)">開閉</button></div>
+    <div id="bh144PicksDetail" class="bh144Collapsible">
+      <div class="bh123PickColumns">
+        <div class="bh105PickBox bh123PickCol bh123MainCol">
+          <div class="bh105PickTitle">🎯 本命候補 最大10点</div>
+          <div class="bh105Picks">${mainPickHTML}</div>
+        </div>
+        <div class="bh105PickBox bh123PickCol bh123HoleCol">
+          <div class="bh105PickTitle">🔥 穴目 最大8点</div>
+          <div class="bh105Picks">${holePickHTML}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bh144SectionBar"><b>📊 3連単オッズ 1位〜120位</b><button type="button" class="bh144Toggle mini" data-bh144-key="odds" onclick="bh144ToggleSection('bh144OddsDetail','odds',this)">開閉</button></div>
+    <div id="bh144OddsDetail" class="bh144Collapsible">
+      <div class="bhOddsPopularitySection">
+        <div class="bhOdds120Scroll">
+          <table class="bhOdds120Table">
+            <thead><tr><th>人気</th><th>買い目</th><th>オッズ</th></tr></thead>
+            <tbody>${allRows105}</tbody>
+          </table>
+        </div>
       </div>
     </div>`;
+  window.bh144ApplyOpenStates?.();
 };
 
 window.bhToggleOddsPopularity=function(){
@@ -7965,7 +8025,7 @@ window.bhEvaluateAllHeads91=function(){
    var score=app?ev.pass/app*100:0;
    // Vol.142: 1コースだけは一周タイム1位を必須級に扱う。
    // 1位でない場合は通常の項目未達に加えて20pt減点し、HUNTER順位・資金配分へ反映する。
-   var lapPenalty=(ev.course===1&&ev.lapRank!==1)?20:0;
+   var lapPenalty=(ev.course===1&&ev.lapRank>=1&&ev.lapRank<=6&&ev.lapRank!==1)?20:0;
    score=Math.max(0,score-lapPenalty);
    return {boat:b,marketRank:market[b]?market[b].rank:99,marketCount:market[b]?market[b].count:0,pass:ev.pass,applicable:app,score:score,lapRank:ev.lapRank,lapPenalty:lapPenalty,ev:ev};
  });

@@ -404,7 +404,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol146-ui-style">
-/* Vol.153: スリット個別折りたたみ */
+/* Vol.154: スリット個別折りたたみ */
 .bh146SlitFoldArea{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0 13px}
 .bh146SlitFold{min-width:0;border:1px solid #303944;border-radius:12px;background:#0e141b;overflow:hidden}
 .bh146SlitToggle{width:100%;margin:0!important;padding:10px 12px!important;border:0!important;border-radius:0!important;background:#141b23!important;color:#e8f2f7!important;font-size:12px!important;text-align:left!important;position:relative}
@@ -415,7 +415,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 .bh146SlitFold .bhSlip{margin:0!important}
 @media(max-width:760px){.bh146SlitFoldArea{grid-template-columns:1fr}.bh146SlitBody{padding:6px}}
 
-/* Vol.153: 直前情報を指定順へ。一周タイム / 展示を大きく */
+/* Vol.154: 直前情報を指定順へ。一周タイム / 展示を大きく */
 .bh146BeforeScroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .bh146BeforeTable{width:100%;min-width:820px;border-collapse:collapse;font-size:12px}
 .bh146BeforeTable th,.bh146BeforeTable td{white-space:nowrap}
@@ -430,7 +430,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol148-shobugake-style">
-/* Vol.153: 場特性カード直下の勝負掛け警報 */
+/* Vol.154: 場特性カード直下の勝負掛け警報 */
 #bhShobugakePanel.active{
   margin:14px 0 18px;
   padding:17px;
@@ -503,7 +503,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol151-cleanup-style">
-/* Vol.153: 旧「1レース資金」は資金配分AIへ一本化。内部互換用DOMだけ残して非表示。 */
+/* Vol.154: 旧「1レース資金」は資金配分AIへ一本化。内部互換用DOMだけ残して非表示。 */
 #bhRaceBudgetWrap{display:none!important}
 </style>
 
@@ -546,7 +546,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 </head>
 <body>
-<div id="bhTopVersion">Vol.153</div>
+<div id="bhTopVersion">Vol.154</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -566,7 +566,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.153</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.154</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2534,7 +2534,7 @@ function bhOneMTheoryHTML(rows){
  return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開見通し：${title}</b><span class="bhTenkaiBadge${badgeOut?' out':''}">${badge}</span></div><div class="bhTenkaiMain"><strong>${main}</strong><div class="bhTenkaiSub">${sub}</div><div class="bhTenkaiMethods">${methodsHTML}</div><div class="bhPatternRanks">12型類似度（参考）：${rank}<br>12型は形の参考値で、本判定ではありません。まず艇身差で攻め成立度を判定し、その後に「1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力」で決まり手確率を求めます。旧固定決まり手ルールは使用しません。</div></div></div>`;
 }
 
-// Vol.153: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
+// Vol.154: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
 function bh146SlitState(key,defOpen=false){
   try{
     const v=localStorage.getItem('BOAT_HUNTER_UI_OPEN_V146_SLIT_'+key);
@@ -4531,7 +4531,7 @@ async function bhLoadRealtimePreviewAndOdds(){
  let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od2','od3'],got={};
  await Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}}));
  bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);
- // Vol.153: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
+ // Vol.154: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
  const nextOdds3=bhExtractOddsFromCsvRow(got.od3),nextOdds2=bhExtractOdds2FromCsvRow(got.od2);
  if(Object.keys(nextOdds3).length){bhRealtimeOdds=nextOdds3;window.bhRealtimeOdds=bhRealtimeOdds;window.BH_ODDS_LAST_OK_AT=Date.now();}
  else if(!window.bhRealtimeOdds||!Object.keys(window.bhRealtimeOdds).length){window.bhRealtimeOdds=bhRealtimeOdds||{};}
@@ -4545,7 +4545,7 @@ async function bhReloadRealtimeVol4(){
   if(btn)btn.disabled=true;
   await bhLoadRealtimePreviewAndOdds();
   bhRenderBeforeInfo();
-  // Vol.153: パネル開閉状態に関係なくオッズ/買い目を再描画する。
+  // Vol.154: パネル開閉状態に関係なくオッズ/買い目を再描画する。
   if(typeof window.bhRenderOddsPopularity==='function')window.bhRenderOddsPopularity();
  }finally{
   if(btn)btn.disabled=false;
@@ -7341,7 +7341,7 @@ function bhOddsPopularityRows(){
     .sort((a,b)=>a.odds-b.odds||a.key.localeCompare(b.key,'ja'));
 }
 
-// Vol.153: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
+// Vol.154: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
 window.bh144ToggleSection=function(id,key,btn){
   const el=document.getElementById(id);if(!el)return;
   const open=el.classList.contains('bh144Open');
@@ -7368,7 +7368,7 @@ window.bh144ApplyOpenStates=function(){
 };
 
 
-// Vol.153: 世間評価/HUNTER評価は「AI解析時点」のスナップショットをレース単位で固定。
+// Vol.154: 世間評価/HUNTER評価は「AI解析時点」のスナップショットをレース単位で固定。
 // オッズ欄の開閉・折りたたみ再描画・結果確定後の画面再描画では再計算しない。
 const BH150_EVAL_SNAPSHOT_KEY='BOAT_HUNTER_MARKET_HUNTER_SNAPSHOT_V150';
 function bh150EvalRaceKey(){
@@ -7522,7 +7522,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.153: 通常は本命10点・穴目8点。評価一致時は本命6〜8点・穴目3点へ圧縮。
+  // Vol.154: 通常は本命10点・穴目8点。評価一致時は本命6〜8点・穴目3点へ圧縮。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7536,8 +7536,8 @@ window.bhRenderOddsPopularity=function(){
   );
   const headAllowed139=x=>!twistHeadBlocked139.has(Number(x?.legs?.[0]??x?.[0]));
 
-  // Vol.153: 世間評価とHUNTER評価が強く一致するレースは、買い目点数を自動で圧縮。
-  // 通常は 本命10点 / 穴目8点。強い一致時は 本命6〜8点 / 穴目3点。
+  // Vol.154: 世間評価とHUNTER評価が強く一致するレースは、買い目点数を自動で圧縮。
+  // 通常は 本命10点 / 穴目8点。強い一致時も買い目としての穴目は8点を確保し、資金配分側だけ絞る。
   const marketHeadRank149=(typeof firstRank!=='undefined'&&Array.isArray(firstRank)?firstRank:[]).map(Number);
   const hunterRankOrder149=(typeof hunterOrder109!=='undefined'&&Array.isArray(hunterOrder109)?hunterOrder109:[])
     .map(x=>Number(x?.boat||x)).filter(Boolean);
@@ -7550,11 +7550,11 @@ window.bhRenderOddsPopularity=function(){
   const avgRankGap149=rankGaps149.reduce((a,b)=>a+b,0)/Math.max(1,rankGaps149.length);
   let mainLimit149=10,holeLimit149=8,consensusLevel149=0;
   if(top3Exact149>=3 && avgRankGap149<=0.50){
-    mainLimit149=6;holeLimit149=3;consensusLevel149=3;
+    mainLimit149=6;holeLimit149=8;consensusLevel149=3;
   }else if(top3Exact149>=3 || (top3Exact149>=2&&avgRankGap149<=0.67)){
-    mainLimit149=7;holeLimit149=3;consensusLevel149=2;
+    mainLimit149=7;holeLimit149=8;consensusLevel149=2;
   }else if(top3Exact149>=2&&avgRankGap149<=1.00){
-    mainLimit149=8;holeLimit149=3;consensusLevel149=1;
+    mainLimit149=8;holeLimit149=8;consensusLevel149=1;
   }
 
   let main10=[...scored].filter(headAllowed139)
@@ -7591,7 +7591,7 @@ window.bhRenderOddsPopularity=function(){
   };
   const isBlockedPattern122=(x)=>impossiblePattern122.has(coursePatternKey122(x?.legs||String(x?.key||'').split('-')));
   for(let i=main10.length-1;i>=0;i--)if(isBlockedPattern122(main10[i]))main10.splice(i,1);
-  // Vol.153 本命の頭は必ず1艇だけ。
+  // Vol.154 本命の頭は必ず1艇だけ。
   // 最終頭候補が有効ならそれを優先し、使えない場合は本命スコア最上位の頭を採用。
   const preferredMainHead149=Number(finalHead109||head||0);
   let mainHead149=0;
@@ -7603,7 +7603,7 @@ window.bhRenderOddsPopularity=function(){
   const mainHeadOrder135=mainHead149?[mainHead149]:[];
   main10=main10.filter(x=>Number(x.legs?.[0])===mainHead149&&headAllowed139(x)&&!isBlockedPattern122(x)).slice(0,mainLimit149);
 
-  // Vol.153 本命不足補充。同じ頭1艇の候補だけで設定点数まで補充。
+  // Vol.154 本命不足補充。同じ頭1艇の候補だけで設定点数まで補充。
   const mainUsed128=new Set(main10.map(x=>x.key));
   const normalFill128=[...scored]
     .filter(x=>Number(x.legs?.[0])===mainHead149&&headAllowed139(x)&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
@@ -7818,7 +7818,7 @@ window.bhRenderOddsPopularity=function(){
       return !mainRejected120.has(x.key)&&!cutKeys119.has(x.key);
     })
     .sort((a,b)=>a.sourceRank-b.sourceRank||a.pop-b.pop);
-  // Vol.153 穴目：
+  // Vol.154 穴目：
   // ・本命に表示済みの買い目は入れない（既存 mainKeys 除外を維持）。
   // ・基本は本命頭と別の頭、最大2艇。
   // ・ただし60倍以上かつ出目理論/組替え等の根拠がある穴だけ、本命頭との重複を許可。
@@ -7826,17 +7826,19 @@ window.bhRenderOddsPopularity=function(){
   // ・世間/HUNTERの強い一致時は穴目3点まで圧縮。
   const holeHeads135=[],hole10=[];
   let holeThreeHeadUnlocked149=false;
+  let sharedMainHeadCount154=0;
   const hasHoleReason149=x=>!!String(x?.holeReason||x?.holeType||'').trim();
   const sharedMainHeadSpecial149=x=>
     Number(x?.legs?.[0])===Number(mainHead149) &&
-    Number(x?.odds||0)>=60 &&
+    Number(x?.odds||0)>=80 &&
     hasHoleReason149(x);
   for(const x of holePool135){
     if(mainKeys.has(x.key))continue;
     const h=Number(x.legs?.[0]);
     const sharedSpecial=sharedMainHeadSpecial149(x);
-    // 通常穴では本命頭を使わない。60倍以上＋根拠ありだけ例外。
+    // 通常穴では本命頭を使わない。80倍以上＋根拠ありだけ例外、かつ最大2点。
     if(h===Number(mainHead149)&&!sharedSpecial)continue;
+    if(sharedSpecial&&sharedMainHeadCount154>=2)continue;
 
     const isNewHead=!holeHeads135.includes(h);
     if(isNewHead){
@@ -7847,13 +7849,13 @@ window.bhRenderOddsPopularity=function(){
       }
       holeHeads135.push(h);
     }
-    if(sharedSpecial)holeThreeHeadUnlocked149=true;
+    if(sharedSpecial){holeThreeHeadUnlocked149=true;sharedMainHeadCount154++;}
 
-    hole10.push({...x,sharedMainHead60:sharedSpecial});
+    hole10.push({...x,sharedMainHead80:sharedSpecial});
     if(hole10.length>=holeLimit149)break;
   }
   const reason108=hole10.length
-    ?`本命頭1艇固定｜穴目は別頭2艇基本${holeThreeHeadUnlocked149?'＋60倍以上根拠ありで本命頭重複・3頭解放':''}${consensusLevel149?`｜世間×HUNTER高一致で 本命${mainLimit149}点・穴${holeLimit149}点へ圧縮`:''}`
+    ?`本命頭1艇固定｜穴目は別頭2艇基本${holeThreeHeadUnlocked149?'＋80倍以上根拠ありで本命頭最大2点・3頭解放':''}${consensusLevel149?`｜世間×HUNTER高一致で 本命${mainLimit149}点・穴${holeLimit149}点へ圧縮`:''}`
     :'出目理論該当なし';
 
   const holeKeys=new Set(hole10.map(x=>x.key));
@@ -7869,8 +7871,9 @@ window.bhRenderOddsPopularity=function(){
   const decisionDay126=(typeof bhTodayKey==='function'?bhTodayKey():new Date().toISOString().slice(0,10));
   const decisionVenue126=Number(document.getElementById('venue')?.value||0);
   const decisionRace126=Number(document.getElementById('race')?.value||0);
-  // Vol.142: 資金配分AI。6艇すべての「世間 vs HUNTER」を評価し、人気薄のHUNTER高評価も資金へ反映。
-  // 買い目自体は消さず、実投資額だけを0円/100円単位で決定する。
+  // Vol.154 資金配分AI：
+  // 買い目表示は本命6〜10点 / 穴目8点を維持。
+  // 実投資は本命を最低6点確保し、穴目へ何点投資するかは「本命への自信」で自動調整する。
   const fundBudget141=Math.max(100,Math.floor(Number(localStorage.getItem('BOAT_HUNTER_FUND_BUDGET_V141')||1200)/100)*100);
   const hunterRank141=hunterOrder109.map(x=>Number(x.boat));
   const marketHeadRank141=firstRank.map(Number);
@@ -7880,7 +7883,6 @@ window.bhRenderOddsPopularity=function(){
   const lapRank142={};
   Object.values(hm).forEach(x=>{if(x&&Number(x.boat))lapRank142[Number(x.boat)]=Number(x.lapRank||x.ev?.lapRank||0)});
 
-  // 世間1番人気（1着支持1位）の信頼度を0〜100で算出。
   const marketTop142=Number(marketHeadRank141[0]||0);
   const marketSecond142=Number(marketHeadRank141[1]||0);
   const topHunterRank142=Number(hunterPos142[marketTop142]||6);
@@ -7897,11 +7899,9 @@ window.bhRenderOddsPopularity=function(){
   topTrust142=Math.max(0,Math.min(100,Math.round(topTrust142)));
   const topTrustLabel142=topTrust142>=75?'高':topTrust142>=55?'中':'低';
 
-  // 6艇のズレ評価。市場よりHUNTER順位が2段以上高い艇は「HUNTER狙い」。
   const boatEval142=[1,2,3,4,5,6].map(b=>{
     const m=Number(marketPos[b]||6),mh=Number(headMarketPos142[b]||6),h=Number(hunterPos142[b]||6);
-    const gap=m-h;
-    const courseNo=Number(window.course?.(b)||b),lap=Number(lapRank142[b]||0);
+    const gap=m-h,courseNo=Number(window.course?.(b)||b),lap=Number(lapRank142[b]||0);
     let label='評価近い',cls='same';
     if(gap>=2){label='⭐ HUNTER狙い';cls='hunter'}
     else if(gap<=-2){label='⚠️ 世間先行';cls='market'}
@@ -7911,45 +7911,59 @@ window.bhRenderOddsPopularity=function(){
   });
   const boatEvalMap142={};boatEval142.forEach(x=>boatEvalMap142[x.boat]=x);
 
-  // 一致数だけでなく1番人気信頼度でも投資点数を調整。
-  let targetCount141=rankMatch141>=3?2:rankMatch141===2?3:rankMatch141===1?5:7;
-  if(topTrust142<55)targetCount141=Math.max(targetCount141,5);
-  else if(topTrust142>=75&&rankMatch141>=2)targetCount141=Math.min(targetCount141,3);
+  // 本命自信度：市場/HUNTERの頭一致、1番人気信頼度、本命頭のHUNTER順位をまとめる。
+  const mainHead154=Number(main10[0]?.legs?.[0]||mainHead149||0);
+  const mainHunterRank154=Number(hunterPos142[mainHead154]||6);
+  const mainMarketRank154=Number(headMarketPos142[mainHead154]||6);
+  let mainConfidence154=50;
+  mainConfidence154 += rankMatch141*8;
+  mainConfidence154 += Math.max(-18,18-(mainHunterRank154-1)*7);
+  mainConfidence154 += Math.max(-12,12-(mainMarketRank154-1)*5);
+  if(mainHead154===marketTop142)mainConfidence154+=(topTrust142-50)*.30;
+  const mainLap154=Number(lapRank142[mainHead154]||0),mainCourse154=Number(window.course?.(mainHead154)||mainHead154);
+  if(mainCourse154===1&&mainLap154>=1&&mainLap154<=6&&mainLap154!==1)mainConfidence154-=18;
+  mainConfidence154=Math.max(0,Math.min(100,Math.round(mainConfidence154)));
+  const mainConfidenceLabel154=mainConfidence154>=78?'高':mainConfidence154>=60?'中':'低';
 
-  const fundPool141=[
-    ...main10.map((x,i)=>({...x,fundType:'main',fundRank:i+1,fundConfidence:120-i*5})),
-    ...hole10.map((x,i)=>({...x,fundType:'hole',fundRank:i+1,fundConfidence:78-i*4}))
-  ].map(x=>{
-    const legs=(x.legs||String(x.key||'').split('-')).map(Number);
-    const weights=[10,4,2];
+  // 本命は最低6点へ必ず資金を入れる。穴目投資点数は本命自信度で変える。
+  const mainFundCount154=Math.min(main10.length,Math.max(6,Math.min(8,main10.length)));
+  let holeFundCount154=mainConfidence154>=82?0:mainConfidence154>=72?1:mainConfidence154>=62?2:mainConfidence154>=52?3:4;
+  holeFundCount154=Math.min(holeFundCount154,hole10.length);
+
+  const scoreFund154=(x,type,i)=>{
+    const legs=(x.legs||String(x.key||'').split('-')).map(Number),weights=[10,4,2];
     let edge=0;
-    legs.forEach((b,i)=>{const e=boatEvalMap142[b];if(e)edge+=(e.market-e.hunter)*(weights[i]||1)});
+    legs.forEach((b,j)=>{const e=boatEvalMap142[b];if(e)edge+=(e.market-e.hunter)*(weights[j]||1)});
     const h=legs[0],he=boatEvalMap142[h];
     let adj=edge;
     if(he&&he.market-he.hunter>=2)adj+=12;
     if(he&&he.market-he.hunter<=-2)adj-=10;
     if(he&&he.course===1&&he.lap>=1&&he.lap<=6&&he.lap!==1)adj-=25;
     if(h===marketTop142)adj+=(topTrust142-50)*.35;
-    return {...x,fundConfidence:x.fundConfidence+adj,fundEdge142:Math.round(adj)};
-  }).filter((x,i,a)=>a.findIndex(y=>y.key===x.key)===i)
-   .sort((a,b)=>b.fundConfidence-a.fundConfidence||a.pop-b.pop||b.odds-a.odds);
-  const fundAlloc141={}; let fundUsed141=0;
-  // まず「的中時に総予算を上回れる」最低額を上位候補へ配分。
-  for(const x of fundPool141){
-    if(Object.keys(fundAlloc141).length>=targetCount141)break;
-    const need=Math.max(100,Math.ceil((fundBudget141+100)/(Math.max(.1,Number(x.odds))*100))*100);
-    if(need<=fundBudget141-fundUsed141){fundAlloc141[x.key]=need;fundUsed141+=need;}
+    return {...x,fundType:type,fundRank:i+1,fundConfidence:(type==='main'?130-i*5:82-i*4)+adj,fundEdge142:Math.round(adj)};
+  };
+  const mainFundPool154=main10.map((x,i)=>scoreFund154(x,'main',i)).sort((a,b)=>b.fundConfidence-a.fundConfidence||a.pop-b.pop);
+  const holeFundPool154=hole10.map((x,i)=>scoreFund154(x,'hole',i)).sort((a,b)=>b.fundConfidence-a.fundConfidence||a.pop-b.pop);
+  const selectedFund154=[...mainFundPool154.slice(0,mainFundCount154),...holeFundPool154.slice(0,holeFundCount154)];
+  const fundPool141=[...mainFundPool154,...holeFundPool154];
+  const fundAlloc141={};let fundUsed141=0;
+
+  // まず選択された全買い目へ最低100円。予算不足時でも本命6点を最優先。
+  for(const x of selectedFund154){
+    if(fundUsed141+100>fundBudget141)break;
+    fundAlloc141[x.key]=100;fundUsed141+=100;
   }
-  // 候補不足時は100円で補い、残金は信頼上位へ100円ずつ厚くする。
-  for(const x of fundPool141){
-    if(Object.keys(fundAlloc141).length>=targetCount141||fundUsed141+100>fundBudget141)break;
-    if(!fundAlloc141[x.key]){fundAlloc141[x.key]=100;fundUsed141+=100;}
+  // 残金は本命自信度が高いほど本命へ厚く、低いほど穴目にも回す。
+  const activeMain154=mainFundPool154.filter(x=>fundAlloc141[x.key]>0);
+  const activeHole154=holeFundPool154.filter(x=>fundAlloc141[x.key]>0);
+  let ri154=0;
+  while(fundUsed141+100<=fundBudget141){
+    const preferHole=activeHole154.length&&mainConfidence154<72&&(ri154%3===2||mainConfidence154<52&&ri154%2===1);
+    const pool=preferHole?activeHole154:(activeMain154.length?activeMain154:activeHole154);
+    if(!pool.length)break;
+    const x=pool[ri154%pool.length];fundAlloc141[x.key]=(fundAlloc141[x.key]||0)+100;fundUsed141+=100;ri154++;
   }
-  const active141=fundPool141.filter(x=>fundAlloc141[x.key]>0).slice(0,targetCount141);
-  let ri141=0;
-  while(active141.length&&fundUsed141+100<=fundBudget141){
-    const x=active141[ri141%active141.length];fundAlloc141[x.key]+=100;fundUsed141+=100;ri141++;
-  }
+  const targetCount141=Object.values(fundAlloc141).filter(v=>Number(v)>0).length;
   const fundItems141=fundPool141.map(x=>({key:x.key,amount:Number(fundAlloc141[x.key]||0),odds:Number(x.odds||0),type:x.fundType,rank:x.fundRank}));
   const fundProfit141=(key,odds)=>{const a=Number(fundAlloc141[key]||0);return a?Math.round(a*Number(odds||0)-fundUsed141):0};
 
@@ -7964,7 +7978,7 @@ window.bhRenderOddsPopularity=function(){
     twistHoleBoats:twistHoleBoats116,
     twistUpBoats:[...twistUpBoats116],
     cut:[...cutKeys],holeBasis:reason108||'',mainHeadRule:{head:mainHead149,maxHeads:1,limit:mainLimit149},holeHeadRule:{baseMaxHeads:2,unlockedMaxHeads:holeThreeHeadUnlocked149?3:2,limit:holeLimit149,sharedMainHead60:holeThreeHeadUnlocked149},consensus:{level:consensusLevel149,top3Exact:top3Exact149,avgRankGap:Number(avgRankGap149.toFixed(2))},
-    buy:{version:144,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,topMarketBoat:marketTop142,topTrust:topTrust142,topTrustLabel:topTrustLabel142,items:fundItems141}
+    buy:{version:154,budget:fundBudget141,used:fundUsed141,reserve:Math.max(0,fundBudget141-fundUsed141),rankMatch:rankMatch141,targetCount:targetCount141,mainMinFundCount:mainFundCount154,holeFundCount:holeFundCount154,mainConfidence:mainConfidence154,mainConfidenceLabel:mainConfidenceLabel154,topMarketBoat:marketTop142,topTrust:topTrust142,topTrustLabel:topTrustLabel142,items:fundItems141}
   };
   window.BH_ODDS_DECISION_V108=decision;
   try{
@@ -8077,7 +8091,7 @@ window.bhRenderOddsPopularity=function(){
     </div>
     <div id="bh144FundDetail" class="bh144Collapsible">
       <div class="bh141FundSummary">
-        <div class="bh141FundMeta">世間×HUNTER 頭順位一致 ${rankMatch141}/3｜1番人気信頼度 ${topTrust142}%${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
+        <div class="bh141FundMeta">本命自信度 ${mainConfidence154}%（${mainConfidenceLabel154}）｜本命投資 ${mainFundCount154}点｜穴目投資 ${holeFundCount154}点${fundBudget141-fundUsed141?`｜温存 ${(fundBudget141-fundUsed141).toLocaleString()}円`:''}</div>
         <div class="bh141BudgetBtns">${[1000,1200,1500,2000].map(v=>`<button type="button" onclick="localStorage.setItem('BOAT_HUNTER_FUND_BUDGET_V141','${v}');window.bhRenderOddsPopularity()" class="${fundBudget141===v?'active':''}">${v.toLocaleString()}円</button>`).join('')}</div>
       </div>
     </div>
@@ -8090,7 +8104,7 @@ window.bhRenderOddsPopularity=function(){
           <div class="bh105Picks">${mainPickHTML}</div>
         </div>
         <div class="bh105PickBox bh123PickCol bh123HoleCol">
-          <div class="bh105PickTitle">🔥 穴目 最大8点</div>
+          <div class="bh105PickTitle">🔥 穴目 基本8点</div>
           <div class="bh105Picks">${holePickHTML}</div>
         </div>
       </div>
@@ -8299,7 +8313,7 @@ function evaluate88(b){
  return {items:items,pass:pass,course:c,ai:ai,motor:mot,lapRank:lapRank};
 }
 
-// Vol.153 勝負掛け仕掛け判定。
+// Vol.154 勝負掛け仕掛け判定。
 // 勝負掛けそのものでは加点せず、Fなし＋ST攻撃力＋連対/3連対＋コース別決まり手が揃った時だけ補正する。
 function bh153ShobuInfo(b){
  try{

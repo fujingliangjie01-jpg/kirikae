@@ -404,7 +404,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol146-ui-style">
-/* Vol.152: スリット個別折りたたみ */
+/* Vol.153: スリット個別折りたたみ */
 .bh146SlitFoldArea{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0 13px}
 .bh146SlitFold{min-width:0;border:1px solid #303944;border-radius:12px;background:#0e141b;overflow:hidden}
 .bh146SlitToggle{width:100%;margin:0!important;padding:10px 12px!important;border:0!important;border-radius:0!important;background:#141b23!important;color:#e8f2f7!important;font-size:12px!important;text-align:left!important;position:relative}
@@ -415,7 +415,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 .bh146SlitFold .bhSlip{margin:0!important}
 @media(max-width:760px){.bh146SlitFoldArea{grid-template-columns:1fr}.bh146SlitBody{padding:6px}}
 
-/* Vol.152: 直前情報を指定順へ。一周タイム / 展示を大きく */
+/* Vol.153: 直前情報を指定順へ。一周タイム / 展示を大きく */
 .bh146BeforeScroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .bh146BeforeTable{width:100%;min-width:820px;border-collapse:collapse;font-size:12px}
 .bh146BeforeTable th,.bh146BeforeTable td{white-space:nowrap}
@@ -430,7 +430,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol148-shobugake-style">
-/* Vol.152: 場特性カード直下の勝負掛け警報 */
+/* Vol.153: 場特性カード直下の勝負掛け警報 */
 #bhShobugakePanel.active{
   margin:14px 0 18px;
   padding:17px;
@@ -503,7 +503,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol151-cleanup-style">
-/* Vol.152: 旧「1レース資金」は資金配分AIへ一本化。内部互換用DOMだけ残して非表示。 */
+/* Vol.153: 旧「1レース資金」は資金配分AIへ一本化。内部互換用DOMだけ残して非表示。 */
 #bhRaceBudgetWrap{display:none!important}
 </style>
 
@@ -546,7 +546,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 </head>
 <body>
-<div id="bhTopVersion">Vol.152</div>
+<div id="bhTopVersion">Vol.153</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -566,7 +566,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.152</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.153</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2534,7 +2534,7 @@ function bhOneMTheoryHTML(rows){
  return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開見通し：${title}</b><span class="bhTenkaiBadge${badgeOut?' out':''}">${badge}</span></div><div class="bhTenkaiMain"><strong>${main}</strong><div class="bhTenkaiSub">${sub}</div><div class="bhTenkaiMethods">${methodsHTML}</div><div class="bhPatternRanks">12型類似度（参考）：${rank}<br>12型は形の参考値で、本判定ではありません。まず艇身差で攻め成立度を判定し、その後に「1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力」で決まり手確率を求めます。旧固定決まり手ルールは使用しません。</div></div></div>`;
 }
 
-// Vol.152: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
+// Vol.153: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
 function bh146SlitState(key,defOpen=false){
   try{
     const v=localStorage.getItem('BOAT_HUNTER_UI_OPEN_V146_SLIT_'+key);
@@ -4531,7 +4531,7 @@ async function bhLoadRealtimePreviewAndOdds(){
  let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od2','od3'],got={};
  await Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}}));
  bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);
- // Vol.152: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
+ // Vol.153: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
  const nextOdds3=bhExtractOddsFromCsvRow(got.od3),nextOdds2=bhExtractOdds2FromCsvRow(got.od2);
  if(Object.keys(nextOdds3).length){bhRealtimeOdds=nextOdds3;window.bhRealtimeOdds=bhRealtimeOdds;window.BH_ODDS_LAST_OK_AT=Date.now();}
  else if(!window.bhRealtimeOdds||!Object.keys(window.bhRealtimeOdds).length){window.bhRealtimeOdds=bhRealtimeOdds||{};}
@@ -4545,7 +4545,7 @@ async function bhReloadRealtimeVol4(){
   if(btn)btn.disabled=true;
   await bhLoadRealtimePreviewAndOdds();
   bhRenderBeforeInfo();
-  // Vol.152: パネル開閉状態に関係なくオッズ/買い目を再描画する。
+  // Vol.153: パネル開閉状態に関係なくオッズ/買い目を再描画する。
   if(typeof window.bhRenderOddsPopularity==='function')window.bhRenderOddsPopularity();
  }finally{
   if(btn)btn.disabled=false;
@@ -7341,7 +7341,7 @@ function bhOddsPopularityRows(){
     .sort((a,b)=>a.odds-b.odds||a.key.localeCompare(b.key,'ja'));
 }
 
-// Vol.152: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
+// Vol.153: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
 window.bh144ToggleSection=function(id,key,btn){
   const el=document.getElementById(id);if(!el)return;
   const open=el.classList.contains('bh144Open');
@@ -7368,7 +7368,7 @@ window.bh144ApplyOpenStates=function(){
 };
 
 
-// Vol.152: 世間評価/HUNTER評価は「AI解析時点」のスナップショットをレース単位で固定。
+// Vol.153: 世間評価/HUNTER評価は「AI解析時点」のスナップショットをレース単位で固定。
 // オッズ欄の開閉・折りたたみ再描画・結果確定後の画面再描画では再計算しない。
 const BH150_EVAL_SNAPSHOT_KEY='BOAT_HUNTER_MARKET_HUNTER_SNAPSHOT_V150';
 function bh150EvalRaceKey(){
@@ -7522,7 +7522,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.152: 通常は本命10点・穴目8点。評価一致時は本命6〜8点・穴目3点へ圧縮。
+  // Vol.153: 通常は本命10点・穴目8点。評価一致時は本命6〜8点・穴目3点へ圧縮。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7536,7 +7536,7 @@ window.bhRenderOddsPopularity=function(){
   );
   const headAllowed139=x=>!twistHeadBlocked139.has(Number(x?.legs?.[0]??x?.[0]));
 
-  // Vol.152: 世間評価とHUNTER評価が強く一致するレースは、買い目点数を自動で圧縮。
+  // Vol.153: 世間評価とHUNTER評価が強く一致するレースは、買い目点数を自動で圧縮。
   // 通常は 本命10点 / 穴目8点。強い一致時は 本命6〜8点 / 穴目3点。
   const marketHeadRank149=(typeof firstRank!=='undefined'&&Array.isArray(firstRank)?firstRank:[]).map(Number);
   const hunterRankOrder149=(typeof hunterOrder109!=='undefined'&&Array.isArray(hunterOrder109)?hunterOrder109:[])
@@ -7591,7 +7591,7 @@ window.bhRenderOddsPopularity=function(){
   };
   const isBlockedPattern122=(x)=>impossiblePattern122.has(coursePatternKey122(x?.legs||String(x?.key||'').split('-')));
   for(let i=main10.length-1;i>=0;i--)if(isBlockedPattern122(main10[i]))main10.splice(i,1);
-  // Vol.152 本命の頭は必ず1艇だけ。
+  // Vol.153 本命の頭は必ず1艇だけ。
   // 最終頭候補が有効ならそれを優先し、使えない場合は本命スコア最上位の頭を採用。
   const preferredMainHead149=Number(finalHead109||head||0);
   let mainHead149=0;
@@ -7603,7 +7603,7 @@ window.bhRenderOddsPopularity=function(){
   const mainHeadOrder135=mainHead149?[mainHead149]:[];
   main10=main10.filter(x=>Number(x.legs?.[0])===mainHead149&&headAllowed139(x)&&!isBlockedPattern122(x)).slice(0,mainLimit149);
 
-  // Vol.152 本命不足補充。同じ頭1艇の候補だけで設定点数まで補充。
+  // Vol.153 本命不足補充。同じ頭1艇の候補だけで設定点数まで補充。
   const mainUsed128=new Set(main10.map(x=>x.key));
   const normalFill128=[...scored]
     .filter(x=>Number(x.legs?.[0])===mainHead149&&headAllowed139(x)&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
@@ -7818,7 +7818,7 @@ window.bhRenderOddsPopularity=function(){
       return !mainRejected120.has(x.key)&&!cutKeys119.has(x.key);
     })
     .sort((a,b)=>a.sourceRank-b.sourceRank||a.pop-b.pop);
-  // Vol.152 穴目：
+  // Vol.153 穴目：
   // ・本命に表示済みの買い目は入れない（既存 mainKeys 除外を維持）。
   // ・基本は本命頭と別の頭、最大2艇。
   // ・ただし60倍以上かつ出目理論/組替え等の根拠がある穴だけ、本命頭との重複を許可。
@@ -8298,6 +8298,67 @@ function evaluate88(b){
  var lapRank=c===1?rankLow88(lapvals,b):0;
  return {items:items,pass:pass,course:c,ai:ai,motor:mot,lapRank:lapRank};
 }
+
+// Vol.153 勝負掛け仕掛け判定。
+// 勝負掛けそのものでは加点せず、Fなし＋ST攻撃力＋連対/3連対＋コース別決まり手が揃った時だけ補正する。
+function bh153ShobuInfo(b){
+ try{
+   var panel=document.getElementById('bhShobugakePanel');
+   if(!panel||!panel.classList.contains('active'))return null;
+   var rows=[].slice.call(panel.querySelectorAll('.bhShobuRow'));
+   var row=rows.find(function(el){return String(el.textContent||'').indexOf(String(b)+'号艇')>=0});
+   return row?{active:true,text:String(row.textContent||'')}:null;
+ }catch(e){return null}
+}
+function bh153FCount(b){
+ var r=racer(b)||{};
+ var vals=[r.flying_count,r.f_count,r.F,r.flying,r.flyingCount];
+ for(var i=0;i<vals.length;i++){var n=Number(vals[i]);if(Number.isFinite(n))return n}
+ var s=String(r.flying||r.f||'').toUpperCase(),m=s.match(/F\s*(\d+)/);return m?Number(m[1]):0;
+}
+function bh153StartAttack(b){
+ try{
+   var st=bhStartStats(b)||{};
+   var arr=Array.isArray(st.history)?st.history:Array.isArray(st.rows)?st.rows:Array.isArray(st.starts)?st.starts:[];
+   var vals=arr.map(function(x){return Number(x&&typeof x==='object'?(x.st??x.start??x.value):x)}).filter(function(x){return Number.isFinite(x)&&x>=0&&x<1});
+   // 履歴配列が取れない場合は既存集計値を利用。
+   var under10=vals.length?vals.filter(function(x){return x<=.10}).length/vals.length*100:Number(st.under010Rate??st.rate010??st.fast10Rate??0);
+   var under15=vals.length?vals.filter(function(x){return x<=.15}).length/vals.length*100:Number(st.under015Rate??st.rate015??st.fast15Rate??0);
+   var avg=vals.length?vals.reduce(function(a,c){return a+c},0)/vals.length:Number(st.avg??st.average??st.mean);
+   return {under10:Number.isFinite(under10)?under10:0,under15:Number.isFinite(under15)?under15:0,avg:Number.isFinite(avg)?avg:99};
+ }catch(e){return {under10:0,under15:0,avg:99}}
+}
+function bh153Rate(r,names){
+ for(var i=0;i<names.length;i++){var v=Number(r[names[i]]);if(Number.isFinite(v))return v}
+ return 0;
+}
+function bh153ShobuAttack(b){
+ var si=bh153ShobuInfo(b);if(!si)return {bonus:0,label:'',active:false};
+ var r=racer(b)||{},f=bh153FCount(b),st=bh153StartAttack(b),d=decisions(r)||{},c=course(b);
+ var r2=bh153Rate(r,['top_2_percent','national_top_2_percent','two_rate','win2_rate']);
+ var r3=bh153Rate(r,['top_3_percent','national_top_3_percent','three_rate','win3_rate']);
+ var attack=0,tech='';
+ if(c===1){attack=num(d.escape);tech='逃げ'}
+ else{
+   var cand=[['差し',num(d.sashi)],['まくり',num(d.maki)],['まくり差し',num(d.makiSashi)]].sort(function(a,b){return b[1]-a[1]});
+   tech=cand[0][0];attack=cand[0][1];
+ }
+ // F持ちは「攻めるST補正」を付けない。勝負掛けだけでの加点もしない。
+ if(f>0)return {bonus:0,label:'勝負掛け・F'+f+'のためST攻め加点なし',active:true,f:f,st:st,r2:r2,r3:r3,attack:attack,tech:tech};
+ var bonus=0;
+ if(st.under10>=30)bonus+=7; else if(st.under10>=15)bonus+=4;
+ if(st.under15>=50)bonus+=4; else if(st.under15>=30)bonus+=2;
+ if(st.avg<=.15)bonus+=2;
+ if(r2>=40)bonus+=3; else if(r2>=30)bonus+=2;
+ if(r3>=60)bonus+=3; else if(r3>=45)bonus+=2;
+ if(attack>=20)bonus+=4; else if(attack>=12)bonus+=2;
+ bonus=Math.min(20,bonus);
+ // ST実績が弱ければ勝負掛けでも補正しない。
+ if(st.under10<10&&st.under15<25&&!(st.avg<=.15))bonus=0;
+ return {bonus:bonus,label:bonus?('🔥勝負掛け仕掛け +'+bonus+'｜0.10内 '+st.under10.toFixed(0)+'%｜'+tech+' '+attack.toFixed(1)+'%'):'勝負掛け・仕掛け根拠弱',active:true,f:0,st:st,r2:r2,r3:r3,attack:attack,tech:tech};
+}
+window.bh153ShobuAttack=bh153ShobuAttack;
+
 window.bhEvaluateAllHeads91=function(){
  var hs=heads88(),market={};
  hs.forEach(function(x){market[x.boat]=x});
@@ -8308,7 +8369,9 @@ window.bhEvaluateAllHeads91=function(){
    // 1位でない場合は通常の項目未達に加えて20pt減点し、HUNTER順位・資金配分へ反映する。
    var lapPenalty=(ev.course===1&&ev.lapRank>=1&&ev.lapRank<=6&&ev.lapRank!==1)?20:0;
    score=Math.max(0,score-lapPenalty);
-   return {boat:b,marketRank:market[b]?market[b].rank:99,marketCount:market[b]?market[b].count:0,pass:ev.pass,applicable:app,score:score,lapRank:ev.lapRank,lapPenalty:lapPenalty,ev:ev};
+   var shobuAttack153=bh153ShobuAttack(b);
+   score=Math.min(100,score+Number(shobuAttack153.bonus||0));
+   return {boat:b,marketRank:market[b]?market[b].rank:99,marketCount:market[b]?market[b].count:0,pass:ev.pass,applicable:app,score:score,lapRank:ev.lapRank,lapPenalty:lapPenalty,shobuAttack153:shobuAttack153,ev:ev};
  });
  rows.sort(function(a,b){return b.score-a.score||b.pass-a.pass||a.marketRank-b.marketRank||a.boat-b.boat});
  rows.forEach(function(x,i){x.hunterRank=i+1;x.gapAbove=i===0?0:Math.max(0,rows[i-1].score-x.score);x.gapTop=Math.max(0,rows[0].score-x.score);x.rankMove=x.marketRank-x.hunterRank});
@@ -9634,5 +9697,32 @@ document.addEventListener('click',e=>{if(e.target?.closest?.('#bhResultDashOpen'
 <style id="bh-vol142-market-hunter-css">
 .bh142MarketTrust{margin:10px 0 12px;padding:11px;border:1px solid #3b3b3b;border-radius:12px;background:#101214}.bh142TrustHead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}.bh142TrustHead span{padding:4px 8px;border-radius:999px;font-size:11px;font-weight:1000}.bh142TrustHead span.high{background:#21391f;color:#8cff85;border:1px solid #477d43}.bh142TrustHead span.mid{background:#3a310f;color:#ffe56d;border:1px solid #746322}.bh142TrustHead span.low{background:#3b1717;color:#ff8d8d;border:1px solid #7a3434}.bh142TrustMeta{margin-top:6px;color:#9ca8af;font-size:10px;line-height:1.5}.bh142BoatGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}.bh142BoatRow{display:grid;grid-template-columns:42px 1fr 1fr;gap:4px;align-items:center;padding:7px;border:1px solid #30343a;border-radius:9px;background:#15171a;font-size:10px}.bh142BoatRow b{font-size:12px}.bh142BoatRow em{grid-column:1/4;font-style:normal;font-weight:900;font-size:10px}.bh142BoatRow.hunter,.bh142BoatRow.hunterLap{border-color:#8a6d1c;background:#211a07}.bh142BoatRow.hunter em,.bh142BoatRow.hunterLap em{color:#ffd84d}.bh142BoatRow.market{border-color:#613636;background:#241414}.bh142BoatRow.market em{color:#ff8b8b}.bh142BoatRow.lap{border-color:#75551d;background:#21180d}.bh142BoatRow.lap em{color:#ffbb62}.bh142BoatRow.same em{color:#78d889}@media(max-width:620px){.bh142BoatGrid{grid-template-columns:1fr}.bh142TrustHead{align-items:flex-start}.bh142BoatRow{grid-template-columns:44px 1fr 1fr}}
 </style>
+
+<script id="bh-vol153-shobu-attack-ui">
+(function(){
+function paint(){
+ try{
+  var rows=document.querySelectorAll('#bhShobugakePanel.active .bhShobuRow');
+  rows.forEach(function(row){
+   if(row.querySelector('.bh153AttackBadge'))return;
+   var m=String(row.textContent||'').match(/(\d)号艇/);if(!m)return;
+   var x=window.bh153ShobuAttack?window.bh153ShobuAttack(Number(m[1])):null;
+   if(!x)return;
+   var el=document.createElement('div');el.className='bh153AttackBadge '+(x.bonus>0?'hot':'weak');
+   el.textContent=x.label||'';
+   row.appendChild(el);
+  });
+ }catch(e){}
+}
+var mo=new MutationObserver(paint);
+setTimeout(function(){var p=document.getElementById('bhShobugakePanel');if(p){mo.observe(p,{childList:true,subtree:true});paint()}},0);
+})();
+</script>
+<style id="bh-vol153-shobu-attack-style">
+.bh153AttackBadge{width:100%;margin-top:8px;padding:7px 9px;border-radius:9px;font-size:12px;font-weight:900}
+.bh153AttackBadge.hot{background:rgba(255,83,35,.16);border:1px solid rgba(255,120,60,.55);color:#ffb06e}
+.bh153AttackBadge.weak{background:rgba(130,145,155,.10);border:1px solid rgba(130,145,155,.25);color:#9eabb3}
+</style>
+
 </body>
 </html>

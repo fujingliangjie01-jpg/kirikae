@@ -398,13 +398,39 @@ var bhClassPatchCore=window.bhClassPatchCore;
 </style>
 
 <style id="bh-vol144-compact-ui-style">
-.bh144CompareWrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px}.bh144EvalCard{min-width:0;border-radius:13px;padding:10px;border:1px solid #38414b;background:#10151b}.bh144EvalCard.market{border-color:#6c5a2b;background:linear-gradient(180deg,#18150c,#101114)}.bh144EvalCard.hunter{border-color:#247ea1;background:linear-gradient(180deg,#0b1d26,#101419)}.bh144EvalTitle{font-size:12px;font-weight:1000;color:#dce7ee;margin-bottom:7px}.bh144EvalMain{display:flex;flex-direction:column;gap:1px}.bh144EvalMain small{font-size:9px;color:#8d99a4}.bh144EvalMain b{font-size:22px;line-height:1.15;color:#fff}.bh144EvalMini{font-size:10px;color:#aeb7be;margin-top:5px}.bh144EvalRanks{font-size:10px;line-height:1.55;margin-top:7px;color:#cbd3d8}.bh144Toggle{width:100%;border:1px solid #39424b;background:#151a20;color:#cfd8df;border-radius:9px;padding:8px 10px;font-size:11px;font-weight:900;text-align:center}.bh144Toggle:after{content:' ▼';font-size:9px}.bh144Toggle[aria-expanded="true"]:after{content:' ▲'}.bh144Toggle.mini{width:auto;padding:5px 8px;white-space:nowrap;font-size:10px}.bh144Collapsible{display:none}.bh144Collapsible.bh144Open{display:block}.bh144ExplainBox{margin:7px 0 10px;padding:9px;border-radius:10px;background:#12151a;border:1px solid #303741}.bh144ExplainText{margin-top:7px;font-size:10px;line-height:1.55;color:#8f9ba4}.bh144CompactHead,.bh144SectionBar{margin-top:9px;border:1px solid #343b43;border-radius:11px;background:#101418;padding:8px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px}.bh144CompactHead>div{min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.bh144CompactHead b,.bh144SectionBar b{font-size:12px}.bh144CompactHead span{font-size:10px;color:#aab4bd;font-weight:800}.bh144CompactHead.fund{border-color:#57491f;background:#17150d}.bh144TrustPill{padding:3px 7px;border-radius:999px}.bh144TrustPill.high{background:#21391f;color:#8cff85!important;border:1px solid #477d43}.bh144TrustPill.mid{background:#3a310f;color:#ffe56d!important;border:1px solid #746322}.bh144TrustPill.low{background:#3b1717;color:#ff8d8d!important;border:1px solid #7a3434}.bh144SectionBar{margin-top:10px}.bh144Collapsible .bh141FundSummary,.bh144Collapsible .bh142MarketTrust{margin-top:6px}.bh144Collapsible .bh123PickColumns{margin-top:7px}.bh144Collapsible .bhOddsPopularitySection{margin-top:6px}
+.bh144CompareWrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 8px}.bh144EvalCard{min-width:0;border-radius:13px;padding:10px;border:1px solid #38414b;background:#10151b}.bh144EvalCard.market{border-color:#6c5a2b;background:linear-gradient(180deg,#18150c,#101114)}.bh144EvalCard.hunter{border-color:#247ea1;background:linear-gradient(180deg,#0b1d26,#101419)}.bh144EvalTitle{font-size:12px;font-weight:1000;color:#dce7ee;margin-bottom:7px}.bh144EvalMain{display:flex;flex-direction:column;gap:1px}.bh144EvalMain small{font-size:9px;color:#8d99a4}.bh144EvalMain b{font-size:22px;line-height:1.15;color:#fff}.bh144EvalMini{font-size:10px;color:#aeb7be;margin-top:5px}.bh144EvalRanks{font-size:10px;line-height:1.55;margin-top:7px;color:#cbd3d8}.bh145RankRow{display:flex;align-items:center;gap:4px;min-height:16px}.bh145RankRow b{font-size:10px;color:#e6edf2}.bh145Move{font-size:10px;font-weight:1000;margin-left:auto;white-space:nowrap}.bh145Move.up{color:#58b7ff}.bh145Move.down{color:#ff6262}.bh145Move.same{color:#7f8a93}.bh145MoveNum{font-size:8px;opacity:.9}.bh144Toggle{width:100%;border:1px solid #39424b;background:#151a20;color:#cfd8df;border-radius:9px;padding:8px 10px;font-size:11px;font-weight:900;text-align:center}.bh144Toggle:after{content:' ▼';font-size:9px}.bh144Toggle[aria-expanded="true"]:after{content:' ▲'}.bh144Toggle.mini{width:auto;padding:5px 8px;white-space:nowrap;font-size:10px}.bh144Collapsible{display:none}.bh144Collapsible.bh144Open{display:block}.bh144ExplainBox{margin:7px 0 10px;padding:9px;border-radius:10px;background:#12151a;border:1px solid #303741}.bh144ExplainText{margin-top:7px;font-size:10px;line-height:1.55;color:#8f9ba4}.bh144CompactHead,.bh144SectionBar{margin-top:9px;border:1px solid #343b43;border-radius:11px;background:#101418;padding:8px 9px;display:flex;justify-content:space-between;align-items:center;gap:8px}.bh144CompactHead>div{min-width:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.bh144CompactHead b,.bh144SectionBar b{font-size:12px}.bh144CompactHead span{font-size:10px;color:#aab4bd;font-weight:800}.bh144CompactHead.fund{border-color:#57491f;background:#17150d}.bh144TrustPill{padding:3px 7px;border-radius:999px}.bh144TrustPill.high{background:#21391f;color:#8cff85!important;border:1px solid #477d43}.bh144TrustPill.mid{background:#3a310f;color:#ffe56d!important;border:1px solid #746322}.bh144TrustPill.low{background:#3b1717;color:#ff8d8d!important;border:1px solid #7a3434}.bh144SectionBar{margin-top:10px}.bh144Collapsible .bh141FundSummary,.bh144Collapsible .bh142MarketTrust{margin-top:6px}.bh144Collapsible .bh123PickColumns{margin-top:7px}.bh144Collapsible .bhOddsPopularitySection{margin-top:6px}
 @media(max-width:420px){.bh144CompareWrap{gap:6px}.bh144EvalCard{padding:8px}.bh144EvalMain b{font-size:20px}.bh144EvalRanks{font-size:9px}.bh144EvalMini{font-size:9px}}
+</style>
+
+
+<style id="bh-vol146-ui-style">
+/* Vol.146: スリット個別折りたたみ */
+.bh146SlitFoldArea{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0 13px}
+.bh146SlitFold{min-width:0;border:1px solid #303944;border-radius:12px;background:#0e141b;overflow:hidden}
+.bh146SlitToggle{width:100%;margin:0!important;padding:10px 12px!important;border:0!important;border-radius:0!important;background:#141b23!important;color:#e8f2f7!important;font-size:12px!important;text-align:left!important;position:relative}
+.bh146SlitToggle:after{content:" ▼";position:absolute;right:12px;color:#7ecde7}
+.bh146SlitToggle[aria-expanded="true"]:after{content:" ▲"}
+.bh146SlitBody{display:none;padding:7px}
+.bh146SlitFold.open .bh146SlitBody{display:block}
+.bh146SlitFold .bhSlip{margin:0!important}
+@media(max-width:760px){.bh146SlitFoldArea{grid-template-columns:1fr}.bh146SlitBody{padding:6px}}
+
+/* Vol.146: 直前情報を指定順へ。一周タイム / 展示を大きく */
+.bh146BeforeScroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.bh146BeforeTable{width:100%;min-width:820px;border-collapse:collapse;font-size:12px}
+.bh146BeforeTable th,.bh146BeforeTable td{white-space:nowrap}
+.bh146BeforeTable .bh146BigCol{font-size:13px;color:#ffe16b!important}
+.bh146BeforeTable .bh146BigCell{font-size:16px!important;font-weight:1000!important;letter-spacing:.2px;background:rgba(255,216,77,.045)}
+.bh146BeforeTable .bh146BigCell .bhBeforeRankMark{font-size:9px!important}
+@media(max-width:600px){
+  .bh146BeforeTable{min-width:790px;font-size:11px}
+  .bh146BeforeTable .bh146BigCell{font-size:15px!important}
+}
 </style>
 
 </head>
 <body>
-<div id="bhTopVersion">Vol.144</div>
+<div id="bhTopVersion">Vol.146</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -424,7 +450,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.144</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.146</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -814,7 +840,7 @@ window.classification=classification;
 <div id="bhBeforeInfoCard" class="card" style="display:none">
 <h2>⚡ 直前情報</h2>
 <button type="button" class="subBtn" onclick="bhReloadRealtimeVol4()">🔄 直前情報・オッズを再取得</button>
-<div class="bhStartLead">展示タイムだけでなく、スタート展示ST・進入・直線/直前タイム・一周・まわり足・チルト・体重・調整重量・部品交換・気象を、取得できた項目だけ表示します。</div>
+<div class="bhStartLead">取得できた直前情報を、スタート → 一周タイム → 直線 → 回り足 → 展示の順で見やすく表示します。一周タイムと展示は強調表示します。</div>
 <div id="bhBeforeInfoRows">
 </div>
 </div>
@@ -2391,6 +2417,31 @@ function bhOneMTheoryHTML(rows){
 
  return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開見通し：${title}</b><span class="bhTenkaiBadge${badgeOut?' out':''}">${badge}</span></div><div class="bhTenkaiMain"><strong>${main}</strong><div class="bhTenkaiSub">${sub}</div><div class="bhTenkaiMethods">${methodsHTML}</div><div class="bhPatternRanks">12型類似度（参考）：${rank}<br>12型は形の参考値で、本判定ではありません。まず艇身差で攻め成立度を判定し、その後に「1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力」で決まり手確率を求めます。旧固定決まり手ルールは使用しません。</div></div></div>`;
 }
+
+// Vol.146: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
+function bh146SlitState(key,defOpen=false){
+  try{
+    const v=localStorage.getItem('BOAT_HUNTER_UI_OPEN_V146_SLIT_'+key);
+    return v===null?!!defOpen:v==='1';
+  }catch(e){return !!defOpen}
+}
+function bh146SlitFoldHTML(key,label,html,defOpen=false){
+  const open=bh146SlitState(key,defOpen);
+  const id='bh146Slit_'+key;
+  return `<div class="bh146SlitFold ${open?'open':''}" id="${id}">
+    <button type="button" class="bh146SlitToggle" aria-expanded="${open?'true':'false'}"
+      onclick="bh146ToggleSlit('${key}',this)">${label}</button>
+    <div class="bh146SlitBody">${html}</div>
+  </div>`;
+}
+window.bh146ToggleSlit=function(key,btn){
+  const wrap=document.getElementById('bh146Slit_'+key);if(!wrap)return;
+  const open=!wrap.classList.contains('open');
+  wrap.classList.toggle('open',open);
+  if(btn)btn.setAttribute('aria-expanded',String(open));
+  try{localStorage.setItem('BOAT_HUNTER_UI_OPEN_V146_SLIT_'+key,open?'1':'0')}catch(e){}
+};
+
 function renderStartPrediction(){
  let card=$("startPredictionCard"),box=$("startPrediction");if(!card||!box||racers.length!==6)return;
  let stats=[1,2,3,4,5,6].map(bhStartStats),usable=stats.filter(x=>Number.isFinite(x.predict));
@@ -2399,7 +2450,7 @@ function renderStartPrediction(){
  let fastest=[...usable].sort((a,b)=>a.predict-b.predict)[0],stable=[...usable].filter(x=>x.count>=3).sort((a,b)=>a.sd-b.sd)[0]||fastest;
  let spread=Math.max(...usable.map(x=>x.predict))-Math.min(...usable.map(x=>x.predict)),body=spread/.15;
  let oneM=bhOneMModel(stats);
- box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bhDualSlip">${bhStartSlipHTML(stats)}${bhOneMSlipHTML(oneM)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<button id="bhStartHistoryToggle" class="subBtn bhStartHistoryToggle" type="button" onclick="bhToggleStartHistory()">📊 各選手のスタート履歴を見る</button><div id="bhStartHistoryWrap" class="bhStartHistoryWrap"><div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div></div><div class="bhStartNote">※予測STは「今回と同じコース」の最大30走を使用。30走データを基礎に予測し、STが安定している選手は中央値も反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、全艇の『外艇と直内艇の前後差』を基礎にAI評価・内側艇の先マイ権・1号艇の負け方・水面条件を補正します。0.30艇身未満は内艇優位、0.30〜0.49は互角、0.50〜0.69は外艇優勢、0.70艇身以上を明確な先行として扱います。</div>`;
+ box.innerHTML=`<div class="bhStartSummary"><div class="bhStartMetric"><small>予測ST最速</small><b>${fastest.boat}号艇 ${bhFmtST(fastest.predict)}</b></div><div class="bhStartMetric"><small>スタート安定</small><b>${stable.boat}号艇 σ${stable.sd.toFixed(3)}</b></div><div class="bhStartMetric"><small>最大スリット差</small><b>${body.toFixed(2)}艇身</b></div></div><div class="bh146SlitFoldArea">${bh146SlitFoldHTML('start','🚤 スタートスリット',bhStartSlipHTML(stats),false)}${bh146SlitFoldHTML('oneM','🏁 1マークスリット',bhOneMSlipHTML(oneM),false)}</div>${bhOneMDetailHTML(oneM)}${bhOneMTheoryHTML(oneM)}<button id="bhStartHistoryToggle" class="subBtn bhStartHistoryToggle" type="button" onclick="bhToggleStartHistory()">📊 各選手のスタート履歴を見る</button><div id="bhStartHistoryWrap" class="bhStartHistoryWrap"><div class="bhStartGrid">${stats.map(bhStartCardHTML).join('')}</div></div><div class="bhStartNote">※予測STは「今回と同じコース」の最大30走を使用。30走データを基礎に予測し、STが安定している選手は中央値も反映。1M直前隊形は「直前タイム＝行き足（加速）」「展示タイム＝伸び足（最高速側）」を分離して反映。そこから12型を類似判定し、本人の得意決まり手・1〜3コースの負け方・AI総合評価を重ねてイン逃げ/イン以外と本線/裏展開を判定します。旧固定決まり手ルールは廃止済み。全体見通しはAI評価と1M理論を別計算し、全艇の『外艇と直内艇の前後差』を基礎にAI評価・内側艇の先マイ権・1号艇の負け方・水面条件を補正します。0.30艇身未満は内艇優位、0.30〜0.49は互角、0.50〜0.69は外艇優勢、0.70艇身以上を明確な先行として扱います。</div>`;
 }
 
 function makurareRateFromCourse(defenderBoat,attackerCourse){
@@ -4364,7 +4415,7 @@ async function bhLoadRealtimePreviewAndOdds(){
  let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od2','od3'],got={};
  await Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}}));
  bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);
- // Vol.144: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
+ // Vol.146: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
  const nextOdds3=bhExtractOddsFromCsvRow(got.od3),nextOdds2=bhExtractOdds2FromCsvRow(got.od2);
  if(Object.keys(nextOdds3).length){bhRealtimeOdds=nextOdds3;window.bhRealtimeOdds=bhRealtimeOdds;window.BH_ODDS_LAST_OK_AT=Date.now();}
  else if(!window.bhRealtimeOdds||!Object.keys(window.bhRealtimeOdds).length){window.bhRealtimeOdds=bhRealtimeOdds||{};}
@@ -4378,7 +4429,7 @@ async function bhReloadRealtimeVol4(){
   if(btn)btn.disabled=true;
   await bhLoadRealtimePreviewAndOdds();
   bhRenderBeforeInfo();
-  // Vol.144: パネル開閉状態に関係なくオッズ/買い目を再描画する。
+  // Vol.146: パネル開閉状態に関係なくオッズ/買い目を再描画する。
   if(typeof window.bhRenderOddsPopularity==='function')window.bhRenderOddsPopularity();
  }finally{
   if(btn)btn.disabled=false;
@@ -4434,7 +4485,7 @@ function bhRenderBeforeInfo(){
  };
  card.style.display="block";
  let wind="";try{let w=weatherSource()||{};wind=`<div class="bhVerifyNote">🌬️ 気象：風速 ${bhPickFirst(w,["wind_speed","windSpeed"])??"－"}m / 風向 ${bhPickFirst(w,["wind_direction","windDirection","wind_name"])??"－"} / 波高 ${bhPickFirst(w,["wave_height","waveHeight"])??"－"}cm / 水温 ${bhPickFirst(w,["water_temperature","waterTemperature"])??"－"}℃</div>`}catch(e){}
- box.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;min-width:760px;border-collapse:collapse;font-size:12px"><thead><tr><th>艇</th><th>進入</th><th>展示ST</th><th>直前/直線</th><th>展示</th><th>1周</th><th>まわり足</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${ranked(x.st,'st',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.straight,'straight',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.ex,'ex',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.lap,'lap',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.turn,'turn',x.b,v=>bhFmtBefore(v))}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">直前情報スナップショットは締切1〜10分前（通常約5分前）に公開されます。公開後に再取得してください。</div>':''}`;
+ box.innerHTML=`<div class="bh146BeforeScroll"><table class="bh146BeforeTable"><thead><tr><th>艇</th><th>進入</th><th>スタート</th><th class="bh146BigCol">一周タイム</th><th>直線</th><th>回り足</th><th class="bh146BigCol">展示</th><th>チルト</th><th>体重</th><th>調整</th><th>部品</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${x.b}</b></td><td>${x.course}</td><td>${ranked(x.st,'st',x.b,v=>bhFmtBefore(v))}</td><td class="bh146BigCell">${ranked(x.lap,'lap',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.straight,'straight',x.b,v=>bhFmtBefore(v))}</td><td>${ranked(x.turn,'turn',x.b,v=>bhFmtBefore(v))}</td><td class="bh146BigCell">${ranked(x.ex,'ex',x.b,v=>bhFmtBefore(v))}</td><td>${x.tilt??'－'}</td><td>${x.weight??'－'}</td><td>${x.adjust??'－'}</td><td>${x.parts??'－'}</td></tr>`).join('')}</tbody></table></div>${wind}${!has?'<div class="bhVerifyNote">直前情報スナップショットは締切1〜10分前（通常約5分前）に公開されます。公開後に再取得してください。</div>':''}`;
 }
 </script>
 
@@ -7174,7 +7225,7 @@ function bhOddsPopularityRows(){
     .sort((a,b)=>a.odds-b.odds||a.key.localeCompare(b.key,'ja'));
 }
 
-// Vol.144: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
+// Vol.146: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
 window.bh144ToggleSection=function(id,key,btn){
   const el=document.getElementById(id);if(!el)return;
   const open=el.classList.contains('bh144Open');
@@ -7759,13 +7810,13 @@ window.bhRenderOddsPopularity=function(){
         <div class="bh144EvalTitle">🌐 世間評価</div>
         <div class="bh144EvalMain"><small>頭支持1位</small><b>${head}号艇</b></div>
         <div class="bh144EvalMini">総合1位 ${marketRank[0]}号艇</div>
-        <div class="bh144EvalRanks">1位 ${trustedBoats128[0]}号艇<br>2位 ${trustedBoats128[1]}号艇<br>3位 ${trustedBoats128[2]}号艇</div>
+        <div class="bh144EvalRanks">${marketRank.slice(1,6).map((boat,i)=>{const mr=i+2,hr=hunterOrder109.findIndex(x=>Number(x.boat)===Number(boat))+1;const move=hr>0&&hr<mr?'up':hr>mr?'down':'same';const arrow=move==='up'?'↑':move==='down'?'↓':'→';return `<div class="bh145RankRow"><b>${mr}位 ${boat}号艇</b><span class="bh145Move ${move}">${arrow}${hr>0?`<span class="bh145MoveNum"> HUNTER${hr}位</span>`:''}</span></div>`}).join('')}</div>
       </div>
       <div class="bh144EvalCard hunter">
         <div class="bh144EvalTitle">🤖 HUNTER評価</div>
         <div class="bh144EvalMain"><small>最終頭候補</small><b>${finalHead109?finalHead109+'号艇':'-'}</b></div>
         <div class="bh144EvalMini">HUNTER1位 ${hunterOrder109[0]?.boat?hunterOrder109[0].boat+'号艇':'-'}</div>
-        <div class="bh144EvalRanks">信頼度 ${finalTrust109}<br>${headConflict109?'⚠️ 人気先行あり':'✅ 大きな矛盾なし'}</div>
+        <div class="bh144EvalRanks">${hunterOrder109.slice(1,6).map((x,i)=>{const boat=Number(x.boat),hr=i+2,mr=marketRank.findIndex(b=>Number(b)===boat)+1;const move=mr>0&&hr<mr?'up':mr>0&&hr>mr?'down':'same';const arrow=move==='up'?'↑':move==='down'?'↓':'→';return `<div class="bh145RankRow"><b>${hr}位 ${boat}号艇</b><span class="bh145Move ${move}">${arrow}${mr>0?`<span class="bh145MoveNum"> 世間${mr}位</span>`:''}</span></div>`}).join('')}</div>
       </div>
     </div>
 

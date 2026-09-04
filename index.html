@@ -10280,12 +10280,12 @@ function pct(n){return `${Number(n||0).toFixed(0)}%`}
 async function actualResult(o){try{if(typeof bhFetchAllResultsForDay!=='function')return null;let got=await bhFetchAllResultsForDay(o.ymd),row=(got.rows||[]).find(x=>Number(x.venue)===o.venue&&Number(x.race)===o.race);return row||null}catch(e){return null}}
 function ensureCard(){let c=document.getElementById('bh178SimCard');if(c)return c;document.getElementById('bh175SimCard')?.remove();document.getElementById('bh176SimCard')?.remove();c=document.createElement('section');c.id='bh178SimCard';c.className='card bh178Card';let anchor=document.querySelector('#bhOddsPopularity,.bhOddsPopularity,#oddsPopularity')||document.getElementById('analysisCard')||document.getElementById('raceCard');if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(c,anchor.nextSibling);else document.body.appendChild(c);return c}
 async function render(o,fetchActual=false){let c=ensureCard();if(!c)return;document.getElementById('bhVol174Blank')?.remove();let m=o.marketStats||{},main=o.exacta.slice(0,7),sub=o.exacta.slice(7,14),actual=fetchActual?await actualResult(o):null;let actualPair=actual?.result?.split('-').slice(0,2).join('-')||'';let hitRank=actualPair?o.exacta.findIndex(x=>x.key===actualPair)+1:0;let scenarios=o.scenarios.slice(0,10);let winnerSummary=o.winTypes.slice(0,8).map(x=>`${x.key.replace(':','号艇 ')} ${x.count}回`).join(' / ');let outsideWins=o.heads.filter(x=>o.features.find(f=>f.boat===x.boat)?.course!==1).reduce((s,x)=>s+x.p1,0);let one=o.features.find(x=>x.course===1),oneWin=one?o.heads.find(x=>x.boat===one.boat)?.p1||0:0;
- c.innerHTML=`<div class="bh178Top"><div><h2>🧪 100回 模擬レース Vol.178</h2><div class="bh178Sub">6艇の攻撃権 → 1M決まり手 → 成否 → 同じ展開から2着・3着を生成。</div></div><button class="bh178Btn" id="bh178Run">再SIM</button></div><div class="bh178Grid"><div class="bh178Box"><small>世間1着支持1位</small><b class="bh178Market">${o.market1?o.market1+'号艇':'オッズ未取得'}</b></div><div class="bh178Box"><small>世間1位 1着 / 2連対 / 3連対</small><b>${m?pct(m.p1):'-'} / ${m?pct(m.p1+m.p2):'-'} / ${m?pct(m.top3):'-'}</b></div><div class="bh178Box"><small>イン1着 / イン以外1着</small><b>${oneWin}% / ${outsideWins}%</b></div><div class="bh178Box"><small>主な勝ち方</small><b style="font-size:12px;line-height:1.5">${winnerSummary||'-'}</b></div></div><div class="bh178Box bh178Situation"><small class="bh178SituationTitle">🎬 シチュエーション結果 TOP10</small>${scenarios.length?scenarios.map((x,i)=>`<div class="bh178SituationRow"><span>${i+1}. <strong>${x.key}</strong></span><span class="bh178SituationCount">${x.count}/100回　${x.count}%</span></div>`).join(''):'<div class="bh178SituationRow"><span>シチュエーション集計なし</span><span>-</span></div>'}</div><div class="bh178Exacta"><div class="bh178Box"><small>本命・2連単 出現上位7</small>${main.map((x,i)=>`<div class="bh178Ticket"><span>${i+1}. <strong>${x.key}</strong></span><span>${x.count}/100</span></div>`).join('')}</div><div class="bh178Box"><small>本命以外 TOP7</small>${sub.length?sub.map((x,i)=>`<div class="bh178Ticket"><span>${i+8}. <strong>${x.key}</strong></span><span>${x.count}/100</span></div>`).join(''):'該当なし'}</div></div><div class="bh178Box" style="margin-top:10px"><small>着順分布</small><table class="bh178Table"><tr><th>艇</th><th>1着</th><th>2着</th><th>3着</th><th>3連対</th></tr>${o.heads.map(x=>`<tr><td>${x.boat}</td><td>${x.p1}</td><td>${x.p2}</td><td>${x.p3}</td><td>${x.top3}</td></tr>`).join('')}</table></div>${(outsideWins<8&&o.market1&&o.features.find(f=>f.boat===o.market1)?.course!==1)?`<div class="bh178Alert">⚠️ 世間1位が外コースなのに外頭が少なすぎます。攻撃条件の不足を検証対象として保持します。</div>`:''}<div class="bh178Shot"><div class="bh178ShotTitle">📸 答え合わせデータ</div><div class="bh178ShotLine">${o.ymd} / 場${o.venue} / ${o.race}R<br>世間1位：<b>${o.market1||'-'}号艇</b>　SIM：1着 ${m?.p1||0}%・2連対 ${(m?.p1||0)+(m?.p2||0)}%・3連対 ${m?.top3||0}%<br>イン頭：${oneWin}%　外頭：${outsideWins}%<br>本命7：${main.map(x=>`${x.key}(${x.count})`).join(' / ')}<br>次点7：${sub.map(x=>`${x.key}(${x.count})`).join(' / ')}<br>勝ち方：${winnerSummary||'-'}<br>主要展開：${scenarios.map(x=>`${x.key} ${x.count}`).join(' / ')||'-'}<br>${actual?`実結果：<span class="bh178Actual">${actual.result}</span>　2連単SIM順位：${hitRank||'圏外'}位`:`<span class="bh178Warn">結果未取得。下のボタンで今日の結果と照合できます。</span>`}</div><button class="bh178Btn" id="bh178Check" style="margin-top:8px;width:100%">今日の結果と答え合わせ</button></div><div class="bh178ScoreNote">※ 結果に合わせた後付け正解補正はしない。11項目・被攻め率・壁・決まり手・ST揺らぎから展開を生成し、実結果とのズレを検証する。</div>`;
+ c.innerHTML=`<div class="bh178Top"><div><h2>🧪 100回 模擬レース Vol.179</h2><div class="bh178Sub">6艇の攻撃権 → 1M決まり手 → 成否 → 同じ展開から2着・3着を生成。</div></div><button class="bh178Btn" id="bh178Run">再SIM</button></div><div class="bh178Grid"><div class="bh178Box"><small>世間1着支持1位</small><b class="bh178Market">${o.market1?o.market1+'号艇':'オッズ未取得'}</b></div><div class="bh178Box"><small>世間1位 1着 / 2連対 / 3連対</small><b>${m?pct(m.p1):'-'} / ${m?pct(m.p1+m.p2):'-'} / ${m?pct(m.top3):'-'}</b></div><div class="bh178Box"><small>イン1着 / イン以外1着</small><b>${oneWin}% / ${outsideWins}%</b></div><div class="bh178Box"><small>主な勝ち方</small><b style="font-size:12px;line-height:1.5">${winnerSummary||'-'}</b></div></div><div class="bh178Box bh178Situation"><small class="bh178SituationTitle">🎬 シチュエーション結果 TOP10</small>${scenarios.length?scenarios.map((x,i)=>`<div class="bh178SituationRow"><span>${i+1}. <strong>${x.key}</strong></span><span class="bh178SituationCount">${x.count}/100回　${x.count}%</span></div>`).join(''):'<div class="bh178SituationRow"><span>シチュエーション集計なし</span><span>-</span></div>'}</div><div class="bh178Exacta"><div class="bh178Box"><small>本命・2連単 出現上位7</small>${main.map((x,i)=>`<div class="bh178Ticket"><span>${i+1}. <strong>${x.key}</strong></span><span>${x.count}/100</span></div>`).join('')}</div><div class="bh178Box"><small>本命以外 TOP7</small>${sub.length?sub.map((x,i)=>`<div class="bh178Ticket"><span>${i+8}. <strong>${x.key}</strong></span><span>${x.count}/100</span></div>`).join(''):'該当なし'}</div></div><div class="bh178Box" style="margin-top:10px"><small>着順分布</small><table class="bh178Table"><tr><th>艇</th><th>1着</th><th>2着</th><th>3着</th><th>3連対</th></tr>${o.heads.map(x=>`<tr><td>${x.boat}</td><td>${x.p1}</td><td>${x.p2}</td><td>${x.p3}</td><td>${x.top3}</td></tr>`).join('')}</table></div>${(outsideWins<8&&o.market1&&o.features.find(f=>f.boat===o.market1)?.course!==1)?`<div class="bh178Alert">⚠️ 世間1位が外コースなのに外頭が少なすぎます。攻撃条件の不足を検証対象として保持します。</div>`:''}<div class="bh178Shot"><div class="bh178ShotTitle">📸 答え合わせデータ</div><div class="bh178ShotLine">${o.ymd} / 場${o.venue} / ${o.race}R<br>世間1位：<b>${o.market1||'-'}号艇</b>　SIM：1着 ${m?.p1||0}%・2連対 ${(m?.p1||0)+(m?.p2||0)}%・3連対 ${m?.top3||0}%<br>イン頭：${oneWin}%　外頭：${outsideWins}%<br>本命7：${main.map(x=>`${x.key}(${x.count})`).join(' / ')}<br>次点7：${sub.map(x=>`${x.key}(${x.count})`).join(' / ')}<br>勝ち方：${winnerSummary||'-'}<br>主要展開：${scenarios.map(x=>`${x.key} ${x.count}`).join(' / ')||'-'}<br>${actual?`実結果：<span class="bh178Actual">${actual.result}</span>　2連単SIM順位：${hitRank||'圏外'}位`:`<span class="bh178Warn">結果未取得。下のボタンで今日の結果と照合できます。</span>`}</div><button class="bh178Btn" id="bh178Check" style="margin-top:8px;width:100%">今日の結果と答え合わせ</button></div><div class="bh178ScoreNote">※ 結果に合わせた後付け正解補正はしない。11項目・被攻め率・壁・決まり手・ST揺らぎから展開を生成し、実結果とのズレを検証する。</div>`;
  document.getElementById('bh178Run').onclick=()=>render(runSim(),false);document.getElementById('bh178Check').onclick=()=>render(o,true);applyHideButtons();}
 function ready(){return safe(()=>racers.length===6,false)}
 function start(){if(!ready())return;let o=runSim();render(o,false)}
 function applyHideButtons(){
-  // Vol.178: existing UI is never scanned or rewritten. Only the new SIM card has its own hide control.
+  // Vol.179: existing UI is never scanned or rewritten. Only the new SIM card has its own hide control.
   const c=document.getElementById('bh178SimCard'); if(!c||c.dataset.bh178HideReady)return; c.dataset.bh178HideReady='1';
   const key='BOAT_HUNTER_SIM_CARD_HIDDEN_V178';
   const btn=document.createElement('button'); btn.type='button'; btn.className='bh178HideBtn';
@@ -10305,11 +10305,69 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
 <script id="bh-vol178-version-ui">
 (()=>{
  function setV(){
-  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.178');
-  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='vol.178'});
+  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.179');
+  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='vol.179'});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();
  setTimeout(setV,100);setTimeout(setV,800);
+})();
+</script>
+
+
+<style id="bh-vol179-situation-standalone-style">
+#bh179SituationCard{margin:14px 0;padding:14px;border-radius:16px;border:2px solid rgba(91,204,255,.55);background:linear-gradient(180deg,rgba(8,24,37,.98),rgba(5,12,20,.98));box-shadow:0 10px 28px rgba(0,0,0,.28)}
+#bh179SituationCard .bh179Title{font-size:19px;font-weight:1000;color:#dff4ff;margin-bottom:4px}
+#bh179SituationCard .bh179Sub{font-size:10px;color:#8ea9bb;line-height:1.5;margin-bottom:9px}
+#bh179SituationCard .bh179Row{display:flex;justify-content:space-between;gap:10px;padding:9px 3px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;font-weight:900}
+#bh179SituationCard .bh179Row:first-of-type{border-top:0}
+#bh179SituationCard .bh179Count{white-space:nowrap;color:#9fdcff}
+#bh179SituationCard .bh179Btns{display:flex;gap:8px;margin-top:10px}
+#bh179SituationCard button{flex:1;border:1px solid rgba(120,210,255,.35);background:#103348;color:#fff;border-radius:10px;padding:10px;font-weight:1000}
+#bh179SituationCard .bh179Empty{padding:12px 3px;color:#ffca63;font-size:12px;font-weight:900}
+</style>
+<script id="bh-vol179-situation-standalone">
+(()=>{'use strict';
+ const KEY='BOAT_HUNTER_SIM_V178';
+ const safe=(fn,fb=null)=>{try{return fn()}catch(e){return fb}};
+ function curKey(){
+   const ymd=safe(()=>today().ymd,'');
+   const venue=Number(document.getElementById('venue')?.value||0);
+   const race=Number(document.getElementById('race')?.value||0);
+   return `${ymd}|${venue}|${race}`;
+ }
+ function latestStored(){
+   try{const st=JSON.parse(localStorage.getItem(KEY)||'{}');return st[curKey()]||null}catch(e){return null}
+ }
+ function ensure(){
+   let c=document.getElementById('bh179SituationCard'); if(c)return c;
+   c=document.createElement('section'); c.id='bh179SituationCard'; c.className='card';
+   const sim=document.getElementById('bh178SimCard');
+   const anchor=sim||document.querySelector('#bhOddsPopularity,.bhOddsPopularity,#oddsPopularity')||document.getElementById('analysisCard')||document.getElementById('raceCard');
+   if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(c,anchor.nextSibling); else document.body.appendChild(c);
+   return c;
+ }
+ function getData(force){
+   if(force && window.BH_VOL178?.runSim) return safe(()=>window.BH_VOL178.runSim(),null);
+   let o=latestStored();
+   if(!o && window.BH_VOL178?.runSim) o=safe(()=>window.BH_VOL178.runSim(),null);
+   return o;
+ }
+ function draw(force=false){
+   const c=ensure(),o=getData(force);
+   const rows=(o?.scenarios||[]).slice(0,10);
+   c.innerHTML=`<div class="bh179Title">🎬 シチュエーション結果 TOP10</div>
+   <div class="bh179Sub">100回の中で実際に発生した「1着艇・決まり手 → 2着艇」を多い順に表示。</div>
+   ${rows.length?rows.map((x,i)=>`<div class="bh179Row"><span>${i+1}. ${x.key}</span><span class="bh179Count">${x.count}/100回　${x.count}%</span></div>`).join(''):`<div class="bh179Empty">まだシチュエーション結果がありません。下の「100回SIMを実行」を押してください。</div>`}
+   <div class="bh179Btns"><button id="bh179Run">100回SIMを実行</button><button id="bh179Refresh">表示を更新</button></div>`;
+   document.getElementById('bh179Run').onclick=()=>draw(true);
+   document.getElementById('bh179Refresh').onclick=()=>draw(false);
+ }
+ function boot(){draw(false);setTimeout(()=>draw(false),400);setTimeout(()=>draw(false),1200)}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+ // Analysis completionに依存しない。画面変化を監視して現レースの結果へ追従。
+ const mo=new MutationObserver(()=>{clearTimeout(window.__bh179SitT);window.__bh179SitT=setTimeout(()=>draw(false),180)});
+ setTimeout(()=>{const root=document.body;if(root)mo.observe(root,{childList:true,subtree:true})},300);
+ window.BH_VOL179_SITUATION={draw};
 })();
 </script>
 

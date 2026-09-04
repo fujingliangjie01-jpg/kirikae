@@ -404,7 +404,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol146-ui-style">
-/* Vol.157: スリット個別折りたたみ */
+/* Vol.158: スリット個別折りたたみ */
 .bh146SlitFoldArea{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0 13px}
 .bh146SlitFold{min-width:0;border:1px solid #303944;border-radius:12px;background:#0e141b;overflow:hidden}
 .bh146SlitToggle{width:100%;margin:0!important;padding:10px 12px!important;border:0!important;border-radius:0!important;background:#141b23!important;color:#e8f2f7!important;font-size:12px!important;text-align:left!important;position:relative}
@@ -415,7 +415,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 .bh146SlitFold .bhSlip{margin:0!important}
 @media(max-width:760px){.bh146SlitFoldArea{grid-template-columns:1fr}.bh146SlitBody{padding:6px}}
 
-/* Vol.157: 直前情報を指定順へ。一周タイム / 展示を大きく */
+/* Vol.158: 直前情報を指定順へ。一周タイム / 展示を大きく */
 .bh146BeforeScroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .bh146BeforeTable{width:100%;min-width:820px;border-collapse:collapse;font-size:12px}
 .bh146BeforeTable th,.bh146BeforeTable td{white-space:nowrap}
@@ -430,7 +430,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol148-shobugake-style">
-/* Vol.157: 場特性カード直下の勝負掛け警報 */
+/* Vol.158: 場特性カード直下の勝負掛け警報 */
 #bhShobugakePanel.active{
   margin:14px 0 18px;
   padding:17px;
@@ -503,7 +503,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 
 <style id="bh-vol151-cleanup-style">
-/* Vol.157: 旧「1レース資金」は資金配分AIへ一本化。内部互換用DOMだけ残して非表示。 */
+/* Vol.158: 旧「1レース資金」は資金配分AIへ一本化。内部互換用DOMだけ残して非表示。 */
 #bhRaceBudgetWrap{display:none!important}
 </style>
 
@@ -546,7 +546,7 @@ var bhClassPatchCore=window.bhClassPatchCore;
 
 </head>
 <body>
-<div id="bhTopVersion">Vol.157</div>
+<div id="bhTopVersion">Vol.158</div>
 
 <script id="bh-classification-neutral-stub">
 function classification(boat, rankings){
@@ -566,7 +566,7 @@ window.classification=classification;
 </div>
 <header>
 <div class="boatVisual" aria-hidden="true">🚤</div>
-<h1>BOAT HUNTER <span class="bhVolBadge">Vol.157</span></h1>
+<h1>BOAT HUNTER <span class="bhVolBadge">Vol.158</span></h1>
 <p>人気ではなく期待値で勝つ</p>
 </header>
 <div class="sgFestivalHero">
@@ -2534,7 +2534,7 @@ function bhOneMTheoryHTML(rows){
  return `<div class="bhTenkai"><div class="bhTenkaiHead"><b>🧠 1M展開見通し：${title}</b><span class="bhTenkaiBadge${badgeOut?' out':''}">${badge}</span></div><div class="bhTenkaiMain"><strong>${main}</strong><div class="bhTenkaiSub">${sub}</div><div class="bhTenkaiMethods">${methodsHTML}</div><div class="bhPatternRanks">12型類似度（参考）：${rank}<br>12型は形の参考値で、本判定ではありません。まず艇身差で攻め成立度を判定し、その後に「1Mで可能な技 × 本人の得意決まり手率 × 1〜3コースの負け方 × AI成功力」で決まり手確率を求めます。旧固定決まり手ルールは使用しません。</div></div></div>`;
 }
 
-// Vol.157: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
+// Vol.158: スタートスリット / 1マークスリットを個別に折りたたみ、開閉状態を端末に保持。
 function bh146SlitState(key,defOpen=false){
   try{
     const v=localStorage.getItem('BOAT_HUNTER_UI_OPEN_V146_SLIT_'+key);
@@ -4531,7 +4531,7 @@ async function bhLoadRealtimePreviewAndOdds(){
  let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);let types=['tkz','stt','sui','original_exhibition','od2','od3'],got={};
  await Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}}));
  bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);
- // Vol.157: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
+ // Vol.158: 一時的な取得失敗/未公開レスポンスで、取得済みオッズを空にしない。
  const nextOdds3=bhExtractOddsFromCsvRow(got.od3),nextOdds2=bhExtractOdds2FromCsvRow(got.od2);
  if(Object.keys(nextOdds3).length){bhRealtimeOdds=nextOdds3;window.bhRealtimeOdds=bhRealtimeOdds;window.BH_ODDS_LAST_OK_AT=Date.now();}
  else if(!window.bhRealtimeOdds||!Object.keys(window.bhRealtimeOdds).length){window.bhRealtimeOdds=bhRealtimeOdds||{};}
@@ -4545,7 +4545,7 @@ async function bhReloadRealtimeVol4(){
   if(btn)btn.disabled=true;
   await bhLoadRealtimePreviewAndOdds();
   bhRenderBeforeInfo();
-  // Vol.157: パネル開閉状態に関係なくオッズ/買い目を再描画する。
+  // Vol.158: パネル開閉状態に関係なくオッズ/買い目を再描画する。
   if(typeof window.bhRenderOddsPopularity==='function')window.bhRenderOddsPopularity();
  }finally{
   if(btn)btn.disabled=false;
@@ -7341,7 +7341,7 @@ function bhOddsPopularityRows(){
     .sort((a,b)=>a.odds-b.odds||a.key.localeCompare(b.key,'ja'));
 }
 
-// Vol.157: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
+// Vol.158: セクションごとの開閉状態を端末に保持。利用者ごとに見たい場所だけ開ける。
 window.bh144ToggleSection=function(id,key,btn){
   const el=document.getElementById(id);if(!el)return;
   const open=el.classList.contains('bh144Open');
@@ -7368,7 +7368,7 @@ window.bh144ApplyOpenStates=function(){
 };
 
 
-// Vol.157: 世間評価/HUNTER評価は「AI解析時点」のスナップショットをレース単位で固定。
+// Vol.158: 世間評価/HUNTER評価は「AI解析時点」のスナップショットをレース単位で固定。
 // オッズ欄の開閉・折りたたみ再描画・結果確定後の画面再描画では再計算しない。
 const BH150_EVAL_SNAPSHOT_KEY='BOAT_HUNTER_MARKET_HUNTER_SNAPSHOT_V150';
 function bh150EvalRaceKey(){
@@ -7522,7 +7522,7 @@ window.bhRenderOddsPopularity=function(){
     </div>`;
 
 
-  // Vol.157: 通常は本命10点・穴目8点。評価一致時は本命6〜8点・穴目3点へ圧縮。
+  // Vol.158: 通常は本命10点・穴目8点。評価一致時は本命6〜8点・穴目3点へ圧縮。
   const hr=(boat)=>hm[boat]?.hunterRank||4;
   const scored=all120.map((x,i)=>{
     const pop=i+1,h1=hr(x.legs[0]),h2=hr(x.legs[1]),h3=hr(x.legs[2]);
@@ -7536,7 +7536,7 @@ window.bhRenderOddsPopularity=function(){
   );
   const headAllowed139=x=>!twistHeadBlocked139.has(Number(x?.legs?.[0]??x?.[0]));
 
-  // Vol.157: 世間評価とHUNTER評価が強く一致するレースは、買い目点数を自動で圧縮。
+  // Vol.158: 世間評価とHUNTER評価が強く一致するレースは、買い目点数を自動で圧縮。
   // 通常は 本命10点 / 穴目8点。強い一致時も買い目としての穴目は8点を確保し、資金配分側だけ絞る。
   const marketHeadRank149=(typeof firstRank!=='undefined'&&Array.isArray(firstRank)?firstRank:[]).map(Number);
   const hunterRankOrder149=(typeof hunterOrder109!=='undefined'&&Array.isArray(hunterOrder109)?hunterOrder109:[])
@@ -7591,7 +7591,7 @@ window.bhRenderOddsPopularity=function(){
   };
   const isBlockedPattern122=(x)=>impossiblePattern122.has(coursePatternKey122(x?.legs||String(x?.key||'').split('-')));
   for(let i=main10.length-1;i>=0;i--)if(isBlockedPattern122(main10[i]))main10.splice(i,1);
-  // Vol.157 本命の頭は必ず1艇だけ。
+  // Vol.158 本命の頭は必ず1艇だけ。
   // 最終頭候補が有効ならそれを優先し、使えない場合は本命スコア最上位の頭を採用。
   const preferredMainHead149=Number(finalHead109||head||0);
   let mainHead149=0;
@@ -7603,7 +7603,7 @@ window.bhRenderOddsPopularity=function(){
   const mainHeadOrder135=mainHead149?[mainHead149]:[];
   main10=main10.filter(x=>Number(x.legs?.[0])===mainHead149&&headAllowed139(x)&&!isBlockedPattern122(x)).slice(0,mainLimit149);
 
-  // Vol.157 本命不足補充。同じ頭1艇の候補だけで設定点数まで補充。
+  // Vol.158 本命不足補充。同じ頭1艇の候補だけで設定点数まで補充。
   const mainUsed128=new Set(main10.map(x=>x.key));
   const normalFill128=[...scored]
     .filter(x=>Number(x.legs?.[0])===mainHead149&&headAllowed139(x)&&!isBlockedPattern122(x)&&!mainUsed128.has(x.key))
@@ -7812,9 +7812,23 @@ window.bhRenderOddsPopularity=function(){
   // 本命組替えを優先。その中は世間のオッズランキングが高い順。
   // 次に出目理論補充、最後に固定出目の最終補充。
   const hunterHoleRank155={};hunterOrder109.forEach((x,i)=>hunterHoleRank155[Number(x.boat)]=i+1);
+
+  // Vol.158: 穴目の通常頭は、ねじれ判定より先にHUNTER順位だけで固定する。
+  // 本命頭を除いたHUNTER上位2艇をそのまま採用し、下位艇を繰り上げない。
+  // 例：HUNTER 3→5→4→6、本命3なら通常穴目頭は必ず5・4。4を飛ばして6にはしない。
+  const eligibleHoleHeads155=hunterOrder109
+    .map(x=>Number(x.boat))
+    .filter((b,i,a)=>b&&b!==Number(mainHead149)&&a.indexOf(b)===i);
+  const preferredHoleHeads155=eligibleHoleHeads155.slice(0,2);
+  const preferredHoleHeadSet157=new Set(preferredHoleHeads155);
+
   const holePool135=holePool113
     .filter(x=>{
-      if(!headAllowed139(x)||mainKeys.has(x.key)||isBlockedPattern122(x))return false;
+      const h=Number(x?.legs?.[0]);
+      // 通常穴目の固定2頭はHUNTER順位を優先。ここでねじれ除外による下位頭への繰上げを起こさない。
+      const fixedHunterHoleHead=preferredHoleHeadSet157.has(h);
+      const possibleSharedMainHead=h===Number(mainHead149);
+      if((!fixedHunterHoleHead&&!possibleSharedMainHead)||mainKeys.has(x.key)||isBlockedPattern122(x))return false;
       if(x.mandatory121)return true;
       return !mainRejected120.has(x.key)&&!cutKeys119.has(x.key);
     })
@@ -7822,17 +7836,12 @@ window.bhRenderOddsPopularity=function(){
       const ar=Number(hunterHoleRank155[Number(a?.legs?.[0])]||99),br=Number(hunterHoleRank155[Number(b?.legs?.[0])]||99);
       return ar-br||a.sourceRank-b.sourceRank||a.pop-b.pop;
     });
-  // Vol.157 穴目頭の確定ルール：
+  // Vol.158 穴目頭の確定ルール：
   // 1) 通常穴の頭は「本命頭を除いたHUNTER評価上位2艇」で先に固定する。
   // 2) 出目理論・本命組替え・最終補充は、その固定2艇以外を新しい頭へ昇格させない。
   // 3) 例外は本命頭のみ。80倍以上＋出目理論/組替え等の明確な根拠ありなら最大2点まで穴目へ採用可。
   //    この例外を採用した場合だけ、穴目全体は「通常2艇＋本命頭」の最大3艇になる。
   // 4) HUNTER下位艇で8点を埋める補充は禁止。該当出目が足りなければ点数不足のまま止める。
-  const eligibleHoleHeads155=hunterOrder109
-    .map(x=>Number(x.boat))
-    .filter((b,i,a)=>b&&b!==Number(mainHead149)&&!twistHeadBlocked139.has(b)&&a.indexOf(b)===i);
-  const preferredHoleHeads155=eligibleHoleHeads155.slice(0,2);
-  const preferredHoleHeadSet157=new Set(preferredHoleHeads155);
   const holeHeads135=[],hole10=[];
   let holeThreeHeadUnlocked149=false;
   let sharedMainHeadCount154=0;
@@ -7861,7 +7870,7 @@ window.bhRenderOddsPopularity=function(){
     if(hole10.length>=holeLimit149)break;
   }
 
-  // Vol.157 最終防波堤：通常頭はHUNTER固定2艇、本命頭は80倍特例のみ。
+  // Vol.158 最終防波堤：通常頭はHUNTER固定2艇、本命頭は80倍特例のみ。
   // ここで6号艇などHUNTER下位の新規頭が紛れ込む経路を完全に遮断する。
   for(let i=hole10.length-1;i>=0;i--){
     const x=hole10[i],h=Number(x?.legs?.[0]);
@@ -7900,7 +7909,7 @@ window.bhRenderOddsPopularity=function(){
   const decisionDay126=(typeof bhTodayKey==='function'?bhTodayKey():new Date().toISOString().slice(0,10));
   const decisionVenue126=Number(document.getElementById('venue')?.value||0);
   const decisionRace126=Number(document.getElementById('race')?.value||0);
-  // Vol.157 資金配分AI：
+  // Vol.158 資金配分AI：
   // 買い目表示は本命6〜10点 / 穴目8点を維持。
   // 実投資は本命を最低6点確保し、穴目へ何点投資するかは「本命への自信」で自動調整する。
   const fundBudget141=Math.max(100,Math.floor(Number(localStorage.getItem('BOAT_HUNTER_FUND_BUDGET_V141')||1200)/100)*100);
@@ -8342,7 +8351,7 @@ function evaluate88(b){
  return {items:items,pass:pass,course:c,ai:ai,motor:mot,lapRank:lapRank};
 }
 
-// Vol.157 勝負掛け仕掛け判定。
+// Vol.158 勝負掛け仕掛け判定。
 // 勝負掛けそのものでは加点せず、Fなし＋ST攻撃力＋連対/3連対＋コース別決まり手が揃った時だけ補正する。
 function bh153ShobuInfo(b){
  try{

@@ -4574,186 +4574,241 @@ function bhMergeRealtimeRows(tkz,stt,orig,sui){
 }
 function bhExtractOddsFromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:3連単[_：:]*)?([1-6])-([1-6])-([1-6])$/);if(!m)continue;let key=`${m[1]}-${m[2]}-${m[3]}`;if(new Set(m.slice(1)).size<3)continue;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
 function bhExtractOdds2FromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:2連単[_：:]*)?([1-6])-([1-6])$/);if(!m||m[1]===m[2])continue;let key=`${m[1]}-${m[2]}`;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
-// ===== Vol.225: オッズ正確性優先 / CSVオッズ完全除外 =====
-// 重要:
-// - od2/od3 CSV は締切前のスナップショットで、現在オッズではないため買い目・世間評価には使用しない。
-// - 表示可能なのは Boatcast の当該 日付/場/R のライブ値のみ。
-// - キャッシュも Boatcast取得成功値だけ、同一レースかつ90秒以内のみ使用。
-// - ライブ値が取れない場合は古い/別時点の数字を残さず未取得扱いにする。
-const BH225_ODDS_CACHE='BOAT_HUNTER_ODDS_LIVE_ONLY_V225';
-function bh225OddsKey(ymd,jcd,rno){return `${ymd}-${String(jcd).padStart(2,'0')}-${String(Number(rno)).padStart(2,'0')}`}
-function bh225LoadOddsCache(ymd,jcd,rno){
-  try{
-    const all=JSON.parse(localStorage.getItem(BH225_ODDS_CACHE)||'{}');
-    const v=all[bh225OddsKey(ymd,jcd,rno)];
-    if(!v||!v.at||v.source!=='BOATCAST_REALTIME')return null;
-    if(Date.now()-Number(v.at)>90000)return null;
-    return v;
-  }catch(e){return null}
-}
-function bh225SaveOddsCache(ymd,jcd,rno,o3,o2){
-  try{
-    const all=JSON.parse(localStorage.getItem(BH225_ODDS_CACHE)||'{}');
-    const key=bh225OddsKey(ymd,jcd,rno);
-    all[key]={at:Date.now(),o3:o3||{},o2:o2||{},source:'BOATCAST_REALTIME'};
-    const kept=Object.entries(all).sort((a,b)=>(b[1]?.at||0)-(a[1]?.at||0)).slice(0,24);
-    localStorage.setItem(BH225_ODDS_CACHE,JSON.stringify(Object.fromEntries(kept)));
-  }catch(e){}
-}
-function bh225ClearOdds(){
-  bhRealtimeOdds={}; window.bhRealtimeOdds=bhRealtimeOdds;
-  bhRealtimeOdds2={}; window.bhRealtimeOdds2=bhRealtimeOdds2;
-  window.BH_ODDS_SOURCE='UNAVAILABLE';
-}
-function bh225ApplyLiveOdds(o3,o2,ymd,jcd,rno){
-  let ok=false;
-  if(o3&&Object.keys(o3).length===120){bhRealtimeOdds=o3;window.bhRealtimeOdds=o3;ok=true}
-  if(o2&&Object.keys(o2).length===30){bhRealtimeOdds2=o2;window.bhRealtimeOdds2=o2;ok=true}
-  if(ok){
-    window.BH_ODDS_LAST_OK_AT=Date.now();
-    window.BH_ODDS_SOURCE='BOATCAST_REALTIME';
-    bh225SaveOddsCache(ymd,jcd,rno,window.bhRealtimeOdds||{},window.bhRealtimeOdds2||{});
-    try{window.bhRenderOddsPopularity?.()}catch(e){}
-  }
-  return ok;
-}
-async function bh225FetchWithTimeout(promise,ms,label){
-  let timer;
-  try{
-    return await Promise.race([
-      promise,
-      new Promise((_,rej)=>{timer=setTimeout(()=>rej(Error(`${label} timeout ${ms}ms`)),ms)})
-    ]);
-  }finally{clearTimeout(timer)}
-}
+// ===== Vol.223: Boatcast「集計中オッズ」へ直接接続 =====
+// 旧 od2/od3 CSV は締切約5分前の1回スナップショットだったため、
+// オッズ表示・世間評価・買い目用オッズはまず race.boatcast.jp の
+// bc_smt_od2 / bc_smt_od3 を直接取得する。取得失敗時だけCSVへフォールバック。
 async function bhFetchBoatcastLiveOdds(type,ymd,jcd,rno){
   if(type!=='od2'&&type!=='od3')throw Error('unsupported odds type');
-  if(!/^\d{8}$/.test(String(ymd)))throw Error('bad date');
-  if(!/^\d{2}$/.test(String(jcd)))throw Error('bad venue');
-  if(!(Number(rno)>=1&&Number(rno)<=12))throw Error('bad race');
   const rr=String(Number(rno)).padStart(2,'0');
   const url=`https://race.boatcast.jp/txt/${jcd}/bc_smt_${type}_${ymd}_${jcd}_${rr}.txt?_=${Date.now()}`;
-  const res=await fetch(url,{method:'GET',cache:'no-store',credentials:'omit',mode:'cors',headers:{'Accept':'text/plain,*/*'}});
+  const res=await fetch(url,{
+    method:'GET',
+    cache:'no-store',
+    credentials:'omit',
+    mode:'cors',
+    headers:{'Accept':'text/plain,*/*'}
+  });
   if(!res.ok)throw Error(`${type} realtime HTTP ${res.status}`);
   const body=await res.text();
   if(!body||body.trim().startsWith('<'))throw Error(`${type} realtime invalid body`);
   const lines=body.replace(/\r/g,'').split('\n');
-  if(lines.length<8||!lines[0].trimStart().startsWith('data='))throw Error(`${type} realtime header`);
-  if(String((lines[1]||'').split('\t')[0]).trim()!=='1')throw Error(`${type} realtime not aggregating`);
+  if(lines.length<3||!lines[0].trimStart().startsWith('data='))throw Error(`${type} realtime header`);
+  if(String((lines[1]||'').split('	')[0]).trim()!=='1')throw Error(`${type} realtime not aggregating`);
+
   const out={};
   if(type==='od3'){
     const vals=[];
     for(const row of lines.slice(2,8)){
-      const c=String(row||'').split('\t');
+      const c=String(row||'').split('	');
       if(c.length<21)throw Error('od3 realtime short row');
       vals.push(...c.slice(1,21));
     }
     if(vals.length!==120)throw Error(`od3 realtime count ${vals.length}`);
     let i=0;
-    for(let f=1;f<=6;f++)for(let ss=1;ss<=6;ss++){
-      if(ss===f)continue;
-      for(let t=1;t<=6;t++){
-        if(t===f||t===ss)continue;
-        const raw=String(vals[i++]??'').trim();
-        const n=Number(raw.replace(/[^0-9.]/g,''));
-        if(!Number.isFinite(n)||n<=0)throw Error(`od3 bad value ${f}-${ss}-${t}`);
-        out[`${f}-${ss}-${t}`]=n;
+    for(let f=1;f<=6;f++){
+      for(let s=1;s<=6;s++){
+        if(s===f)continue;
+        for(let t=1;t<=6;t++){
+          if(t===f||t===s)continue;
+          const n=Number(String(vals[i++]).replace(/[^0-9.]/g,''));
+          if(Number.isFinite(n)&&n>0)out[`${f}-${s}-${t}`]=n;
+        }
       }
     }
-    if(Object.keys(out).length!==120)throw Error('od3 incomplete');
   }else{
     const vals=[];
     for(const row of lines.slice(2,8)){
-      const c=String(row||'').split('\t');
+      const c=String(row||'').split('	');
       if(c.length<6)throw Error('od2 realtime short row');
       vals.push(...c.slice(1,6));
     }
     if(vals.length!==30)throw Error(`od2 realtime count ${vals.length}`);
     let i=0;
-    for(let f=1;f<=6;f++)for(let ss=1;ss<=6;ss++){
-      if(ss===f)continue;
-      const raw=String(vals[i++]??'').trim();
-      const n=Number(raw.replace(/[^0-9.]/g,''));
-      if(!Number.isFinite(n)||n<=0)throw Error(`od2 bad value ${f}-${ss}`);
-      out[`${f}-${ss}`]=n;
+    for(let f=1;f<=6;f++){
+      for(let s=1;s<=6;s++){
+        if(s===f)continue;
+        const n=Number(String(vals[i++]).replace(/[^0-9.]/g,''));
+        if(Number.isFinite(n)&&n>0)out[`${f}-${s}`]=n;
+      }
     }
-    if(Object.keys(out).length!==30)throw Error('od2 incomplete');
   }
+  if(!Object.keys(out).length)throw Error(`${type} realtime empty`);
   return out;
 }
-function bh225RestoreImmediateOdds(ymd,jcd,rno){
-  const c=bh225LoadOddsCache(ymd,jcd,rno);
-  if(!c)return false;
-  if(c.o3&&Object.keys(c.o3).length===120){bhRealtimeOdds=c.o3;window.bhRealtimeOdds=c.o3}
-  if(c.o2&&Object.keys(c.o2).length===30){bhRealtimeOdds2=c.o2;window.bhRealtimeOdds2=c.o2}
-  window.BH_ODDS_LAST_OK_AT=Number(c.at)||Date.now();
-  window.BH_ODDS_SOURCE='BOATCAST_CACHE_90S';
-  try{window.bhRenderOddsPopularity?.()}catch(e){}
-  return true;
-}
+
 async function bhLoadRealtimePreviewAndOdds(){
-  let t=today(),ymd=t.ymd,jcd=String(document.getElementById('venue').value).padStart(2,'0'),rno=Number(document.getElementById('race').value);
-  const restored=bh225RestoreImmediateOdds(ymd,jcd,rno);
-  if(!restored)bh225ClearOdds();
+  let t=today(),ymd=t.ymd,
+      jcd=String(document.getElementById('venue').value).padStart(2,'0'),
+      rno=Number(document.getElementById('race').value);
 
+  // 展示・気象等は従来CSVを維持。オッズだけ直接リアルタイム取得へ切替。
   let types=['tkz','stt','sui','original_exhibition'],got={};
-  const previewPromise=Promise.all(types.map(async type=>{try{let rows=await bhFetchPreviewCSV(type,ymd);got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno)}catch(e){got[type]=null}})).then(()=>{bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui)});
+  await Promise.all(types.map(async type=>{
+    try{
+      let rows=await bhFetchPreviewCSV(type,ymd);
+      got[type]=bhFindRaceCsvRow(rows,ymd,jcd,rno);
+    }catch(e){got[type]=null}
+  }));
+  bhMergeRealtimeRows(got.tkz,got.stt,got.original_exhibition,got.sui);
 
-  // CSV odds は一切取得しない。ライブ2種だけを独立取得。
-  const p3=bh225FetchWithTimeout(bhFetchBoatcastLiveOdds('od3',ymd,jcd,rno),2800,'od3');
-  const p2=bh225FetchWithTimeout(bhFetchBoatcastLiveOdds('od2',ymd,jcd,rno),2800,'od2');
-  const [r3,r2]=await Promise.allSettled([p3,p2]);
-  const o3=r3.status==='fulfilled'?r3.value:null;
-  const o2=r2.status==='fulfilled'?r2.value:null;
-  if(o3||o2){
-    window.BH_ODDS_DIRECT_ERROR={};
-    bh225ApplyLiveOdds(o3,o2,ymd,jcd,rno);
-  }else{
-    window.BH_ODDS_DIRECT_ERROR={live3:r3.reason?String(r3.reason.message||r3.reason):'',live2:r2.reason?String(r2.reason.message||r2.reason):''};
-    if(!restored)bh225ClearOdds();
+  let live3=null,live2=null,liveError3=null,liveError2=null;
+  await Promise.all([
+    bhFetchBoatcastLiveOdds('od3',ymd,jcd,rno).then(v=>live3=v).catch(e=>liveError3=e),
+    bhFetchBoatcastLiveOdds('od2',ymd,jcd,rno).then(v=>live2=v).catch(e=>liveError2=e)
+  ]);
+
+  // 直接取得成功時は必ず最新値で全置換。
+  if(live3&&Object.keys(live3).length){
+    bhRealtimeOdds=live3;
+    window.bhRealtimeOdds=bhRealtimeOdds;
+    window.BH_ODDS_LAST_OK_AT=Date.now();
+    window.BH_ODDS_SOURCE='BOATCAST_REALTIME';
   }
-  await Promise.allSettled([previewPromise]);
+  if(live2&&Object.keys(live2).length){
+    bhRealtimeOdds2=live2;
+    window.bhRealtimeOdds2=bhRealtimeOdds2;
+  }
+
+  // CORS/通信失敗時のみ、従来の締切前スナップショットへ退避。
+  // フォールバック時は「リアルタイム」と偽表示しない。
+  if(!live3){
+    try{
+      const rows3=await bhFetchPreviewCSV('od3',ymd);
+      got.od3=bhFindRaceCsvRow(rows3,ymd,jcd,rno);
+      const fallback3=bhExtractOddsFromCsvRow(got.od3);
+      if(Object.keys(fallback3).length){
+        bhRealtimeOdds=fallback3;
+        window.bhRealtimeOdds=bhRealtimeOdds;
+        window.BH_ODDS_LAST_OK_AT=Date.now();
+        window.BH_ODDS_SOURCE='CSV_SNAPSHOT_FALLBACK';
+      }
+    }catch(e){}
+  }
+  if(!live2){
+    try{
+      const rows2=await bhFetchPreviewCSV('od2',ymd);
+      got.od2=bhFindRaceCsvRow(rows2,ymd,jcd,rno);
+      const fallback2=bhExtractOdds2FromCsvRow(got.od2);
+      if(Object.keys(fallback2).length){
+        bhRealtimeOdds2=fallback2;
+        window.bhRealtimeOdds2=bhRealtimeOdds2;
+      }
+    }catch(e){}
+  }
+
+  window.BH_ODDS_DIRECT_ERROR={
+    od3:liveError3?String(liveError3.message||liveError3):'',
+    od2:liveError2?String(liveError2.message||liveError2):''
+  };
+
   bhRealtimePreviewLoaded=!!(got.tkz||got.stt||got.sui||got.original_exhibition);
-  try{window.bhRenderOddsPopularity?.()}catch(e){}
   return got;
 }
+
+// 表示中レースのオッズだけを軽量更新。15秒ごと。
+// Boatcast直接取得に成功した時だけ上書きし、CSVスナップショットでは自動更新しない。
 window.bhRefreshLiveOddsOnly=async function(force=false){
   if(document.hidden&&!force)return false;
   if(window.BH_ODDS_REFRESHING)return false;
   const venue=document.getElementById('venue'),race=document.getElementById('race');
   if(!venue||!race||!venue.value||!race.value)return false;
-  const t=today(),ymd=t.ymd,jcd=String(venue.value).padStart(2,'0'),rno=Number(race.value);
-  const hadCache=bh225RestoreImmediateOdds(ymd,jcd,rno);
-  if(!hadCache && window.BH_ODDS_SOURCE!=='BOATCAST_REALTIME')bh225ClearOdds();
+
   window.BH_ODDS_REFRESHING=true;
+  const t=today(),ymd=t.ymd,jcd=String(venue.value).padStart(2,'0'),rno=Number(race.value);
+
   const sig=o=>Object.keys(o||{}).sort().map(k=>k+':'+o[k]).join('|');
-  const before3=sig(window.bhRealtimeOdds||{}),before2=sig(window.bhRealtimeOdds2||{});
+  let source='', changed=false;
+
   try{
-    const [r3,r2]=await Promise.allSettled([
-      bh225FetchWithTimeout(bhFetchBoatcastLiveOdds('od3',ymd,jcd,rno),2400,'od3'),
-      bh225FetchWithTimeout(bhFetchBoatcastLiveOdds('od2',ymd,jcd,rno),2400,'od2')
-    ]);
-    const o3=r3.status==='fulfilled'?r3.value:null;
-    const o2=r2.status==='fulfilled'?r2.value:null;
-    const liveOk=!!(o3||o2);
-    if(liveOk){
-      window.BH_ODDS_DIRECT_ERROR={};
-      bh225ApplyLiveOdds(o3,o2,ymd,jcd,rno);
-    }else{
-      window.BH_ODDS_DIRECT_ERROR={live3:r3.reason?String(r3.reason.message||r3.reason):'',live2:r2.reason?String(r2.reason.message||r2.reason):''};
-      if(!bh225LoadOddsCache(ymd,jcd,rno))bh225ClearOdds();
+    // 1) まずBoatcastリアルタイムを試す
+    try{
+      const [o3,o2]=await Promise.all([
+        bhFetchBoatcastLiveOdds('od3',ymd,jcd,rno),
+        bhFetchBoatcastLiveOdds('od2',ymd,jcd,rno)
+      ]);
+
+      if(Object.keys(o3||{}).length){
+        changed = changed || sig(o3)!==sig(window.bhRealtimeOdds||{});
+        bhRealtimeOdds=o3; window.bhRealtimeOdds=o3;
+      }
+      if(Object.keys(o2||{}).length){
+        changed = changed || sig(o2)!==sig(window.bhRealtimeOdds2||{});
+        bhRealtimeOdds2=o2; window.bhRealtimeOdds2=o2;
+      }
+
+      if(Object.keys(o3||{}).length){
+        source='BOATCAST_REALTIME';
+        window.BH_ODDS_DIRECT_ERROR={};
+      }
+    }catch(e){
+      window.BH_ODDS_DIRECT_ERROR={od3:String(e&&e.message||e)};
     }
-    const changed=before3!==sig(window.bhRealtimeOdds||{})||before2!==sig(window.bhRealtimeOdds2||{});
-    if(changed){try{typeof renderBets==='function'&&renderBets()}catch(e){}try{typeof renderRace==='function'&&renderRace()}catch(e){}}
+
+    // 2) 直接取得できなければ、その場で従来CSVへ即フォールバック
+    if(source!=='BOATCAST_REALTIME'){
+      try{
+        const [rows3,rows2]=await Promise.all([
+          bhFetchPreviewCSV('od3',ymd),
+          bhFetchPreviewCSV('od2',ymd)
+        ]);
+
+        const row3=bhFindRaceCsvRow(rows3,ymd,jcd,rno);
+        const row2=bhFindRaceCsvRow(rows2,ymd,jcd,rno);
+        const o3=bhExtractOddsFromCsvRow(row3);
+        const o2=bhExtractOdds2FromCsvRow(row2);
+
+        if(Object.keys(o3||{}).length){
+          changed = changed || sig(o3)!==sig(window.bhRealtimeOdds||{});
+          bhRealtimeOdds=o3; window.bhRealtimeOdds=o3;
+          source='CSV_SNAPSHOT_FALLBACK';
+        }
+        if(Object.keys(o2||{}).length){
+          changed = changed || sig(o2)!==sig(window.bhRealtimeOdds2||{});
+          bhRealtimeOdds2=o2; window.bhRealtimeOdds2=o2;
+        }
+      }catch(e){
+        if(!window.BH_ODDS_DIRECT_ERROR)window.BH_ODDS_DIRECT_ERROR={};
+        window.BH_ODDS_DIRECT_ERROR.csv=String(e&&e.message||e);
+      }
+    }
+
+    // 3) どちらか取れたら必ず更新時刻・表示を反映
+    if(source){
+      window.BH_ODDS_LAST_OK_AT=Date.now();
+      window.BH_ODDS_SOURCE=source;
+      try{window.bhRenderOddsPopularity?.()}catch(e){}
+      if(changed){
+        try{typeof renderBets==='function'&&renderBets()}catch(e){}
+        try{typeof renderRace==='function'&&renderRace()}catch(e){}
+      }
+      return true;
+    }
+
+    // 4) 両方失敗した場合は、既存の取得済みオッズを消さない
+    window.BH_ODDS_SOURCE='UNAVAILABLE';
     try{window.bhRenderOddsPopularity?.()}catch(e){}
-    return liveOk||!!bh225LoadOddsCache(ymd,jcd,rno);
-  }finally{window.BH_ODDS_REFRESHING=false}
+    return false;
+  }finally{
+    window.BH_ODDS_REFRESHING=false;
+  }
 };
+
 if(window.BH_ODDS_LIVE_TIMER)clearInterval(window.BH_ODDS_LIVE_TIMER);
 window.BH_ODDS_LIVE_TIMER=setInterval(()=>{window.bhRefreshLiveOddsOnly?.()},5000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)window.bhRefreshLiveOddsOnly?.(true)});
-['venue','race'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.dataset.bh225OddsHook){el.dataset.bh225OddsHook='1';el.addEventListener('change',()=>{bh225ClearOdds();setTimeout(()=>window.bhRefreshLiveOddsOnly?.(true),20)})}});
-setTimeout(()=>window.bhRefreshLiveOddsOnly?.(true),80);
+// Vol.223: 画面復帰・場/レース変更時は即更新
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden)window.bhRefreshLiveOddsOnly?.(true);
+});
+['venue','race'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el&&!el.dataset.bh220OddsHook){
+    el.dataset.bh220OddsHook='1';
+    el.addEventListener('change',()=>setTimeout(()=>window.bhRefreshLiveOddsOnly?.(true),50));
+  }
+});
+setTimeout(()=>window.bhRefreshLiveOddsOnly?.(true),300);
+
 
 function bhGetOdds(key){let parts=String(key).split('-');return Number((parts.length===2?bhRealtimeOdds2:bhRealtimeOdds)?.[key])||null}
 async function bhReloadRealtimeVol4(){
@@ -10637,8 +10692,8 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
 <script id="bh-vol178-version-ui">
 (()=>{
  function setV(){
-  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.225');
-  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.225'});
+  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.223');
+  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.223'});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();
  setTimeout(setV,100);setTimeout(setV,800);
@@ -11169,7 +11224,7 @@ function render(){
   const third=[...rows].sort((a,b)=>a.thirdRank-b.thirdRank).slice(0,2);
 
   box.innerHTML=`<div class="v184-title">🌎 世間評価 × HUNTER 6艇診断</div>
-    <div class="v184-subtitle">Vol.225：頭力・2着力・3着力を完全分離。オッズはBoatcast集計中オッズをリアルタイム取得。</div>
+    <div class="v184-subtitle">Vol.223：頭力・2着力・3着力を完全分離。オッズはBoatcast集計中オッズをリアルタイム取得。</div>
     ${byMarket.map(x=>`<div class="v184-row ${boatColorClass(x.boat)}">
       <div class="v184-boat ${boatColorClass(x.boat)}">${x.boat}号艇</div>
       <div class="v184-mid">
@@ -12762,7 +12817,7 @@ document.addEventListener('click',e=>{
 'use strict';
 
 /*
-Vol.225:
+Vol.223:
 - 母数に入れるのは「スリットが揃った通常条件」と「HUNTER予想スリット」のみ。
 - ハンデ戦・条件変化・逆風/不利想定などのストレスSIMは母数から除外し、耐久チェックとして別集計。
 - 既存SIM結果オブジェクトに mode / simMode / handicap / stress / isStress / isHandicap /
@@ -12834,7 +12889,7 @@ function bh219RenderDenominatorNote(){
     const note=document.createElement('div');
     note.id='bh219DenomNote';
     note.style.cssText='margin:8px 0 0;padding:8px 10px;border:1px solid #31566b;border-radius:8px;background:#0b1820;color:#a9c7d8;font-size:10px;line-height:1.5';
-    note.innerHTML='Vol.225：確率母数は通常SIM（横一線／HUNTER予想スリット）のみ。ハンデ・壁・攻め手は耐久チェックで母数外。';
+    note.innerHTML='Vol.223：確率母数は通常SIM（横一線／HUNTER予想スリット）のみ。ハンデ・壁・攻め手は耐久チェックで母数外。';
     host.prepend(note);
     return;
   }
@@ -12843,7 +12898,7 @@ function bh219RenderDenominatorNote(){
   const note=document.createElement('div');
   note.id='bh219DenomNote';
   note.style.cssText='margin:8px 0 0;padding:8px 10px;border:1px solid #31566b;border-radius:8px;background:#0b1820;color:#a9c7d8;font-size:10px;line-height:1.5';
-  note.innerHTML=`Vol.225：通常確率の母数 <b>${base.length.toLocaleString()}回</b>（スリット揃い＋HUNTER予想スリット）｜耐久チェック <b>${stress.length.toLocaleString()}回</b>（母数外）`;
+  note.innerHTML=`Vol.223：通常確率の母数 <b>${base.length.toLocaleString()}回</b>（スリット揃い＋HUNTER予想スリット）｜耐久チェック <b>${stress.length.toLocaleString()}回</b>（母数外）`;
   host.prepend(note);
 
   if(base.length){
@@ -12886,5 +12941,68 @@ else setTimeout(bh219RenderDenominatorNote,0);
 })();
 </script>
 
+
+
+<!-- ===== Vol.227: 最下部「3連単オッズ1〜120位」だけ公式ページ直結 ===== -->
+<style id="bh-vol227-bottom-official-odds-style">
+#bh227OfficialOddsBox{margin:10px 0;padding:12px;border:1px solid #2f6f91;border-radius:12px;background:#0c1821}
+#bh227OfficialOddsBox .bh227Title{font-size:15px;font-weight:1000;color:#dff5ff;margin-bottom:5px}
+#bh227OfficialOddsBox .bh227Sub{font-size:11px;line-height:1.55;color:#9fb5c4;margin-bottom:10px}
+#bh227OfficialOddsBox .bh227Btn{display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;padding:13px 10px;border-radius:10px;border:1px solid #4aaee0;background:#10384e;color:#fff;font-size:15px;font-weight:1000}
+#bh227OfficialOddsBox .bh227Meta{margin-top:8px;font-size:10px;color:#7f9aaa;text-align:center}
+</style>
+<script id="bh-vol227-bottom-official-odds">
+(()=>{'use strict';
+  function raceArgs(){
+    let ymd='';
+    try{ymd=String((typeof today==='function'&&today().ymd)||'').replace(/\D/g,'')}catch(e){}
+    if(!/^\d{8}$/.test(ymd)){
+      const d=new Date(),z=n=>String(n).padStart(2,'0');
+      ymd=`${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}`;
+    }
+    const venue=String(document.getElementById('venue')?.value||'').replace(/\D/g,'');
+    const race=String(document.getElementById('race')?.value||'').replace(/\D/g,'');
+    if(!venue||!race)return null;
+    return {ymd,jcd:String(Number(venue)).padStart(2,'0'),rno:String(Number(race))};
+  }
+  function officialUrl(){
+    const a=raceArgs(); if(!a)return '';
+    return `https://www.boatrace.jp/owpc/pc/race/odds3t?hd=${a.ymd}&jcd=${a.jcd}&rno=${a.rno}`;
+  }
+  function apply(){
+    const detail=document.getElementById('bh144OddsDetail');
+    if(!detail)return;
+    const url=officialUrl();
+    const a=raceArgs();
+    detail.innerHTML=`<div id="bh227OfficialOddsBox">
+      <div class="bh227Title">📊 公式 3連単オッズ 120通り</div>
+      <div class="bh227Sub">この一番下のオッズ欄だけ、BOAT HUNTER内の推定値・CSV値を使いません。選択中のレースのBOAT RACE公式3連単オッズを直接開きます。</div>
+      ${url?`<a class="bh227Btn" href="${url}" target="_blank" rel="noopener">公式3連単オッズを開く</a>`:`<div class="bhOddsPopularityEmpty">開催場とレースを選択してください。</div>`}
+      <div class="bh227Meta">${a?`${a.ymd} / 場コード ${a.jcd} / ${a.rno}R`:''}</div>
+    </div>`;
+  }
+  const old=window.bhRenderOddsPopularity;
+  if(typeof old==='function'){
+    window.bhRenderOddsPopularity=function(){
+      const r=old.apply(this,arguments);
+      setTimeout(apply,0);setTimeout(apply,80);
+      return r;
+    };
+  }
+  document.addEventListener('click',e=>{
+    if(/オッズ人気|3連単オッズ|開閉/.test(e.target?.textContent||''))setTimeout(apply,30);
+  },true);
+  document.getElementById('venue')?.addEventListener('change',()=>setTimeout(apply,0));
+  document.getElementById('race')?.addEventListener('change',()=>setTimeout(apply,0));
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,300),{once:true});
+  else setTimeout(apply,300);
+  const mo=new MutationObserver(()=>{if(document.getElementById('bh144OddsDetail'))setTimeout(apply,20)});
+  if(document.body)mo.observe(document.body,{childList:true,subtree:true});
+  window.BH_VOL227_BOTTOM_ODDS={apply,officialUrl};
+})();
+</script>
+<script id="bh-vol227-version-ui">
+(()=>{function setV(){document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.227');document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim()))el.textContent='Vol.227'});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();setTimeout(setV,100);setTimeout(setV,800);})();
+</script>
 </body>
 </html>

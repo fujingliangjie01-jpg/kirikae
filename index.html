@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>BOAT HUNTER V006</title>
+<title>BOAT HUNTER V007</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07131d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 button,select,input{font:inherit}.hide{display:none!important}.wrap{max-width:900px;margin:auto;padding:14px}
@@ -122,20 +122,118 @@ body{background:#07131d}
 .dataLive{color:#76e6a3!important}
 .dataWarn{color:#ffd660!important}
 
+
+/* ===== Vol.007 FINAL OVERRIDE ===== */
+.top{
+  position:relative!important;min-height:100vh!important;display:flex!important;
+  align-items:center!important;justify-content:center!important;
+  padding:28px 18px!important;text-align:center!important;isolation:isolate!important;overflow:hidden!important
+}
+.top:before,.top:after{content:"";position:absolute;inset:0;z-index:-2}
+.top .content{width:min(760px,100%);position:relative;z-index:2}
+.top .logo{font-size:clamp(42px,11vw,82px);font-weight:1000;letter-spacing:.04em;line-height:.92;margin:0}
+.top .sub{margin-top:14px;font-size:clamp(13px,3.6vw,18px);font-weight:800;letter-spacing:.18em}
+.top .badge{display:inline-block;margin-bottom:20px;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:950;letter-spacing:.14em}
+.top .boat{font-size:clamp(64px,18vw,120px);filter:drop-shadow(0 12px 12px rgba(0,0,0,.45));margin-bottom:18px}
+.top .wave{position:absolute;left:-10%;right:-10%;bottom:-9vh;height:35vh;z-index:-1;border-radius:50% 50% 0 0/22% 22% 0 0;transform:rotate(-2deg)}
+.topVol{position:absolute;right:12px;top:max(10px,env(safe-area-inset-top));font-size:10px;font-weight:700;letter-spacing:.08em;color:#fff;opacity:.28;z-index:4}
+
+/* 通常 — RESET_TOP_ONLY と同じ世界観 */
+.top.top-normal{
+ background:
+ radial-gradient(circle at 50% 10%,rgba(58,180,255,.28),transparent 35%),
+ linear-gradient(180deg,#06111b 0%,#08283b 48%,#075176 100%)!important
+}
+.top.top-normal:before{
+ background:
+ linear-gradient(115deg,transparent 0 48%,rgba(255,255,255,.055) 49%,transparent 50%),
+ repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 8px)
+}
+.top.top-normal .badge{background:rgba(65,190,255,.12);border:1px solid rgba(99,211,255,.42);color:#aeeaff}
+.top.top-normal .logo{color:#f4fbff;text-shadow:0 0 22px rgba(74,194,255,.34)}
+.top.top-normal .sub{color:#a9d8ed}
+.top.top-normal .wave{background:linear-gradient(180deg,rgba(83,211,255,.34),rgba(3,39,61,.95));box-shadow:0 -8px 30px rgba(92,220,255,.15)}
+
+/* SG */
+.top.top-sg{
+ background:
+ radial-gradient(circle at 15% 8%,rgba(255,67,67,.25),transparent 26%),
+ radial-gradient(circle at 85% 7%,rgba(255,213,65,.24),transparent 26%),
+ radial-gradient(ellipse at 50% 26%,rgba(25,121,189,.36),transparent 48%),
+ linear-gradient(180deg,#020711 0%,#07182b 46%,#10222d 100%)!important
+}
+.top.top-sg:before{
+ background:
+ repeating-linear-gradient(90deg,transparent 0 9%,rgba(255,216,91,.09) 9.2% 9.5%,transparent 9.8% 18%),
+ repeating-linear-gradient(0deg,rgba(90,205,255,.04) 0 1px,transparent 1px 8px)
+}
+.top.top-sg .badge{background:linear-gradient(90deg,#671212,#76500c,#0b4968);border:1px solid #ffe06b;color:#fff2aa;box-shadow:0 0 20px rgba(255,216,77,.24)}
+.top.top-sg .logo{color:#fff5bd;text-shadow:0 2px 0 #762900,0 0 12px #ff9b2e,0 0 28px rgba(255,216,77,.65)}
+.top.top-sg .sub{color:#dff6ff}
+.top.top-sg .wave{background:linear-gradient(180deg,rgba(34,148,199,.28),rgba(2,38,59,.96));box-shadow:0 -8px 35px rgba(255,213,72,.10)}
+
+/* レディース */
+.top.top-ladies{
+ background:
+ radial-gradient(circle at 18% 10%,rgba(255,121,187,.34),transparent 28%),
+ radial-gradient(circle at 82% 12%,rgba(255,208,231,.22),transparent 25%),
+ linear-gradient(180deg,#21091a 0%,#4a1238 45%,#7b245c 100%)!important
+}
+.top.top-ladies:before{
+ background:
+ radial-gradient(circle at 12% 22%,rgba(255,255,255,.15) 0 2px,transparent 3px),
+ radial-gradient(circle at 78% 30%,rgba(255,205,229,.18) 0 3px,transparent 4px),
+ radial-gradient(circle at 32% 72%,rgba(255,255,255,.12) 0 2px,transparent 3px)
+}
+.top.top-ladies .badge{background:rgba(255,121,187,.16);border:1px solid rgba(255,188,220,.65);color:#ffd9eb;box-shadow:0 0 20px rgba(255,103,176,.20)}
+.top.top-ladies .logo{color:#fff5fb;text-shadow:0 0 20px rgba(255,112,184,.55)}
+.top.top-ladies .sub{color:#ffd0e6}
+.top.top-ladies .wave{background:linear-gradient(180deg,rgba(255,123,190,.25),rgba(81,14,57,.96))}
+
+/* 選手データ本体＝艇色。過去20走詳細だけダークのまま */
+.card{
+  background:var(--c)!important;
+  color:var(--t)!important;
+  border:4px solid var(--c)!important;
+  border-left-width:10px!important;
+  outline:2px solid rgba(255,255,255,.20);
+  box-shadow:0 10px 28px rgba(0,0,0,.34)!important
+}
+.card.b1{outline-color:rgba(255,255,255,.95)}
+.card.b2{outline-color:rgba(150,150,150,.70)}
+.card.b3{outline-color:rgba(255,97,104,.85)}
+.card.b4{outline-color:rgba(84,164,255,.85)}
+.card.b5{outline-color:rgba(255,238,70,.90)}
+.card.b6{outline-color:rgba(72,210,112,.85)}
+.card .name{color:var(--t)!important}
+.card .rank{background:rgba(0,0,0,.14)!important;color:var(--t)!important;border:1px solid currentColor}
+.card.b2 .rank{background:rgba(255,255,255,.12)!important}
+.card .big,.card .small,.card .stQuick{color:#fff}
+.card .small{border-top-color:rgba(0,0,0,.18)!important}
+.card .more{background:#07131d!important;color:#d7eaf5!important;border-color:rgba(255,255,255,.20)!important}
+.card .detail{
+  background:#08141e!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.20) inset
+}
+.card .detail .k,.card .detail .muted{color:#8da1b1!important}
+.card .detail .courseChip{background:var(--c)!important;color:var(--t)!important}
+.card .stat,.card .stBox{box-shadow:0 1px 0 rgba(255,255,255,.03) inset}
+@media(max-width:600px){.top{padding-bottom:15vh!important}}
+
 </style>
 </head>
 <body>
-<div class="vol">V006</div>
-
 <section id="top" class="top top-normal">
-  <div class="topcontent">
-    <div class="topBoat">🚤</div>
-    <div id="topBadge" class="topBadge">BOAT HUNTER</div>
-    <div class="logo">BOAT<br>HUNTER</div>
-    <div id="topSub" class="topSub">人気ではなく期待値で勝つ</div>
+  <div class="topVol">Vol.007</div>
+  <div class="content">
+    <div class="boat">🚤</div>
+    <div class="badge" id="topBadge">BOAT HUNTER</div>
+    <h1 class="logo">BOAT<br>HUNTER</h1>
+    <div class="sub" id="topSub">人気ではなく期待値で勝つ</div>
     <button id="open" class="start">出走表を開く</button>
   </div>
-  <div class="topWater"></div>
+  <div class="wave"></div>
 </section>
 
 <section id="main" class="hide">

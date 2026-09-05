@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>BOAT HUNTER V003</title>
+<title>BOAT HUNTER V004</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07131d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 button,select,input{font:inherit}.hide{display:none!important}.wrap{max-width:900px;margin:auto;padding:14px}
@@ -50,10 +50,21 @@ button,select,input{font:inherit}.hide{display:none!important}.wrap{max-width:90
 .rate{border:1px solid rgba(255,255,255,.055)}
 @media(max-width:620px){.histHead{grid-template-columns:66px 38px 38px 48px 1fr}}
 
+
+.stQuick{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.stBox{background:#0b1b27;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:6px;text-align:center}
+.stBox .v{font-size:14px}
+.stRank1{background:#ff3b30!important;color:#fff!important}
+.stRank2{background:#ffd60a!important;color:#111!important}
+.loadingPulse{animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:.45}to{opacity:1}}
+.progress{height:4px;background:#102a39;border-radius:99px;overflow:hidden;margin-top:6px}
+.progress>i{display:block;height:100%;width:30%;background:#48c7ff;animation:loadbar 1.1s infinite ease-in-out}
+@keyframes loadbar{0%{transform:translateX(-120%)}100%{transform:translateX(430%)}}
 </style>
 </head>
 <body>
-<div class="vol">V003</div>
+<div class="vol">V004</div>
 
 <section id="top" class="top">
   <div><div style="font-size:74px">🚤</div><div class="logo">BOAT<br>HUNTER</div><div style="margin-top:12px;color:#a9d8ed">人気ではなく期待値で勝つ</div><button id="open" class="start">出走表を開く</button></div>
@@ -97,7 +108,7 @@ function grade(r){return R[+r.rank_number]||"—"}
 
 function card(r){
  const b=+r.entry_number,[ml,mc]=motor(r.motor_top_2_percent,r.motor_top_3_percent);
- return `<article class="card b${b}">
+ return `<article class="card b${b}" data-boat="${b}" data-number="${r.number}">
  <div class="row"><div class="no">${b}</div><div style="flex:1">
    <div class="name">${r.name||"—"}</div>
    <span class="patch rank">${grade(r)}</span><span class="patch ${mc}">${ml}</span>
@@ -105,6 +116,10 @@ function card(r){
     <div class="stat"><div class="k">全国勝率</div><div class="v">${f(r.national_win_rate)}</div></div>
     <div class="stat"><div class="k">今季の勝ち点</div><div class="v na">未接続</div></div>
     <div class="stat"><div class="k">過去最高階級 / 年</div><div class="v na">未接続</div></div>
+   </div>
+   <div class="stQuick">
+    <div class="stBox"><div class="k">今コース 平均ST</div><div id="avgst${b}" class="v na">取得中</div></div>
+    <div class="stBox"><div class="k">今コース ST順位</div><div id="avgrank${b}" class="v na">取得中</div></div>
    </div>
  </div></div>
  <div class="small">
@@ -114,11 +129,10 @@ function card(r){
   <div class="stat"><div class="k">今節勝ち点</div><div class="v na">未接続</div></div>
   <div class="stat"><div class="k">得点順位</div><div class="v na">未接続</div></div>
  </div>
- <button class="more" onclick="toggleDetail(${b},${r.number})">過去20走 ▼</button>
+ <button class="more" onclick="toggleDetail(${b},${r.number})">同コース過去20走 ▼</button>
  <div id="d${b}" class="detail hide"></div>
  </article>`;
 }
-
 function decorateRanks(rr){
  const metrics=[
   ["national_win_rate",0],
@@ -144,41 +158,107 @@ async function getRace(){
   let rr=racers(currentRace);if(rr.length!==6)throw Error("6艇を取得できません");
   $("cards").innerHTML=rr.map(card).join("");
   decorateRanks(rr);
-  $("status").textContent=`✓ ${S[$("stadium").value]} ${$("race").value}R 取得完了`;
+  $("status").textContent=`✓ ${S[$("stadium").value]} ${$("race").value}R / 過去20走を高速取得中…`;
+  preloadHistory(rr);
  }catch(e){$("status").textContent="取得失敗："+e.message}
 }
 
 function allRaces(j){
  let out=[];for(const st of Object.values(j?.programs?.stadiums||{}))for(const r of Object.values(st?.races||{}))if(r.result?.racers)out.push(r);return out
 }
-function dateMinus(s,days){let d=new Date(s+"T00:00:00+09:00");d.setDate(d.getDate()-days);return d.toISOString().slice(0,10)}
+function dateMinus(s,days){
+ const [y,m,d]=s.split("-").map(Number);
+ const x=new Date(Date.UTC(y,m-1,d-days));
+ return x.toISOString().slice(0,10)
+}
+function dayJson(date){
+ return fetch(url(date),{cache:"force-cache"})
+   .then(x=>x.ok?x.json():null)
+   .catch(()=>null)
+}
+function stRanks(rs){
+ const vals=rs.map(x=>n(x.start_timing)).filter(x=>x!=null).sort((a,b)=>a-b);
+ const map=new Map();
+ for(const x of rs){
+  const v=n(x.start_timing);
+  if(v==null)continue;
+  map.set(+x.entry_number,vals.indexOf(v)+1);
+ }
+ return map
+}
+function consumeHistoryDay(j,d,targets){
+ if(!j)return;
+ for(const race of allRaces(j)){
+  const rs=Object.values(race.result?.racers||{});
+  const winner=rs.find(x=>+x.place_number===1);
+  if(!winner)continue;
+  const ranks=stRanks(rs);
+  for(const self of rs){
+   const obj=targets.get(+self.number);
+   if(!obj||obj.rows.length>=20)continue;
+   if(+self.course_number!==obj.course)continue;
+   obj.rows.push({
+    date:d,place:+self.place_number,entry:+self.entry_number,course:+self.course_number,
+    st:n(self.start_timing),stRank:ranks.get(+self.entry_number)||null,
+    winnerEntry:+winner.entry_number,winnerCourse:+winner.course_number,
+    tech:+race.result.technique_number,stadium:+race.stadium_number,race:+race.race_number
+   });
+  }
+ }
+}
 async function buildHistory(){
  const rr=racers(currentRace);
  const targets=new Map(rr.map(x=>[+x.number,{course:+x.entry_number,rows:[]}]));
  const start=$("date").value;
- for(let day=1;day<=520;day++){
+ const BATCH=14,MAX_DAYS=420;
+
+ for(let from=1;from<=MAX_DAYS;from+=BATCH){
   if([...targets.values()].every(o=>o.rows.length>=20))break;
-  let d=dateMinus(start,day);if(d<"2025-01-01")break;
-  try{
-   let j=await fetch(url(d),{cache:"force-cache"}).then(x=>x.ok?x.json():null);if(!j)continue;
-   for(const race of allRaces(j)){
-    const rs=Object.values(race.result.racers||{});
-    const winner=rs.find(x=>+x.place_number===1);
-    if(!winner)continue;
-    for(const self of rs){
-     const obj=targets.get(+self.number);
-     if(!obj||obj.rows.length>=20)continue;
-     if(+self.course_number!==obj.course)continue;
-     obj.rows.push({
-      date:d,place:+self.place_number,entry:+self.entry_number,course:+self.course_number,st:self.start_timing,
-      winnerEntry:+winner.entry_number,winnerCourse:+winner.course_number,tech:+race.result.technique_number,
-      stadium:+race.stadium_number,race:+race.race_number
-     });
-    }
-   }
-  }catch(e){}
+  const dates=Array.from({length:BATCH},(_,i)=>dateMinus(start,from+i));
+  const jsons=await Promise.all(dates.map(dayJson));
+  // 新しい日付→古い日付の順を維持
+  for(let i=0;i<dates.length;i++)consumeHistoryDay(jsons[i],dates[i],targets);
+  $("status").innerHTML=`選手データ取得中… ${Math.min(from+BATCH-1,MAX_DAYS)}日分確認<div class="progress"><i></i></div>`;
  }
+ for(const o of targets.values())o.rows=o.rows.slice(0,20);
  return new Map([...targets].map(([k,v])=>[k,v.rows]));
+}
+function histMetrics(h){
+ if(!h.length)return{avgST:null,avgRank:null,win:0,top2:0,top3:0};
+ const sts=h.map(x=>n(x.st)).filter(x=>x!=null);
+ const rs=h.map(x=>n(x.stRank)).filter(x=>x!=null);
+ return{
+  avgST:sts.length?sts.reduce((a,b)=>a+b,0)/sts.length:null,
+  avgRank:rs.length?rs.reduce((a,b)=>a+b,0)/rs.length:null,
+  win:h.filter(x=>x.place===1).length,
+  top2:h.filter(x=>x.place<=2).length,
+  top3:h.filter(x=>x.place<=3).length
+ }
+}
+function updateMainHistory(rr,map){
+ rr.forEach(r=>{
+  const b=+r.entry_number,h=map.get(+r.number)||[],m=histMetrics(h);
+  const a=$("avgst"+b),q=$("avgrank"+b);
+  if(a){a.classList.remove("na");a.textContent=m.avgST==null?"—":m.avgST.toFixed(3)}
+  if(q){q.classList.remove("na");q.textContent=m.avgRank==null?"—":m.avgRank.toFixed(2)+"位"}
+ });
+ // 6艇中の平均ST順位を色分け：1位赤、2位黄
+ const vals=rr.map(r=>({b:+r.entry_number,h:map.get(+r.number)||[]}))
+   .map(x=>({b:x.b,v:histMetrics(x.h).avgST}))
+   .filter(x=>x.v!=null).sort((a,b)=>a.v-b.v);
+ vals.slice(0,2).forEach((x,i)=>{
+  const el=$("avgst"+x.b);if(el)el.classList.add(i===0?"stRank1":"stRank2")
+ });
+}
+async function preloadHistory(rr){
+ try{
+  if(!historyLoading)historyLoading=buildHistory();
+  historyCache=await historyLoading;
+  updateMainHistory(rr,historyCache);
+  $("status").textContent="✓ 出走表＋同コース過去20走 取得完了";
+ }catch(e){
+  $("status").textContent="出走表取得済み / 過去20走の取得に失敗";
+ }
 }
 
 function rateStats(h,course){
@@ -207,18 +287,16 @@ function rateStats(h,course){
  return s.map(x=>`<div class="rate"><span class="k">${x[0]}</span><b>${c(x[1])}</b></div>`).join("");
 }
 function recentSummary(h){
- const base=h.length||1;
- const win=h.filter(x=>x.place===1).length;
- const top2=h.filter(x=>x.place<=2).length;
- const top3=h.filter(x=>x.place<=3).length;
- const pc=k=>(k/base*100).toFixed(1)+"%";
+ const base=h.length||1,m=histMetrics(h),pc=k=>(k/base*100).toFixed(1)+"%";
  return `<div class="summary3">
-   <div class="sum win"><div class="k">1着率</div><div class="sv">${pc(win)}</div></div>
-   <div class="sum top2"><div class="k">2連対率</div><div class="sv">${pc(top2)}</div></div>
-   <div class="sum top3"><div class="k">3連対率</div><div class="sv">${pc(top3)}</div></div>
+   <div class="sum win"><div class="k">1着率</div><div class="sv">${pc(m.win)}</div></div>
+   <div class="sum top2"><div class="k">2連対率</div><div class="sv">${pc(m.top2)}</div></div>
+   <div class="sum top3"><div class="k">3連対率</div><div class="sv">${pc(m.top3)}</div></div>
+   <div class="sum"><div class="k">平均ST</div><div class="sv">${m.avgST==null?"—":m.avgST.toFixed(3)}</div></div>
+   <div class="sum"><div class="k">平均ST順位</div><div class="sv">${m.avgRank==null?"—":m.avgRank.toFixed(2)+"位"}</div></div>
+   <div class="sum"><div class="k">母数</div><div class="sv">${h.length}走</div></div>
  </div>`;
 }
-
 async function toggleDetail(boatNo,number){
  const box=$("d"+boatNo);
  if(!box.classList.contains("hide")){box.classList.add("hide");return}
@@ -231,14 +309,14 @@ async function toggleDetail(boatNo,number){
  }
  const h=historyCache.get(+number)||[];
  let rows=h.map(x=>`<div class="hrow place${x.place<=3?x.place:0}">
-   <span>${x.date.slice(5)}</span><span class="placeBadge">${x.place}着</span><span>${x.course}コース</span><span>ST ${f(x.st,2)}</span>
+   <span>${x.date.slice(5)}</span><span class="placeBadge">${x.place}着</span><span>${x.course}コース</span><span>ST ${f(x.st,2)} / ${x.stRank??"—"}位</span>
    <span>1着 ${x.winnerEntry}号艇 / ${T[x.tech]||"不明"}</span>
  </div>`).join("");
  box.innerHTML=`<div class="courseTitle"><span class="courseChip">${boatNo}</span>${boatNo}コース限定・直近${h.length}走</div>
  ${recentSummary(h)}
  <div class="rates">${rateStats(h,boatNo)}</div>
  <div class="hist">
-   <div class="histHead"><span>日付</span><span>着</span><span>コース</span><span>ST</span><span>1着艇 / 決まり手</span></div>
+   <div class="histHead"><span>日付</span><span>着</span><span>コース</span><span>ST / 順位</span><span>1着艇 / 決まり手</span></div>
    ${rows||'<div class="muted">履歴なし</div>'}
  </div>`;
  box.dataset.done="1";

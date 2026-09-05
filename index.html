@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>BOAT HUNTER V005</title>
+<title>BOAT HUNTER V006</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#07131d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 button,select,input{font:inherit}.hide{display:none!important}.wrap{max-width:900px;margin:auto;padding:14px}
@@ -98,13 +98,44 @@ body{background:#07131d}
 #main.kiryu .head h2:after{content:" KIRYU NIGHT";font-size:10px;color:#c88cff;letter-spacing:.16em;margin-left:8px}
 #main.kiryu .controls{border:1px solid rgba(174,98,239,.24);box-shadow:0 0 22px rgba(100,35,155,.12)}
 
+
+/* ===== V006 TOP 3 THEMES ===== */
+.top{min-height:100vh;display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;isolation:isolate}
+.topcontent{position:relative;z-index:2;padding:30px 18px}
+.topBoat{font-size:88px;margin-bottom:8px;filter:drop-shadow(0 14px 12px rgba(0,0,0,.5))}
+.topWater{position:absolute;left:-12%;right:-12%;bottom:-10%;height:38%;border-radius:50% 50% 0 0/24% 24% 0 0;z-index:0}
+.top.top-normal{background:radial-gradient(circle at 50% 10%,rgba(63,193,255,.32),transparent 33%),linear-gradient(180deg,#05111b 0%,#082b40 52%,#07608a 100%)}
+.top.top-normal .topWater{background:linear-gradient(180deg,rgba(94,220,255,.37),rgba(3,43,65,.96))}
+.top.top-normal .logo{color:#f5fbff;text-shadow:0 0 22px rgba(74,194,255,.4)}
+.top.top-normal .topBadge{color:#bdeeff;border:1px solid rgba(102,213,255,.48);background:rgba(47,168,218,.14)}
+.top.top-normal .topSub{color:#a9d8ed}
+.top.top-sg{background:radial-gradient(circle at 14% 9%,rgba(255,53,53,.30),transparent 25%),radial-gradient(circle at 86% 8%,rgba(255,217,54,.30),transparent 26%),linear-gradient(180deg,#02050d 0%,#09182b 50%,#152733 100%)}
+.top.top-sg .topWater{background:linear-gradient(180deg,rgba(32,145,195,.34),rgba(2,38,58,.97))}
+.top.top-sg .logo{color:#fff3aa;text-shadow:0 0 10px #ff9c28,0 0 30px rgba(255,213,58,.67)}
+.top.top-sg .topBadge{color:#fff2a9;border:1px solid #ffe16d;background:linear-gradient(90deg,rgba(122,17,17,.62),rgba(120,78,8,.58),rgba(8,72,102,.58))}
+.top.top-sg .topSub{color:#e8f8ff}
+.top.top-ladies{background:radial-gradient(circle at 18% 10%,rgba(255,119,186,.38),transparent 28%),radial-gradient(circle at 84% 9%,rgba(255,211,232,.22),transparent 23%),linear-gradient(180deg,#210819 0%,#4d1239 48%,#81255f 100%)}
+.top.top-ladies .topWater{background:linear-gradient(180deg,rgba(255,132,194,.28),rgba(81,14,57,.96))}
+.top.top-ladies .logo{color:#fff6fb;text-shadow:0 0 23px rgba(255,112,184,.62)}
+.top.top-ladies .topBadge{color:#ffe0ee;border:1px solid rgba(255,190,221,.75);background:rgba(255,101,178,.18)}
+.top.top-ladies .topSub{color:#ffd0e6}
+.dataLive{color:#76e6a3!important}
+.dataWarn{color:#ffd660!important}
+
 </style>
 </head>
 <body>
-<div class="vol">V005</div>
+<div class="vol">V006</div>
 
-<section id="top" class="top">
-  <div><div style="font-size:74px;filter:drop-shadow(0 12px 10px #0008)">🚤</div><div class="topBadge">BOAT HUNTER</div><div class="logo">BOAT<br>HUNTER</div><div class="topSub">人気ではなく期待値で勝つ</div><button id="open" class="start">出走表を開く</button></div>
+<section id="top" class="top top-normal">
+  <div class="topcontent">
+    <div class="topBoat">🚤</div>
+    <div id="topBadge" class="topBadge">BOAT HUNTER</div>
+    <div class="logo">BOAT<br>HUNTER</div>
+    <div id="topSub" class="topSub">人気ではなく期待値で勝つ</div>
+    <button id="open" class="start">出走表を開く</button>
+  </div>
+  <div class="topWater"></div>
 </section>
 
 <section id="main" class="hide">
@@ -151,8 +182,8 @@ function card(r){
    <span class="patch rank">${grade(r)}</span><span class="patch ${mc}">${ml}</span>
    <div class="big">
     <div class="stat"><div class="k">全国勝率</div><div class="v">${f(r.national_win_rate)}</div></div>
-    <div class="stat"><div class="k">今季の勝ち点</div><div class="v na">未接続</div></div>
-    <div class="stat"><div class="k">過去最高階級 / 年</div><div class="v na">未接続</div></div>
+    <div class="stat"><div class="k">今季の勝ち点</div><div id="seasonPts${b}" class="v na">取得中</div></div>
+    <div class="stat"><div class="k">過去最高階級 / 年</div><div id="bestClass${b}" class="v na">取得中</div></div>
    </div>
    <div class="stQuick">
     <div class="stBox"><div class="k">今コース 平均ST</div><div id="avgst${b}" class="v na">取得中</div></div>
@@ -163,8 +194,8 @@ function card(r){
   <div class="stat"><div class="k">モーター</div><div class="v">${r.motor_number??"—"}号機</div></div>
   <div class="stat"><div class="k">2連対率</div><div class="v">${p(r.motor_top_2_percent)}</div></div>
   <div class="stat"><div class="k">3連対率</div><div class="v">${p(r.motor_top_3_percent)}</div></div>
-  <div class="stat"><div class="k">今節勝ち点</div><div class="v na">未接続</div></div>
-  <div class="stat"><div class="k">得点順位</div><div class="v na">未接続</div></div>
+  <div class="stat"><div class="k">今節得点率</div><div id="meetPts${b}" class="v na">取得中</div></div>
+  <div class="stat"><div class="k">得点順位</div><div id="meetRank${b}" class="v na">取得中</div></div>
  </div>
  <button class="more" onclick="toggleDetail(${b},${r.number})">同コース過去20走 ▼</button>
  <div id="d${b}" class="detail hide"></div>
@@ -192,11 +223,14 @@ async function getRace(){
  try{
   let j=await fetch(url($("date").value),{cache:"no-store"}).then(x=>{if(!x.ok)throw Error(x.status);return x.json()});
   currentRace=raceOf(j,$("stadium").value,$("race").value);
+  setTopTheme(raceTheme(currentRace));
   let rr=racers(currentRace);if(rr.length!==6)throw Error("6艇を取得できません");
   $("cards").innerHTML=rr.map(card).join("");
   decorateRanks(rr);
   $("status").textContent=`✓ ${S[$("stadium").value]} ${$("race").value}R / 過去20走を高速取得中…`;
   preloadHistory(rr);
+  loadMeetPoints(rr);
+  loadBestClasses(rr);
  }catch(e){$("status").textContent="取得失敗："+e.message}
 }
 
@@ -232,7 +266,12 @@ function consumeHistoryDay(j,d,targets){
   const ranks=stRanks(rs);
   for(const self of rs){
    const obj=targets.get(+self.number);
-   if(!obj||obj.rows.length>=20)continue;
+   if(!obj)continue;
+   if(d>=window.__seasonStart){
+    const pt={1:10,2:8,3:6,4:4,5:2,6:1}[+self.place_number];
+    if(pt){obj.seasonPts+=pt;obj.seasonStarts++}
+   }
+   if(obj.rows.length>=20)continue;
    if(+self.course_number!==obj.course)continue;
    obj.rows.push({
     date:d,place:+self.place_number,entry:+self.entry_number,course:+self.course_number,
@@ -245,12 +284,16 @@ function consumeHistoryDay(j,d,targets){
 }
 async function buildHistory(){
  const rr=racers(currentRace);
- const targets=new Map(rr.map(x=>[+x.number,{course:+x.entry_number,rows:[]}]));
+ const targets=new Map(rr.map(x=>[+x.number,{course:+x.entry_number,rows:[],seasonPts:0,seasonStarts:0}]));
  const start=$("date").value;
+ const yy=+start.slice(0,4), mm=+start.slice(5,7);
+ const seasonStart=`${yy}-${mm>=7?"07":"01"}-01`;
  const BATCH=14,MAX_DAYS=420;
+ window.__seasonStart=seasonStart;
 
  for(let from=1;from<=MAX_DAYS;from+=BATCH){
-  if([...targets.values()].every(o=>o.rows.length>=20))break;
+  const oldest=dateMinus(start,from);
+  if([...targets.values()].every(o=>o.rows.length>=20) && oldest<=seasonStart)break;
   const dates=Array.from({length:BATCH},(_,i)=>dateMinus(start,from+i));
   const jsons=await Promise.all(dates.map(dayJson));
   // 新しい日付→古い日付の順を維持
@@ -258,7 +301,7 @@ async function buildHistory(){
   $("status").innerHTML=`選手データ取得中… ${Math.min(from+BATCH-1,MAX_DAYS)}日分確認<div class="progress"><i></i></div>`;
  }
  for(const o of targets.values())o.rows=o.rows.slice(0,20);
- return new Map([...targets].map(([k,v])=>[k,v.rows]));
+ return new Map([...targets].map(([k,v])=>[k,v]));
 }
 function histMetrics(h){
  if(!h.length)return{avgST:null,avgRank:null,win:0,top2:0,top3:0};
@@ -274,19 +317,107 @@ function histMetrics(h){
 }
 function updateMainHistory(rr,map){
  rr.forEach(r=>{
-  const b=+r.entry_number,h=map.get(+r.number)||[],m=histMetrics(h);
+  const b=+r.entry_number,obj=map.get(+r.number),h=obj?.rows||[],m=histMetrics(h);
   const a=$("avgst"+b),q=$("avgrank"+b);
   if(a){a.classList.remove("na");a.textContent=m.avgST==null?"—":m.avgST.toFixed(3)}
   if(q){q.classList.remove("na");q.textContent=m.avgRank==null?"—":m.avgRank.toFixed(2)+"位"}
+  const sp=$("seasonPts"+b);
+  if(sp){sp.classList.remove("na");sp.classList.add("dataLive");sp.textContent=obj?`${obj.seasonPts}点 / ${obj.seasonStarts}走`:"—"}
  });
  // 6艇中の平均ST順位を色分け：1位赤、2位黄
- const vals=rr.map(r=>({b:+r.entry_number,h:map.get(+r.number)||[]}))
+ const vals=rr.map(r=>({b:+r.entry_number,h:map.get(+r.number)?.rows||[]}))
    .map(x=>({b:x.b,v:histMetrics(x.h).avgST}))
    .filter(x=>x.v!=null).sort((a,b)=>a.v-b.v);
  vals.slice(0,2).forEach((x,i)=>{
   const el=$("avgst"+x.b);if(el)el.classList.add(i===0?"stRank1":"stRank2")
  });
 }
+
+
+async function legacyDay(date){
+ const ymd=date.replaceAll("-","");
+ const y=ymd.slice(0,4);
+ const endpoint=date>="2026-01-01"
+  ?`https://boatraceopenapi.github.io/api/v1/${y}/${ymd}.json`
+  :`https://boatraceopenapi.github.io/programs/v3/${y}/${ymd}.json`;
+ try{const r=await fetch(endpoint,{cache:"force-cache"});return r.ok?await r.json():null}catch(e){return null}
+}
+function scanProgramRacers(j,cb){
+ const sts=j?.programs?.stadiums||j?.stadiums||{};
+ for(const st of Object.values(sts)){
+  const races=st?.races||{};
+  for(const race of Object.values(races)){
+   const rs=race?.racers||{};
+   for(const r of Object.values(rs))cb(r)
+  }
+ }
+}
+async function loadBestClasses(rr){
+ const target=new Map(rr.map(r=>[+r.number,{best:+r.rank_number||0,year:+$("date").value.slice(0,4)}]));
+ const starts=["2023-07-01","2024-01-01","2024-07-01","2025-01-01","2025-07-01","2026-01-01","2026-07-01"];
+ // 3-day intervals over first 24 days of each class term: 56 shared files, not per racer.
+ const dates=[];
+ for(const st of starts)for(let d=0;d<24;d+=3)dates.push(dateMinus(st,-d));
+ for(let i=0;i<dates.length;i+=8){
+  const chunk=dates.slice(i,i+8),js=await Promise.all(chunk.map(legacyDay));
+  js.forEach((j,k)=>{
+   if(!j)return;
+   const yr=+chunk[k].slice(0,4);
+   scanProgramRacers(j,r=>{
+    const o=target.get(+r.number);if(!o)return;
+    const rank=+r.rank_number||0;
+    if(rank>o.best){o.best=rank;o.year=yr}
+    else if(rank===o.best&&yr<o.year)o.year=yr;
+   })
+  })
+ }
+ target.forEach((o,num)=>{
+  const r=rr.find(x=>+x.number===num);if(!r)return;
+  const el=$("bestClass"+r.entry_number);
+  if(el){el.classList.remove("na");el.classList.add("dataLive");el.textContent=`${R[o.best]||"—"} / ${o.year}年`}
+ });
+}
+
+async function fetchTextCors(target){
+ const urls=[
+  "https://api.allorigins.win/raw?url="+encodeURIComponent(target),
+  "https://corsproxy.io/?url="+encodeURIComponent(target)
+ ];
+ for(const u of urls){
+  try{const r=await fetch(u,{cache:"no-store"});if(r.ok){const t=await r.text();if(t.length>500)return t}}catch(e){}
+ }
+ throw Error("official fetch failed")
+}
+async function loadMeetPoints(rr){
+ const d=$("date").value.replaceAll("-",""),j=String($("stadium").value).padStart(2,"0"),rno=$("race").value;
+ const target=`https://www.boatrace.jp/owpc/pc/race/pointchart?hd=${d}&jcd=${j}&rno=${rno}`;
+ try{
+  const html=await fetchTextCors(target),doc=new DOMParser().parseFromString(html,"text/html");
+  const rows=[...doc.querySelectorAll("tr")];
+  rr.forEach(r=>{
+   const tr=rows.find(x=>x.textContent.includes(String(r.number)));
+   if(!tr)return;
+   const txt=tr.textContent.replace(/\s+/g," ").trim();
+   // Registered no / class / name are followed by score rate and rank.
+   const after=txt.slice(txt.indexOf(String(r.number))+4);
+   const nums=[...after.matchAll(/(?<!\d)(\d{1,2}\.\d{2}|\d{1,2})(?!\d)/g)].map(x=>x[1]);
+   let rate=null,rank=null;
+   for(let i=0;i<nums.length;i++){
+    if(rate==null && nums[i].includes(".")){rate=nums[i]; if(nums[i+1]&&!nums[i+1].includes("."))rank=nums[i+1]; break}
+   }
+   const a=$("meetPts"+r.entry_number),b=$("meetRank"+r.entry_number);
+   if(a&&rate){a.textContent=rate;a.classList.remove("na");a.classList.add("dataLive")}
+   if(b&&rank){b.textContent=rank+"位";b.classList.remove("na");b.classList.add("dataLive")}
+  });
+ }catch(e){
+  rr.forEach(r=>{
+   const a=$("meetPts"+r.entry_number),b=$("meetRank"+r.entry_number);
+   if(a)a.textContent="公式取得待ち";
+   if(b)b.textContent="公式取得待ち";
+  });
+ }
+}
+
 async function preloadHistory(rr){
  try{
   if(!historyLoading)historyLoading=buildHistory();
@@ -344,7 +475,7 @@ async function toggleDetail(boatNo,number){
   if(!historyLoading)historyLoading=buildHistory();
   historyCache=await historyLoading;
  }
- const h=historyCache.get(+number)||[];
+ const obj=historyCache.get(+number),h=obj?.rows||[];
  let rows=h.map(x=>`<div class="hrow place${x.place<=3?x.place:0}">
    <span>${x.date.slice(5)}</span><span class="placeBadge">${x.place}着</span><span>${x.course}コース</span><span>ST ${f(x.st,2)} / ${x.stRank??"—"}位</span>
    <span>1着 ${x.winnerEntry}号艇 / ${T[x.tech]||"不明"}</span>
@@ -357,6 +488,31 @@ async function toggleDetail(boatNo,number){
    ${rows||'<div class="muted">履歴なし</div>'}
  </div>`;
  box.dataset.done="1";
+}
+
+
+function setTopTheme(type){
+ const t=$("top");
+ t.classList.remove("top-normal","top-sg","top-ladies");
+ if(type==="sg"){
+  t.classList.add("top-sg");
+  $("topBadge").textContent="🏆 SG FESTIVAL • SPECIAL GRADE 🏆";
+  $("topSub").textContent="SPECIAL GRADE • BOAT HUNTER FESTIVAL";
+ }else if(type==="ladies"){
+  t.classList.add("top-ladies");
+  $("topBadge").textContent="🌸 ALL LADIES 開催中 💗";
+  $("topSub").textContent="BOAT HUNTER • LADIES FESTIVAL";
+ }else{
+  t.classList.add("top-normal");
+  $("topBadge").textContent="BOAT HUNTER";
+  $("topSub").textContent="人気ではなく期待値で勝つ";
+ }
+}
+function raceTheme(r){
+ const text=((r?.title||"")+" "+(r?.subtitle||"")).toUpperCase();
+ if(["SG","グランプリ","ボートレースクラシック","ボートレースオールスター","グランドチャンピオン","オーシャンカップ","ボートレースメモリアル","ボートレースダービー","チャレンジカップ"].some(x=>text.includes(x.toUpperCase())))return"sg";
+ if(["オールレディース","ヴィーナス","レディースチャンピオン","クイーンズクライマックス","女子"].some(x=>text.includes(x.toUpperCase())))return"ladies";
+ return"normal";
 }
 
 function applyVenueTheme(){
@@ -372,6 +528,7 @@ $("back").onclick=()=>{$("main").classList.add("hide");$("top").classList.remove
 $("get").onclick=getRace;
 $("stadium").onchange=applyVenueTheme;
 applyVenueTheme();
+setTopTheme('normal');
 </script>
 </body>
 </html>

@@ -4574,7 +4574,7 @@ function bhMergeRealtimeRows(tkz,stt,orig,sui){
 }
 function bhExtractOddsFromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:3連単[_：:]*)?([1-6])-([1-6])-([1-6])$/);if(!m)continue;let key=`${m[1]}-${m[2]}-${m[3]}`;if(new Set(m.slice(1)).size<3)continue;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
 function bhExtractOdds2FromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:2連単[_：:]*)?([1-6])-([1-6])$/);if(!m||m[1]===m[2])continue;let key=`${m[1]}-${m[2]}`;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
-// ===== Vol.219: Boatcast「集計中オッズ」へ直接接続 =====
+// ===== Vol.220: Boatcast「集計中オッズ」へ直接接続 =====
 // 旧 od2/od3 CSV は締切約5分前の1回スナップショットだったため、
 // オッズ表示・世間評価・買い目用オッズはまず race.boatcast.jp の
 // bc_smt_od2 / bc_smt_od3 を直接取得する。取得失敗時だけCSVへフォールバック。
@@ -4710,32 +4710,54 @@ async function bhLoadRealtimePreviewAndOdds(){
 
 // 表示中レースのオッズだけを軽量更新。15秒ごと。
 // Boatcast直接取得に成功した時だけ上書きし、CSVスナップショットでは自動更新しない。
-window.bhRefreshLiveOddsOnly=async function(){
-  if(document.hidden)return false;
+window.bhRefreshLiveOddsOnly=async function(force=false){
+  if(document.hidden&&!force)return false;
+  if(window.BH_ODDS_REFRESHING)return false;
   const venue=document.getElementById('venue'),race=document.getElementById('race');
   if(!venue||!race||!venue.value||!race.value)return false;
+  window.BH_ODDS_REFRESHING=true;
   const t=today(),ymd=t.ymd,jcd=String(venue.value).padStart(2,'0'),rno=Number(race.value);
   try{
     const [o3,o2]=await Promise.all([
       bhFetchBoatcastLiveOdds('od3',ymd,jcd,rno),
       bhFetchBoatcastLiveOdds('od2',ymd,jcd,rno)
     ]);
-    if(Object.keys(o3).length){
-      bhRealtimeOdds=o3;window.bhRealtimeOdds=o3;
-      window.BH_ODDS_LAST_OK_AT=Date.now();
-      window.BH_ODDS_SOURCE='BOATCAST_REALTIME';
-    }
+    const sig=o=>Object.keys(o||{}).sort().map(k=>k+':'+o[k]).join('|');
+    const changed3=Object.keys(o3).length&&sig(o3)!==sig(window.bhRealtimeOdds||{});
+    const changed2=Object.keys(o2).length&&sig(o2)!==sig(window.bhRealtimeOdds2||{});
+    if(Object.keys(o3).length){bhRealtimeOdds=o3;window.bhRealtimeOdds=o3;}
     if(Object.keys(o2).length){bhRealtimeOdds2=o2;window.bhRealtimeOdds2=o2;}
+    window.BH_ODDS_LAST_OK_AT=Date.now();
+    window.BH_ODDS_SOURCE='BOATCAST_REALTIME';
     try{window.bhRenderOddsPopularity?.()}catch(e){}
+    if(changed3||changed2){
+      try{typeof renderBets==='function'&&renderBets()}catch(e){}
+      try{typeof renderRace==='function'&&renderRace()}catch(e){}
+    }
     return true;
   }catch(e){
     window.BH_ODDS_DIRECT_ERROR={od3:String(e.message||e)};
     return false;
+  }finally{
+    window.BH_ODDS_REFRESHING=false;
   }
 };
 
 if(window.BH_ODDS_LIVE_TIMER)clearInterval(window.BH_ODDS_LIVE_TIMER);
-window.BH_ODDS_LIVE_TIMER=setInterval(()=>{window.bhRefreshLiveOddsOnly?.()},15000);
+window.BH_ODDS_LIVE_TIMER=setInterval(()=>{window.bhRefreshLiveOddsOnly?.()},5000);
+// Vol.220: 画面復帰・場/レース変更時は即更新
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden)window.bhRefreshLiveOddsOnly?.(true);
+});
+['venue','race'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el&&!el.dataset.bh220OddsHook){
+    el.dataset.bh220OddsHook='1';
+    el.addEventListener('change',()=>setTimeout(()=>window.bhRefreshLiveOddsOnly?.(true),50));
+  }
+});
+setTimeout(()=>window.bhRefreshLiveOddsOnly?.(true),300);
+
 
 function bhGetOdds(key){let parts=String(key).split('-');return Number((parts.length===2?bhRealtimeOdds2:bhRealtimeOdds)?.[key])||null}
 async function bhReloadRealtimeVol4(){
@@ -10619,8 +10641,8 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
 <script id="bh-vol178-version-ui">
 (()=>{
  function setV(){
-  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.219');
-  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.219'});
+  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.220');
+  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.220'});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();
  setTimeout(setV,100);setTimeout(setV,800);
@@ -11151,7 +11173,7 @@ function render(){
   const third=[...rows].sort((a,b)=>a.thirdRank-b.thirdRank).slice(0,2);
 
   box.innerHTML=`<div class="v184-title">🌎 世間評価 × HUNTER 6艇診断</div>
-    <div class="v184-subtitle">Vol.219：頭力・2着力・3着力を完全分離。オッズはBoatcast集計中オッズをリアルタイム取得。</div>
+    <div class="v184-subtitle">Vol.220：頭力・2着力・3着力を完全分離。オッズはBoatcast集計中オッズをリアルタイム取得。</div>
     ${byMarket.map(x=>`<div class="v184-row ${boatColorClass(x.boat)}">
       <div class="v184-boat ${boatColorClass(x.boat)}">${x.boat}号艇</div>
       <div class="v184-mid">
@@ -12744,7 +12766,7 @@ document.addEventListener('click',e=>{
 'use strict';
 
 /*
-Vol.219:
+Vol.220:
 - 母数に入れるのは「スリットが揃った通常条件」と「HUNTER予想スリット」のみ。
 - ハンデ戦・条件変化・逆風/不利想定などのストレスSIMは母数から除外し、耐久チェックとして別集計。
 - 既存SIM結果オブジェクトに mode / simMode / handicap / stress / isStress / isHandicap /
@@ -12816,7 +12838,7 @@ function bh219RenderDenominatorNote(){
     const note=document.createElement('div');
     note.id='bh219DenomNote';
     note.style.cssText='margin:8px 0 0;padding:8px 10px;border:1px solid #31566b;border-radius:8px;background:#0b1820;color:#a9c7d8;font-size:10px;line-height:1.5';
-    note.innerHTML='Vol.219：確率の母数は「スリットが揃ったSIM＋HUNTER予想スリット」のみ。ハンデ戦などは母数から外し、耐久チェックとして別扱い。';
+    note.innerHTML='Vol.220：確率の母数は「スリットが揃ったSIM＋HUNTER予想スリット」のみ。ハンデ戦などは母数から外し、耐久チェックとして別扱い。';
     host.prepend(note);
     return;
   }
@@ -12825,7 +12847,7 @@ function bh219RenderDenominatorNote(){
   const note=document.createElement('div');
   note.id='bh219DenomNote';
   note.style.cssText='margin:8px 0 0;padding:8px 10px;border:1px solid #31566b;border-radius:8px;background:#0b1820;color:#a9c7d8;font-size:10px;line-height:1.5';
-  note.innerHTML=`Vol.219：通常確率の母数 <b>${base.length.toLocaleString()}回</b>（スリット揃い＋HUNTER予想スリット）｜耐久チェック <b>${stress.length.toLocaleString()}回</b>（母数外）`;
+  note.innerHTML=`Vol.220：通常確率の母数 <b>${base.length.toLocaleString()}回</b>（スリット揃い＋HUNTER予想スリット）｜耐久チェック <b>${stress.length.toLocaleString()}回</b>（母数外）`;
   host.prepend(note);
 
   if(base.length){

@@ -4574,7 +4574,7 @@ function bhMergeRealtimeRows(tkz,stt,orig,sui){
 }
 function bhExtractOddsFromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:3連単[_：:]*)?([1-6])-([1-6])-([1-6])$/);if(!m)continue;let key=`${m[1]}-${m[2]}-${m[3]}`;if(new Set(m.slice(1)).size<3)continue;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
 function bhExtractOdds2FromCsvRow(row){let out={};for(let [k,v] of Object.entries(row||{})){let m=String(k).match(/(?:2連単[_：:]*)?([1-6])-([1-6])$/);if(!m||m[1]===m[2])continue;let key=`${m[1]}-${m[2]}`;let n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(Number.isFinite(n)&&n>0)out[key]=n}return out}
-// ===== Vol.221: Boatcast「集計中オッズ」へ直接接続 =====
+// ===== Vol.223: Boatcast「集計中オッズ」へ直接接続 =====
 // 旧 od2/od3 CSV は締切約5分前の1回スナップショットだったため、
 // オッズ表示・世間評価・買い目用オッズはまず race.boatcast.jp の
 // bc_smt_od2 / bc_smt_od3 を直接取得する。取得失敗時だけCSVへフォールバック。
@@ -4592,9 +4592,7 @@ async function bhFetchBoatcastLiveOdds(type,ymd,jcd,rno){
   if(!res.ok)throw Error(`${type} realtime HTTP ${res.status}`);
   const body=await res.text();
   if(!body||body.trim().startsWith('<'))throw Error(`${type} realtime invalid body`);
-  const lines=body.replace(/
-/g,'').split('
-');
+  const lines=body.replace(/\r/g,'').split('\n');
   if(lines.length<3||!lines[0].trimStart().startsWith('data='))throw Error(`${type} realtime header`);
   if(String((lines[1]||'').split('	')[0]).trim()!=='1')throw Error(`${type} realtime not aggregating`);
 
@@ -4798,7 +4796,7 @@ window.bhRefreshLiveOddsOnly=async function(force=false){
 
 if(window.BH_ODDS_LIVE_TIMER)clearInterval(window.BH_ODDS_LIVE_TIMER);
 window.BH_ODDS_LIVE_TIMER=setInterval(()=>{window.bhRefreshLiveOddsOnly?.()},5000);
-// Vol.221: 画面復帰・場/レース変更時は即更新
+// Vol.223: 画面復帰・場/レース変更時は即更新
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden)window.bhRefreshLiveOddsOnly?.(true);
 });
@@ -10652,7 +10650,7 @@ function runSim(){let F=featureRows(),market=marketHeads(),venue=Number(document
    let wk=`${first}:${scenarioType}`;
    winTypes[wk]=(winTypes[wk]||0)+1;
  }
- let exacta=Object.entries(pair).map(([key,count])=>({key,count,pct:count/SIMS*100})).sort((a,b)=>b.count-a.count||a.key.localeCompare(b.key));let headRows=F.map(x=>({boat:x.boat,win:heads[x.boat]||0,p1:places[x.boat]?.[0]||0,p2:places[x.boat]?.[1]||0,p3:places[x.boat]?.[2]||0,top3:(places[x.boat]||[]).reduce((a,v)=>a+v,0),base:x.base})).sort((a,b)=>b.win-a.win||b.base-a.base);let scRows=Object.entries(scenarios).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count).slice(0,10);let wtRows=Object.entries(winTypes).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count);let m=market1?headRows.find(x=>x.boat===market1):null;let out={version:V,sims:SIMS,ymd,venue,race,createdAt:Date.now(),market,market1,features:F,exacta,heads:headRows,scenarios:scRows,winTypes:wtRows,marketStats:m};persist(out);return out}
+ let exacta=Object.entries(pair).map(([key,count])=>({key,count,pct:count/SIMS*100})).sort((a,b)=>b.count-a.count||a.key.localeCompare(b.key));let headRows=F.map(x=>({boat:x.boat,win:heads[x.boat]||0,p1:places[x.boat]?.[0]||0,p2:places[x.boat]?.[1]||0,p3:places[x.boat]?.[2]||0,top3:(places[x.boat]||[]).reduce((a,v)=>a+v,0),base:x.base})).sort((a,b)=>b.win-a.win||b.base-a.base);let scRows=Object.entries(scenarios).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count).slice(0,10);let wtRows=Object.entries(winTypes).map(([key,count])=>({key,count})).sort((a,b)=>b.count-a.count);let m=market1?headRows.find(x=>x.boat===market1):null;let out={version:V,sims:SIMS,denominatorSims:SIMS,denominatorModes:['HUNTER予想スリット'],ymd,venue,race,createdAt:Date.now(),market,market1,features:F,exacta,heads:headRows,scenarios:scRows,winTypes:wtRows,marketStats:m};persist(out);return out}
 function persist(o){try{let st=JSON.parse(localStorage.getItem(SIMKEY)||'{}');st[`${o.ymd}|${o.venue}|${o.race}`]=o;localStorage.setItem(SIMKEY,JSON.stringify(st))}catch(e){}}
 function pct(n,total=SIMS){return `${(Number(n||0)/Number(total||SIMS)*100).toFixed(1)}%`}
 function pp(n,total=SIMS){return Number(n||0)/Number(total||SIMS)*100}
@@ -10666,7 +10664,7 @@ function bh204ScenarioCard(x,i,sims,tie){
  return `<div class="bh204Scenario"><div class="bh204Rank">${i+1}</div><div class="bh204Body"><div class="bh204Pair"><div class="bh204First"><small>1着</small><b>${m[1]}号艇</b></div><div class="bh204Second"><small>2着</small><b>${m[3]}号艇</b></div></div><div class="bh204Method"><small>展開・決まり手</small><b>${m[2]||"展開"}</b>${tie||""}</div><div class="bh204Freq">${x.count.toLocaleString()}/${sims.toLocaleString()}回　${pct(x.count,sims)}</div></div></div>`;
 }
 async function render(o,fetchActual=false){let c=ensureCard();if(!c)return;document.getElementById('bhVol174Blank')?.remove();const sims=Number(o.sims||SIMS);let m=o.marketStats||{},main=o.exacta.slice(0,7),sub=o.exacta.slice(7,14),actual=fetchActual?await actualResult(o):null;let actualPair=actual?.result?.split('-').slice(0,2).join('-')||'';let hitRank=actualPair?o.exacta.findIndex(x=>x.key===actualPair)+1:0;let scenarios=o.scenarios.slice(0,10);let winnerSummary=o.winTypes.slice(0,8).map(x=>`${x.key.replace(':','号艇 ')} ${pct(x.count,sims)}`).join(' / ');let outsideWins=o.heads.filter(x=>o.features.find(f=>f.boat===x.boat)?.course!==1).reduce((s,x)=>s+x.p1,0);let one=o.features.find(x=>x.course===1),oneWin=one?o.heads.find(x=>x.boat===one.boat)?.p1||0:0;
- c.innerHTML=`<div class="bh178Top"><div><h2>🧪 ${sims.toLocaleString()}回 模擬レース Vol.217</h2><div class="bh178Sub">内部は${sims.toLocaleString()}回。1%以内の差は「同格」として扱い、2連単TOP7は合計出現率で判定。</div></div><button class="bh178Btn" id="bh178Run">再SIM</button></div><div class="bh178Grid"><div class="bh178Box"><small>世間1着支持1位</small><b class="bh178Market">${o.market1?o.market1+'号艇':'オッズ未取得'}</b></div><div class="bh178Box"><small>世間1位 1着 / 2連対 / 3連対</small><b>${m?pct(m.p1,sims):'-'} / ${m?pct((m.p1||0)+(m.p2||0),sims):'-'} / ${m?pct(m.top3,sims):'-'}</b></div><div class="bh178Box"><small>イン1着 / イン以外1着</small><b>${pct(oneWin,sims)} / ${pct(outsideWins,sims)}</b></div><div class="bh178Box"><small>主な勝ち方</small><b style="font-size:12px;line-height:1.5">${winnerSummary||'-'}</b></div></div><div class="bh178Box bh178Situation"><small class="bh178SituationTitle">🎬 シチュエーション結果 TOP10</small><div class="bh181Explain">1着・2着・展開を分離表示。5,000回の発生順。</div>${scenarios.length?scenarios.map((x,i)=>bh204ScenarioCard(x,i,sims,tieLabel(scenarios,i,sims))).join(''):'<div class="bh204Scenario"><div class="bh204Method">シチュエーション集計なし</div></div>'}</div><div class="bh178Exacta"><div class="bh178Box"><small>本命・2連単 出現上位7</small>${main.map((x,i)=>`<div class="bh178Ticket"><span>${i+1}. <strong>${x.key}</strong>${tieLabel(main,i,sims)}</span><span>${pct(x.count,sims)}</span></div>`).join('')}</div><div class="bh178Box"><small>本命以外 TOP7</small>${sub.length?sub.map((x,i)=>`<div class="bh178Ticket"><span>${i+8}. <strong>${x.key}</strong>${tieLabel(o.exacta,i+7,sims)}</span><span>${pct(x.count,sims)}</span></div>`).join(''):'該当なし'}</div></div><div class="bh178Box" style="margin-top:10px"><small>着順分布</small><table class="bh178Table"><tr><th>艇</th><th>1着</th><th>2着</th><th>3着</th><th>3連対</th></tr>${o.heads.map(x=>`<tr><td>${x.boat}</td><td>${pct(x.p1,sims)}</td><td>${pct(x.p2,sims)}</td><td>${pct(x.p3,sims)}</td><td>${pct(x.top3,sims)}</td></tr>`).join('')}</table></div>${(pp(outsideWins,sims)<8&&o.market1&&o.features.find(f=>f.boat===o.market1)?.course!==1)?`<div class="bh178Alert">⚠️ 世間1位が外コースなのに外頭が少なすぎます。攻撃条件の不足を検証対象として保持します。</div>`:''}<div class="bh178Shot"><div class="bh178ShotTitle">📸 答え合わせデータ</div><div class="bh178ShotLine">${o.ymd} / 場${o.venue} / ${o.race}R<br>内部SIM：<b>${sims.toLocaleString()}回</b>　1%以内＝同格<br>世間1位：<b>${o.market1||'-'}号艇</b>　SIM：1着 ${pct(m?.p1||0,sims)}・2連対 ${pct((m?.p1||0)+(m?.p2||0),sims)}・3連対 ${pct(m?.top3||0,sims)}<br>イン頭：${pct(oneWin,sims)}　外頭：${pct(outsideWins,sims)}<br>本命7：${main.map(x=>`${x.key}(${pct(x.count,sims)})`).join(' / ')}<br>次点7：${sub.map(x=>`${x.key}(${pct(x.count,sims)})`).join(' / ')}<br>勝ち方：${winnerSummary||'-'}<br>主要展開：${scenarios.map(x=>`${x.key} ${pct(x.count,sims)}`).join(' / ')||'-'}<br>${actual?`実結果：<span class="bh178Actual">${actual.result}</span>　2連単SIM順位：${hitRank||'圏外'}位`:`<span class="bh178Warn">結果未取得。下のボタンで今日の結果と照合できます。</span>`}</div><button class="bh178Btn" id="bh178Check" style="margin-top:8px;width:100%">今日の結果と答え合わせ</button></div><div class="bh178ScoreNote">※ 5,000回の頻度差を見る。0.1〜1.0pt程度の小差を過信せず、同格帯・2連単合計確率・着順分布を優先する。</div>`;
+ c.innerHTML=`<div class="bh178Top"><div><h2>🧪 ${sims.toLocaleString()}回 模擬レース Vol.217</h2><div class="bh178Sub">母数はHUNTER予想スリット ${sims.toLocaleString()}回。ハンデ・壁・攻め手は耐久チェックで母数外。1%以内は「同格」。</div></div><button class="bh178Btn" id="bh178Run">再SIM</button></div><div class="bh178Grid"><div class="bh178Box"><small>世間1着支持1位</small><b class="bh178Market">${o.market1?o.market1+'号艇':'オッズ未取得'}</b></div><div class="bh178Box"><small>世間1位 1着 / 2連対 / 3連対</small><b>${m?pct(m.p1,sims):'-'} / ${m?pct((m.p1||0)+(m.p2||0),sims):'-'} / ${m?pct(m.top3,sims):'-'}</b></div><div class="bh178Box"><small>イン1着 / イン以外1着</small><b>${pct(oneWin,sims)} / ${pct(outsideWins,sims)}</b></div><div class="bh178Box"><small>主な勝ち方</small><b style="font-size:12px;line-height:1.5">${winnerSummary||'-'}</b></div></div><div class="bh178Box bh178Situation"><small class="bh178SituationTitle">🎬 シチュエーション結果 TOP10</small><div class="bh181Explain">1着・2着・展開を分離表示。母数はHUNTER予想スリットのみ。</div>${scenarios.length?scenarios.map((x,i)=>bh204ScenarioCard(x,i,sims,tieLabel(scenarios,i,sims))).join(''):'<div class="bh204Scenario"><div class="bh204Method">シチュエーション集計なし</div></div>'}</div><div class="bh178Exacta"><div class="bh178Box"><small>本命・2連単 出現上位7</small>${main.map((x,i)=>`<div class="bh178Ticket"><span>${i+1}. <strong>${x.key}</strong>${tieLabel(main,i,sims)}</span><span>${pct(x.count,sims)}</span></div>`).join('')}</div><div class="bh178Box"><small>本命以外 TOP7</small>${sub.length?sub.map((x,i)=>`<div class="bh178Ticket"><span>${i+8}. <strong>${x.key}</strong>${tieLabel(o.exacta,i+7,sims)}</span><span>${pct(x.count,sims)}</span></div>`).join(''):'該当なし'}</div></div><div class="bh178Box" style="margin-top:10px"><small>着順分布</small><table class="bh178Table"><tr><th>艇</th><th>1着</th><th>2着</th><th>3着</th><th>3連対</th></tr>${o.heads.map(x=>`<tr><td>${x.boat}</td><td>${pct(x.p1,sims)}</td><td>${pct(x.p2,sims)}</td><td>${pct(x.p3,sims)}</td><td>${pct(x.top3,sims)}</td></tr>`).join('')}</table></div>${(pp(outsideWins,sims)<8&&o.market1&&o.features.find(f=>f.boat===o.market1)?.course!==1)?`<div class="bh178Alert">⚠️ 世間1位が外コースなのに外頭が少なすぎます。攻撃条件の不足を検証対象として保持します。</div>`:''}<div class="bh178Shot"><div class="bh178ShotTitle">📸 答え合わせデータ</div><div class="bh178ShotLine">${o.ymd} / 場${o.venue} / ${o.race}R<br>内部SIM：<b>${sims.toLocaleString()}回</b>　1%以内＝同格<br>世間1位：<b>${o.market1||'-'}号艇</b>　SIM：1着 ${pct(m?.p1||0,sims)}・2連対 ${pct((m?.p1||0)+(m?.p2||0),sims)}・3連対 ${pct(m?.top3||0,sims)}<br>イン頭：${pct(oneWin,sims)}　外頭：${pct(outsideWins,sims)}<br>本命7：${main.map(x=>`${x.key}(${pct(x.count,sims)})`).join(' / ')}<br>次点7：${sub.map(x=>`${x.key}(${pct(x.count,sims)})`).join(' / ')}<br>勝ち方：${winnerSummary||'-'}<br>主要展開：${scenarios.map(x=>`${x.key} ${pct(x.count,sims)}`).join(' / ')||'-'}<br>${actual?`実結果：<span class="bh178Actual">${actual.result}</span>　2連単SIM順位：${hitRank||'圏外'}位`:`<span class="bh178Warn">結果未取得。下のボタンで今日の結果と照合できます。</span>`}</div><button class="bh178Btn" id="bh178Check" style="margin-top:8px;width:100%">今日の結果と答え合わせ</button></div><div class="bh178ScoreNote">※ 確率母数はHUNTER予想スリットのみ。ハンデ・壁・攻め手は耐久チェックとして別評価し、確率には混ぜない。</div>`;
  document.getElementById('bh178Run').onclick=()=>render(runSim(),false);document.getElementById('bh178Check').onclick=()=>render(o,true);applyHideButtons();} 
 function ready(){return safe(()=>racers.length===6,false)}
 function start(){if(!ready())return;let o=runSim();render(o,false)}
@@ -10694,8 +10692,8 @@ document.addEventListener('DOMContentLoaded',()=>{applyHideButtons();setTimeout(
 <script id="bh-vol178-version-ui">
 (()=>{
  function setV(){
-  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.221');
-  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.221'});
+  document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.223');
+  document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim())) el.textContent='Vol.223'});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();
  setTimeout(setV,100);setTimeout(setV,800);
@@ -11226,7 +11224,7 @@ function render(){
   const third=[...rows].sort((a,b)=>a.thirdRank-b.thirdRank).slice(0,2);
 
   box.innerHTML=`<div class="v184-title">🌎 世間評価 × HUNTER 6艇診断</div>
-    <div class="v184-subtitle">Vol.221：頭力・2着力・3着力を完全分離。オッズはBoatcast集計中オッズをリアルタイム取得。</div>
+    <div class="v184-subtitle">Vol.223：頭力・2着力・3着力を完全分離。オッズはBoatcast集計中オッズをリアルタイム取得。</div>
     ${byMarket.map(x=>`<div class="v184-row ${boatColorClass(x.boat)}">
       <div class="v184-boat ${boatColorClass(x.boat)}">${x.boat}号艇</div>
       <div class="v184-mid">
@@ -11859,13 +11857,13 @@ function render(result){
   }).join('<br>');
 
   host.innerHTML=`
-    <div class="bh194Head"><b>🧠 役割分割 5,000回SIM</b><span style="font-size:11px;opacity:.65">AI解析と同時に自動取得</span></div>
+    <div class="bh194Head"><b>🛡️ 耐久チェック 5,000回</b><span style="font-size:11px;opacity:.65">確率母数には含めない</span></div>
     <div class="bh194Grid">
-      <div class="bh194Card"><strong>① 地力 1,000回</strong><span>スタート横一線。選手能力・機体・モーター・今のコースで誰が最もトップになるか。</span></div>
-      <div class="bh194Card"><strong>② 1Mハンデ 1,200回</strong><span>各艇200回、1Mで0.5艇身トップ通過。勝ち切り率と逆転する艇を確認。</span></div>
-      <div class="bh194Card"><strong>③ 壁 600回</strong><span>横一線から内側2・3と外側4・5・6が壁になる/壊す力を確認。</span></div>
-      <div class="bh194Card"><strong>④ 攻め手 1,200回</strong><span>各艇200回。差し/まくり/まくり差しの最適攻め手と成功率、イン逃げ以外の裏目を確認。</span></div>
-      <div class="bh194Card"><strong>⑤ 2着選出 1,000回</strong><span>前4,000回から有力10展開を選び、各100回。展開ごとの最多2着艇を選出。</span></div>
+      <div class="bh194Card"><strong>① 横一線 1,000回</strong><span>これは母数採用。スリットが揃った場合の基準SIM。</span></div>
+      <div class="bh194Card"><strong>② 1Mハンデ 1,200回</strong><span>耐久チェック。母数から除外。各艇200回、1Mで0.5艇身トップ通過。</span></div>
+      <div class="bh194Card"><strong>③ 壁 600回</strong><span>耐久チェック。母数から除外。壁になる/壊す力だけ確認。</span></div>
+      <div class="bh194Card"><strong>④ 攻め手 1,200回</strong><span>耐久チェック。母数から除外。最適攻め手と裏目だけ確認。</span></div>
+      <div class="bh194Card"><strong>⑤ 2着耐久 1,000回</strong><span>耐久チェック。母数から除外。展開ごとの2着崩れを確認。</span></div>
     </div>
     <div class="bh194Table">
       <table>
@@ -12819,7 +12817,7 @@ document.addEventListener('click',e=>{
 'use strict';
 
 /*
-Vol.221:
+Vol.223:
 - 母数に入れるのは「スリットが揃った通常条件」と「HUNTER予想スリット」のみ。
 - ハンデ戦・条件変化・逆風/不利想定などのストレスSIMは母数から除外し、耐久チェックとして別集計。
 - 既存SIM結果オブジェクトに mode / simMode / handicap / stress / isStress / isHandicap /
@@ -12891,7 +12889,7 @@ function bh219RenderDenominatorNote(){
     const note=document.createElement('div');
     note.id='bh219DenomNote';
     note.style.cssText='margin:8px 0 0;padding:8px 10px;border:1px solid #31566b;border-radius:8px;background:#0b1820;color:#a9c7d8;font-size:10px;line-height:1.5';
-    note.innerHTML='Vol.221：確率の母数は「スリットが揃ったSIM＋HUNTER予想スリット」のみ。ハンデ戦などは母数から外し、耐久チェックとして別扱い。';
+    note.innerHTML='Vol.223：確率母数は通常SIM（横一線／HUNTER予想スリット）のみ。ハンデ・壁・攻め手は耐久チェックで母数外。';
     host.prepend(note);
     return;
   }
@@ -12900,7 +12898,7 @@ function bh219RenderDenominatorNote(){
   const note=document.createElement('div');
   note.id='bh219DenomNote';
   note.style.cssText='margin:8px 0 0;padding:8px 10px;border:1px solid #31566b;border-radius:8px;background:#0b1820;color:#a9c7d8;font-size:10px;line-height:1.5';
-  note.innerHTML=`Vol.221：通常確率の母数 <b>${base.length.toLocaleString()}回</b>（スリット揃い＋HUNTER予想スリット）｜耐久チェック <b>${stress.length.toLocaleString()}回</b>（母数外）`;
+  note.innerHTML=`Vol.223：通常確率の母数 <b>${base.length.toLocaleString()}回</b>（スリット揃い＋HUNTER予想スリット）｜耐久チェック <b>${stress.length.toLocaleString()}回</b>（母数外）`;
   host.prepend(note);
 
   if(base.length){

@@ -13004,5 +13004,56 @@ else setTimeout(bh219RenderDenominatorNote,0);
 <script id="bh-vol227-version-ui">
 (()=>{function setV(){document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.227');document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim()))el.textContent='Vol.227'});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();setTimeout(setV,100);setTimeout(setV,800);})();
 </script>
+
+<!-- ===== Vol.228: 最下部公式3連単オッズ欄を独立常時表示 ===== -->
+<style id="bh-vol228-official-odds-style">
+#bh228OfficialOddsStandalone{margin:16px 16px 10px;padding:14px;border:1px solid #2f6f91;border-radius:14px;background:#0c1821;color:#fff}
+#bh228OfficialOddsStandalone .title{font-size:17px;font-weight:1000;color:#dff5ff;margin-bottom:6px}
+#bh228OfficialOddsStandalone .sub{font-size:11px;line-height:1.6;color:#9fb5c4;margin-bottom:10px}
+#bh228OfficialOddsStandalone .btn{display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;padding:14px 10px;border-radius:11px;border:1px solid #4aaee0;background:#123e57;color:#fff;font-size:16px;font-weight:1000}
+#bh228OfficialOddsStandalone .meta{margin-top:8px;text-align:center;font-size:10px;color:#8099aa}
+</style>
+<script id="bh-vol228-official-odds-standalone">
+(()=>{'use strict';
+  function args(){
+    let ymd='';
+    try{ymd=String((typeof today==='function'&&today().ymd)||'').replace(/\D/g,'')}catch(e){}
+    if(!/^\d{8}$/.test(ymd)){
+      const d=new Date(),z=n=>String(n).padStart(2,'0');
+      ymd=`${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}`;
+    }
+    const venue=String(document.getElementById('venue')?.value||'').replace(/\D/g,'');
+    const race=String(document.getElementById('race')?.value||'').replace(/\D/g,'');
+    if(!venue||!race)return null;
+    return {ymd,jcd:String(Number(venue)).padStart(2,'0'),rno:String(Number(race))};
+  }
+  function url(){const a=args();return a?`https://www.boatrace.jp/owpc/pc/race/odds3t?hd=${a.ymd}&jcd=${a.jcd}&rno=${a.rno}`:''}
+  function render(){
+    let box=document.getElementById('bh228OfficialOddsStandalone');
+    if(!box){
+      box=document.createElement('section'); box.id='bh228OfficialOddsStandalone';
+      const footer=[...document.querySelectorAll('footer,div,p')].find(el=>/BOAT HUNTER\s*©\s*2026/i.test(el.textContent||''));
+      const topBtn=[...document.querySelectorAll('button,a,div')].find(el=>(el.textContent||'').trim()==='⬆️ 1番上へ');
+      const anchor=footer||topBtn;
+      if(anchor&&anchor.parentNode) anchor.parentNode.insertBefore(box,anchor);
+      else document.body.appendChild(box);
+    }
+    const a=args(),u=url();
+    box.innerHTML=`<div class="title">📊 公式 3連単オッズ</div>
+      <div class="sub">一番下のオッズ確認専用。BOAT HUNTER内の古いCSV値は使わず、選択中レースのBOAT RACE公式3連単オッズを開きます。</div>
+      ${u?`<a class="btn" href="${u}" target="_blank" rel="noopener">公式3連単オッズ 120通りを開く</a>`:`<div class="sub">開催場とレースを選択してください。</div>`}
+      <div class="meta">${a?`${a.ymd} / 場コード ${a.jcd} / ${a.rno}R`:''}</div>`;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(render,250),{once:true});else setTimeout(render,250);
+  document.getElementById('venue')?.addEventListener('change',()=>setTimeout(render,0));
+  document.getElementById('race')?.addEventListener('change',()=>setTimeout(render,0));
+  document.addEventListener('click',e=>{if(/AI解析|オッズ|表示|開閉/.test(e.target?.textContent||''))setTimeout(render,100)},true);
+  window.BH_VOL228_BOTTOM_OFFICIAL_ODDS={render,url};
+})();
+</script>
+<script id="bh-vol228-version-ui">
+(()=>{function setV(){document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.228');document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim()))el.textContent='Vol.228'});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();setTimeout(setV,100);setTimeout(setV,800);})();
+</script>
+
 </body>
 </html>

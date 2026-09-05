@@ -4706,7 +4706,7 @@ async function bhLoadRealtimePreviewAndOdds(){
   return got;
 }
 
-// 表示中レースのオッズだけを軽量更新。15秒ごと。
+// 表示中レースのオッズだけを軽量更新。Vol.229では3分ごと。
 // Boatcast直接取得に成功した時だけ上書きし、CSVスナップショットでは自動更新しない。
 window.bhRefreshLiveOddsOnly=async function(force=false){
   if(document.hidden&&!force)return false;
@@ -4778,10 +4778,9 @@ window.bhRefreshLiveOddsOnly=async function(force=false){
       window.BH_ODDS_LAST_OK_AT=Date.now();
       window.BH_ODDS_SOURCE=source;
       try{window.bhRenderOddsPopularity?.()}catch(e){}
-      if(changed){
-        try{typeof renderBets==='function'&&renderBets()}catch(e){}
-        try{typeof renderRace==='function'&&renderRace()}catch(e){}
-      }
+      // Vol.229: 自動オッズ更新では画面全体を再描画しない。
+      // renderRace/renderBets はスクロール位置・表示カードを動かすため禁止。
+      // bhRenderOddsPopularity() だけでオッズ/世間評価を最新値へ同期する。
       return true;
     }
 
@@ -4795,8 +4794,8 @@ window.bhRefreshLiveOddsOnly=async function(force=false){
 };
 
 if(window.BH_ODDS_LIVE_TIMER)clearInterval(window.BH_ODDS_LIVE_TIMER);
-window.BH_ODDS_LIVE_TIMER=setInterval(()=>{window.bhRefreshLiveOddsOnly?.()},5000);
-// Vol.223: 画面復帰・場/レース変更時は即更新
+window.BH_ODDS_LIVE_TIMER=setInterval(()=>{window.bhRefreshLiveOddsOnly?.()},180000);
+// Vol.229: 通常は3分更新。画面復帰・場/レース変更時のみ即更新
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden)window.bhRefreshLiveOddsOnly?.(true);
 });
@@ -7747,12 +7746,10 @@ window.bhRenderOddsPopularity=function(){
   }catch(e){hunter=[]}
 
   const snap150=bh150ReadEvalSnapshot();
-  if(snap150&&Array.isArray(snap150.firstRank)&&Array.isArray(snap150.marketRank)&&Array.isArray(snap150.hunter)){
-    firstRank=snap150.firstRank.map(Number);
-    secondRank=(snap150.secondRank||secondRank).map(Number);
-    thirdRank=(snap150.thirdRank||thirdRank).map(Number);
-    marketRank=snap150.marketRank.map(Number);
-    if(snap150.support&&typeof snap150.support==='object')support=snap150.support;
+  // Vol.229: 世間評価はスナップショット固定禁止。
+  // first/second/third/marketRank/support は常に「現在の120通りオッズ」から再計算する。
+  // AI解析時に固定するのはHUNTER評価だけ。
+  if(snap150&&Array.isArray(snap150.hunter)){
     hunter=snap150.hunter.map(x=>Object.assign({},x,{boat:Number(x.boat),hunterRank:Number(x.hunterRank)}));
   }else{
     bh150WriteEvalSnapshot({
@@ -9583,18 +9580,12 @@ async function bhRefreshOdds130(){
 
   bhOddsBusy130=true;
   try{
-    // Reuse the existing realtime/odds acquisition path if present.
-    if(typeof window.bhFetchRealtimeOdds==='function'){
+    // Vol.229: オッズだけを更新。直前情報やレース全体の再取得は行わない。
+    if(typeof window.bhRefreshLiveOddsOnly==='function'){
+      await window.bhRefreshLiveOddsOnly(false);
+    }else if(typeof window.bhFetchRealtimeOdds==='function'){
       await window.bhFetchRealtimeOdds();
-    }else if(typeof window.bhFetchBeforeInfo==='function'){
-      await window.bhFetchBeforeInfo();
-    }else if(typeof window.fetchBeforeInfo==='function'){
-      await window.fetchBeforeInfo();
-    }
-
-    // Re-render the current popularity / HUNTER odds analysis from refreshed odds.
-    if(typeof window.bhRenderOddsPopularity==='function'){
-      window.bhRenderOddsPopularity();
+      if(typeof window.bhRenderOddsPopularity==='function')window.bhRenderOddsPopularity();
     }
   }catch(e){
     console.warn('Vol136 オッズ自動更新',e);
@@ -9605,7 +9596,7 @@ async function bhRefreshOdds130(){
 
 function bhStartOddsAuto130(){
   if(bhOddsTimer130)clearInterval(bhOddsTimer130);
-  bhOddsTimer130=setInterval(bhRefreshOdds130,30000);
+  bhOddsTimer130=setInterval(bhRefreshOdds130,180000);
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
@@ -9617,7 +9608,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 window.bhRefreshOdds130=bhRefreshOdds130;
-window.BH_VOL130={version:130,oddsAutoRefreshSeconds:30};
+window.BH_VOL130={version:130,oddsAutoRefreshSeconds:180};
 })();
 </script>
 
@@ -13005,7 +12996,7 @@ else setTimeout(bh219RenderDenominatorNote,0);
 (()=>{function setV(){document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.227');document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim()))el.textContent='Vol.227'});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();setTimeout(setV,100);setTimeout(setV,800);})();
 </script>
 
-<!-- ===== Vol.228: 最下部公式3連単オッズ欄を独立常時表示 ===== -->
+<!-- ===== Vol.229: 最下部公式3連単オッズ欄 + 3分更新/世間評価連動 ===== -->
 <style id="bh-vol228-official-odds-style">
 #bh228OfficialOddsStandalone{margin:16px 16px 10px;padding:14px;border:1px solid #2f6f91;border-radius:14px;background:#0c1821;color:#fff}
 #bh228OfficialOddsStandalone .title{font-size:17px;font-weight:1000;color:#dff5ff;margin-bottom:6px}
@@ -13052,7 +13043,7 @@ else setTimeout(bh219RenderDenominatorNote,0);
 })();
 </script>
 <script id="bh-vol228-version-ui">
-(()=>{function setV(){document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.228');document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim()))el.textContent='Vol.228'});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();setTimeout(setV,100);setTimeout(setV,800);})();
+(()=>{function setV(){document.querySelectorAll('#bhTopVersion,.bhVolBadge').forEach(el=>el.textContent='Vol.229');document.querySelectorAll('.bhVol').forEach(el=>{if(/^vol\./i.test((el.textContent||'').trim()))el.textContent='Vol.229'});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setV,{once:true});else setV();setTimeout(setV,100);setTimeout(setV,800);})();
 </script>
 
 </body>
